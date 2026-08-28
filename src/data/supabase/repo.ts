@@ -19,7 +19,7 @@ const camel = <T,>(row: any, mapa: Record<string, string>): T => {
 
 const M = {
   consultora: { id: 'id', nombre: 'nombre', email: 'email', rol: 'rol', cupo_maximo: 'cupoMaximo', acepta_nuevos: 'aceptaNuevos', activa: 'activa', color: 'color', mano_levantada_at: 'manoLevantadaAt', mano_levantada_nota: 'manoLevantadaNota', sesiones_back_to_back: 'sesionesBackToBack' },
-  cliente: { id: 'id', nombre: 'nombre', email: 'email', programa: 'programa', fecha_alta: 'fechaAlta', fecha_fin_prevista: 'fechaFinPrevista', plan_pago: 'planPago', tiene_garantia: 'tieneGarantia', fuente: 'fuente', consultora_id: 'consultoraId', estado: 'estado', drive_folder_id: 'driveFolderId', horas_reales_semana: 'horasRealesSemana', dias_gracia_pago: 'diasGraciaPago', nivel_desalineado: 'nivelDesalineado', nivel_vendido: 'nivelVendido' },
+  cliente: { id: 'id', nombre: 'nombre', email: 'email', telefono: 'telefono', programa: 'programa', fecha_alta: 'fechaAlta', fecha_fin_prevista: 'fechaFinPrevista', plan_pago: 'planPago', tiene_garantia: 'tieneGarantia', fuente: 'fuente', consultora_id: 'consultoraId', estado: 'estado', drive_folder_id: 'driveFolderId', horas_reales_semana: 'horasRealesSemana', dias_gracia_pago: 'diasGraciaPago', nivel_desalineado: 'nivelDesalineado', nivel_vendido: 'nivelVendido' },
   negocio: { cliente_id: 'clienteId', que_vende: 'queVende', a_quien: 'aQuien', precio: 'precio', moneda: 'moneda', como_entrega: 'comoEntrega', facturacion_mensual: 'facturacionMensual', cantidad_clientes: 'cantidadClientes', origen_clientes: 'origenClientes', que_funciono: 'queFunciono', que_no_funciono: 'queNoFunciono', actualizado_at: 'actualizadoAt' },
   autoridad: { cliente_id: 'clienteId', hace_excepcionalmente_bien: 'haceExcepcionalmenteBien', experiencia_profesional: 'experienciaProfesional', resultados_propios: 'resultadosPropios', resultados_terceros: 'resultadosTerceros', industrias_que_conoce: 'industriasQueConoce', autoridad_desperdiciada: 'autoridadDesperdiciada', actualizado_at: 'actualizadoAt' },
   estrategia: { id: 'id', cliente_id: 'clienteId', version: 'version', cliente_ideal: 'clienteIdeal', problema: 'problema', deseo: 'deseo', promesa: 'promesa', oferta: 'oferta', mecanismo: 'mecanismo', canal: 'canal', precio: 'precio', moneda: 'moneda', vigente_desde: 'vigenteDesde', motivo_cambio: 'motivoCambio', iniciativa: 'iniciativa', sesion_id: 'sesionId', creada_por: 'creadaPor' },
@@ -33,6 +33,7 @@ const M = {
   lectura: { id: 'id', cliente_id: 'clienteId', consultora_id: 'consultoraId', sesion_id: 'sesionId', fecha: 'fecha', percepcion: 'percepcion', bloqueo_declarado: 'bloqueoDeclarado', necesita_intervencion: 'necesitaIntervencion', potencial_renovacion: 'potencialRenovacion', comentario: 'comentario' },
   alerta: { id: 'id', cliente_id: 'clienteId', sesion_id: 'sesionId', codigo: 'codigo', origen: 'origen', estado_semaforo: 'estadoSemaforo', titulo: 'titulo', cuerpo: 'cuerpo', cita_textual: 'citaTextual', fecha_cita: 'fechaCita', pedido: 'pedido', destinatario: 'destinatario', plazo_horas: 'plazoHoras', prioridad: 'prioridad', emitida_at: 'emitidaAt', emitida_en_semana: 'emitidaEnSemana', diferida: 'diferida', cerrada_at: 'cerradaAt', cerrada_por: 'cerradaPor', texto_cierre: 'textoCierre', escalada_a_id: 'escaladaAId', veces_emitida: 'vecesEmitida' },
   traspaso: { id: 'id', cliente_id: 'clienteId', consultora_origen_id: 'consultoraOrigenId', consultora_destino_id: 'consultoraDestinoId', fecha: 'fecha', motivo: 'motivo' },
+  documento: { id: 'id', cliente_id: 'clienteId', tipo: 'tipo', titulo: 'titulo', contenido: 'contenido', fecha: 'fecha', subido_por: 'subidoPor', creado_at: 'creadoAt', archivo: 'archivo' },
   diagnostico: { id: 'id', cliente_id: 'clienteId', consultora_id: 'consultoraId', pregunta: 'pregunta', hipotesis_consultora: 'hipotesisConsultora', cuello_botella: 'cuelloBotella', tipo_bloqueo: 'tipoBloqueo', eslabon_roto: 'eslabonRoto', coincidio: 'coincidio', payload: 'payload', prompt_version: 'promptVersion', modelo: 'modelo', created_at: 'createdAt' },
   prorroga: { id: 'id', cliente_id: 'clienteId', pago_id: 'pagoId', dias_otorgados: 'diasOtorgados', autorizada_por: 'autorizadaPor', autorizada_at: 'autorizadaAt', nueva_fecha: 'nuevaFecha', motivo: 'motivo', resultado: 'resultado', resuelta_at: 'resueltaAt' },
   baja: { id: 'id', cliente_id: 'clienteId', fecha: 'fecha', motivo: 'motivo', solicitada_por: 'solicitadaPor', pidio_reembolso: 'pidioReembolso', nota: 'nota', pasos: 'pasos' },
@@ -56,11 +57,11 @@ export const supabaseRepo: Repo = {
       'consultoras', 'clientes', 'negocio', 'autoridad', 'estrategia_versiones',
       'objetivos_comerciales', 'metricas_semanales', 'sesiones', 'compromisos',
       'pagos', 'asistencias_mentoria', 'hitos_cliente', 'lecturas_consultora',
-      'alertas', 'traspasos', 'diagnosticos',
+      'alertas', 'traspasos', 'diagnosticos', 'documentos_cliente',
       'prorrogas', 'bajas', 'atribuciones', 'revisiones_caso',
     ];
     const res = await Promise.all(tablas.map((t) => sb.from(t).select('*')));
-    const [eq, cl, ne, au, es, ob, me, se, co, pa, as, hi, le, al, tr, di, pr, ba, at, rv] =
+    const [eq, cl, ne, au, es, ob, me, se, co, pa, as, hi, le, al, tr, di, dc, pr, ba, at, rv] =
       res.map((r) => r.data ?? []);
 
     return {
@@ -80,6 +81,7 @@ export const supabaseRepo: Repo = {
       alertas: al.map((r) => camel(r, M.alerta)),
       traspasos: tr.map((r) => camel(r, M.traspaso)),
       diagnosticos: di.map((r) => camel(r, M.diagnostico)),
+      documentos: dc.map((r) => camel(r, M.documento)),
       prorrogas: pr.map((r) => camel(r, M.prorroga)),
       bajas: ba.map((r: any) => ({ ...camel(r, M.baja), pasos: r.pasos ?? [] })),
       atribuciones: at.map((r) => camel(r, M.atribucion)),
@@ -87,6 +89,39 @@ export const supabaseRepo: Repo = {
     } as Dataset;
   },
 
+  async guardarCliente(c) {
+    const sb = await clienteSupabase();
+    await sb.from('clientes').upsert(snake(c as never, M.cliente));
+  },
+  async guardarNegocio(n) {
+    const sb = await clienteSupabase();
+    await sb.from('negocio').upsert(snake(n as never, M.negocio), { onConflict: 'cliente_id' });
+  },
+  async guardarAutoridad(a) {
+    const sb = await clienteSupabase();
+    await sb.from('autoridad').upsert(snake(a as never, M.autoridad), { onConflict: 'cliente_id' });
+  },
+  /** Append-only: cambiar la meta no borra contra qué se venía midiendo. */
+  async guardarObjetivo(o) {
+    const sb = await clienteSupabase();
+    await sb.from('objetivos_comerciales').insert(snake(o as never, M.objetivo));
+  },
+  async guardarDocumento(d) {
+    const sb = await clienteSupabase();
+    await sb.from('documentos_cliente').upsert(snake(d as never, M.documento));
+  },
+  async borrarDocumento(id) {
+    const sb = await clienteSupabase();
+    await sb.from('documentos_cliente').delete().eq('id', id);
+  },
+  async guardarPago(p) {
+    const sb = await clienteSupabase();
+    await sb.from('pagos').upsert(snake(p as never, M.pago), { onConflict: 'cliente_id,numero_cuota' });
+  },
+  async guardarAsistencia(a) {
+    const sb = await clienteSupabase();
+    await sb.from('asistencias_mentoria').upsert(snake(a as never, M.asistencia));
+  },
   async guardarSesion(s) {
     const sb = await clienteSupabase();
     await sb.from('sesiones').upsert(snake(s as never, M.sesion));

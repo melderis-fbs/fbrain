@@ -55,18 +55,37 @@ function inferirLocal(texto: string): PerfilInferido {
   };
 }
 
+type ResultadoCoherencia = {
+  veredicto: 'coherente' | 'parcial' | 'incoherente';
+  veredictoPorQue: string;
+  brecha: { dimension: string; inferido: string; declarado: string; coincide: boolean }[];
+  palabrasResponsables: { cita: string; porQueDesvia: string; queDiriaEnSuLugar: string }[];
+  eslabonATocar: string;
+  queNoHaria: string[];
+  conclusionLeads: string;
+  perfilInferidoCiego: { quienEs: string; frasesDecisivas: { cita: string; senal: string }[] };
+};
+
 export function Coherencia({
+  clienteId,
   clienteIdeal,
   precio,
   moneda,
   promptA,
   promptB,
+  conectado,
+  correr,
 }: {
+  clienteId: string;
   clienteIdeal?: string;
   precio?: number;
   moneda?: string;
   promptA: string;
   promptB: string;
+  conectado: boolean;
+  correr: (clienteId: string, fd: FormData) => Promise<
+    { ok: true; resultado: ResultadoCoherencia } | { ok: false; error: string; errores?: string[] }
+  >;
 }) {
   const [material, setMaterial] = useState('');
   const [tipo, setTipo] = useState('reel');
@@ -74,6 +93,30 @@ export function Coherencia({
   const [paso, setPaso] = useState<'material' | 'ciego' | 'comparacion'>('material');
   const [perfil, setPerfil] = useState<PerfilInferido | null>(null);
   const [verPrompts, setVerPrompts] = useState(false);
+  const [resultado, setResultado] = useState<ResultadoCoherencia | null>(null);
+  const [corriendo, setCorriendo] = useState(false);
+  const [errorModelo, setErrorModelo] = useState<string | null>(null);
+
+  async function correrTest() {
+    setCorriendo(true);
+    setErrorModelo(null);
+    try {
+      const fd = new FormData();
+      fd.set('material', material);
+      fd.set('tipo', tipo);
+      fd.set('leads', leads);
+      const r = await correr(clienteId, fd);
+      if (!r.ok) {
+        setErrorModelo([r.error, ...(r.errores ?? [])].join(' · '));
+        return;
+      }
+      setResultado(r.resultado);
+    } catch (e) {
+      setErrorModelo(e instanceof Error ? e.message : 'Falló la llamada al modelo.');
+    } finally {
+      setCorriendo(false);
+    }
+  }
 
   const nLeads = Number(leads) || 0;
 
@@ -91,9 +134,81 @@ export function Coherencia({
     );
   }
 
+  const TONO: Record<string, string> = {
+    coherente: 'good', parcial: 'warning', incoherente: 'critical',
+  };
+
   return (
     <div className="space-y-4">
-      {paso === 'material' && (
+      {errorModelo && (
+        <p className="rounded-lg border px-3 py-2 text-[12px]" style={{ borderColor: 'var(--critical)', background: 'var(--critical-soft)', color: 'var(--critical-ink)' }}>
+          {errorModelo}
+        </p>
+      )}
+
+      {resultado && (
+        <section className="space-y-3">
+          <div className="rounded-xl border p-4" style={{ borderColor: `var(--${TONO[resultado.veredicto]})`, background: `var(--${TONO[resultado.veredicto]}-soft)` }}>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.08em]" style={{ color: `var(--${TONO[resultado.veredicto]}-ink)` }}>
+              {resultado.veredicto}
+            </div>
+            <p className="mt-1 text-[13px] leading-relaxed">{resultado.veredictoPorQue}</p>
+          </div>
+
+          <div className="rounded-xl border border-line bg-surface p-4">
+            <h3 className="mb-2 text-[13px] font-semibold">A quién atrae de verdad (lectura a ciegas)</h3>
+            <p className="text-[13px] leading-relaxed">{resultado.perfilInferidoCiego.quienEs}</p>
+            <ul className="mt-2 space-y-1 text-[12.5px] text-ink-2">
+              {resultado.perfilInferidoCiego.frasesDecisivas.map((f, i) => (
+                <li key={i}>«{f.cita}» → {f.senal}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="overflow-x-auto rounded-xl border border-line bg-surface p-4">
+            <h3 className="mb-2 text-[13px] font-semibold">La brecha, dimensión por dimensión</h3>
+            <table className="w-full min-w-[32rem] text-[12.5px]">
+              <thead><tr className="text-left text-ink-3"><th className="pb-1 font-medium">Dimensión</th><th className="pb-1 font-medium">Atrae</th><th className="pb-1 font-medium">Declarado</th></tr></thead>
+              <tbody>
+                {resultado.brecha.map((b, i) => (
+                  <tr key={i} className="border-t border-line" style={{ background: b.coincide ? undefined : 'var(--serious-soft)' }}>
+                    <td className="py-1.5 font-medium">{b.dimension}</td>
+                    <td className="py-1.5">{b.inferido}</td>
+                    <td className="py-1.5">{b.declarado}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {resultado.palabrasResponsables.length > 0 && (
+            <div className="rounded-xl border border-line bg-surface p-4">
+              <h3 className="mb-2 text-[13px] font-semibold">Las palabras responsables</h3>
+              <ul className="space-y-2 text-[12.5px]">
+                {resultado.palabrasResponsables.map((p, i) => (
+                  <li key={i}>
+                    <div className="italic">«{p.cita}»</div>
+                    <div className="text-ink-3">{p.porQueDesvia}</div>
+                    <div>En su lugar: <strong>{p.queDiriaEnSuLugar}</strong></div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="rounded-xl border border-line bg-surface p-4 text-[12.5px]">
+            <p><strong>Eslabón a tocar primero:</strong> {resultado.eslabonATocar}</p>
+            <p className="mt-1"><strong>Qué no haría todavía:</strong> {resultado.queNoHaria.join(' · ')}</p>
+            <p className="mt-1"><strong>Sobre los leads:</strong> {resultado.conclusionLeads}</p>
+          </div>
+
+          <button type="button" onClick={() => { setResultado(null); setPaso('material'); }} className="rounded-lg px-3 py-1.5 text-[12px] text-ink-3">
+            Probar otro material
+          </button>
+        </section>
+      )}
+
+      {!resultado && paso === 'material' && (
         <section className="rounded-xl border border-line bg-surface p-4">
           <h2 className="mb-1 text-[13px] font-semibold">El material</h2>
           <p className="mb-3 text-[11.5px] text-ink-3">
@@ -134,11 +249,27 @@ export function Coherencia({
                 setPerfil(inferirLocal(material));
                 setPaso('ciego');
               }}
-              className="rounded-lg px-4 py-2.5 text-[13px] font-semibold text-white disabled:opacity-50"
-              style={{ background: 'var(--accent)' }}
+              className={
+                conectado
+                  ? 'rounded-lg border border-line px-4 py-2.5 text-[13px] font-medium hover:border-accent disabled:opacity-50'
+                  : 'rounded-lg px-4 py-2.5 text-[13px] font-semibold text-white disabled:opacity-50'
+              }
+              style={conectado ? undefined : { background: 'var(--accent)' }}
             >
-              Leer a ciegas
+              Leer a ciegas a mano
             </button>
+            {conectado && (
+              <button
+                type="button"
+                disabled={material.trim().length < 60 || corriendo}
+                onClick={correrTest}
+                className="rounded-lg px-4 py-2.5 text-[13px] font-semibold text-white disabled:opacity-50"
+                style={{ background: 'var(--accent)' }}
+                title="Dos llamadas: primero lee el material sin saber nada del negocio, recién después compara"
+              >
+                {corriendo ? 'Leyendo a ciegas y comparando…' : 'Correr el test con el modelo'}
+              </button>
+            )}
           </div>
         </section>
       )}

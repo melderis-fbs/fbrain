@@ -1,0 +1,4 @@
+Cliente,Cuota,Monto,Moneda,Vencimiento,Fecha pago,Estado
+Ana Pérez,1,1000,USD,04/03/2026,04/03/2026,pagado
+Ana Pérez,2,1000,USD,04/04/2026,05/04/2026,pagado
+Ana Pérez,3,1000,USD,04/05/2026,,pendiente

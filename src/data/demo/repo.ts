@@ -23,7 +23,7 @@ let cache: { key: string; data: Dataset } | null = null;
 function asegurar(hoy: string): Dataset {
   if (cache && cache.key === hoy) return cache.data;
   const base = generarDataset(hoy);
-  cache = { key: hoy, data: { equipo: equipoDe(hoy), ...base } };
+  cache = { key: hoy, data: { equipo: equipoDe(hoy), documentos: [], ...base } };
   return cache.data;
 }
 
@@ -32,6 +32,70 @@ export const demoRepo: Repo = {
 
   async cargarTodo(hoy) {
     return asegurar(hoy);
+  },
+
+  async guardarCliente(c) {
+    const d = cache?.data;
+    if (!d) return;
+    const i = d.clientes.findIndex((x) => x.id === c.id);
+    if (i >= 0) d.clientes[i] = c;
+    else d.clientes.push(c);
+  },
+
+  async guardarNegocio(n) {
+    const d = cache?.data;
+    if (!d) return;
+    const i = d.negocios.findIndex((x) => x.clienteId === n.clienteId);
+    if (i >= 0) d.negocios[i] = n;
+    else d.negocios.push(n);
+  },
+
+  async guardarAutoridad(a) {
+    const d = cache?.data;
+    if (!d) return;
+    const i = d.autoridades.findIndex((x) => x.clienteId === a.clienteId);
+    if (i >= 0) d.autoridades[i] = a;
+    else d.autoridades.push(a);
+  },
+
+  /** Append-only: cambiar la meta no borra contra qué se venía midiendo. */
+  async guardarObjetivo(o) {
+    const d = cache?.data;
+    if (!d) return;
+    d.objetivos.push(o);
+  },
+
+  async guardarDocumento(x) {
+    const d = cache?.data;
+    if (!d) return;
+    const i = d.documentos.findIndex((y) => y.id === x.id);
+    if (i >= 0) d.documentos[i] = x;
+    else d.documentos.unshift(x);
+  },
+
+  async borrarDocumento(id) {
+    const d = cache?.data;
+    if (!d) return;
+    const i = d.documentos.findIndex((x) => x.id === id);
+    if (i >= 0) d.documentos.splice(i, 1);
+  },
+
+  async guardarPago(p) {
+    const d = cache?.data;
+    if (!d) return;
+    const i = d.pagos.findIndex((x) => x.clienteId === p.clienteId && x.numeroCuota === p.numeroCuota);
+    if (i >= 0) d.pagos[i] = p;
+    else d.pagos.push(p);
+  },
+
+  async guardarAsistencia(a) {
+    const d = cache?.data;
+    if (!d) return;
+    const i = d.asistencias.findIndex(
+      (x) => x.clienteId === a.clienteId && x.mentoria === a.mentoria && x.fecha === a.fecha,
+    );
+    if (i >= 0) d.asistencias[i] = a;
+    else d.asistencias.push(a);
   },
 
   async guardarSesion(s) {

@@ -3,6 +3,8 @@ import { notFound, redirect } from 'next/navigation';
 import { getUsuario, veTodo } from '@/server/auth';
 import { getWorkspace } from '@/server/workspace';
 import { Coherencia } from '@/components/Coherencia';
+import { hayModelo } from '@/server/modelo';
+import { correrCoherencia } from '@/server/acciones-motores';
 import { PROMPT_COHERENCIA_A, PROMPT_COHERENCIA_B } from '@/domain/motores/otros';
 
 export const metadata = { title: 'Test de coherencia · Founders Brain' };
@@ -36,6 +38,9 @@ export default async function CoherenciaPage({ params }: { params: Promise<{ id:
         clienteIdeal={e?.clienteIdeal}
         precio={e?.precio}
         moneda={e?.moneda}
+        clienteId={id}
+        conectado={hayModelo()}
+        correr={correrCoherencia}
         promptA={PROMPT_COHERENCIA_A}
         promptB={PROMPT_COHERENCIA_B}
       />

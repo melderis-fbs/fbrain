@@ -13,6 +13,8 @@ import { Hitos } from '@/components/Hitos';
 import { Timeline } from '@/components/Timeline';
 import { Tracker } from '@/components/Tracker';
 import { AlertaCard } from '@/components/AlertaCard';
+import { ChatCliente } from '@/components/ChatCliente';
+import { hayModelo } from '@/server/modelo';
 import { colorIndice, plata } from '@/lib/ui';
 import { formatDate, formatDateLong } from '@/lib/date';
 
@@ -124,8 +126,21 @@ export default async function ExpedientePage({ params }: { params: Promise<{ id:
           <Link href={`/clientes/${id}/coherencia`} className="rounded-lg border border-line px-3 py-2 text-[12.5px] font-medium hover:border-accent">
             Test de coherencia
           </Link>
+          <Link href={`/clientes/${id}/ficha`} className="rounded-lg border border-line px-3 py-2 text-[12.5px] font-medium hover:border-accent">
+            Editar la ficha
+          </Link>
+          <Link href={`/clientes/${id}/tracker`} className="rounded-lg border border-line px-3 py-2 text-[12.5px] font-medium hover:border-accent">
+            Cargar la semana
+          </Link>
+          <Link href={`/clientes/${id}/documentos`} className="rounded-lg border border-line px-3 py-2 text-[12.5px] font-medium hover:border-accent">
+            Documentos{v.ctx.registros.documentos.length > 0 && ` (${v.ctx.registros.documentos.length})`}
+          </Link>
         </div>
       </Card>
+
+      <div className="mb-4">
+        <ChatCliente clienteId={id} nombre={v.ctx.cliente.nombre} conectado={hayModelo()} />
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
@@ -390,6 +405,27 @@ export default async function ExpedientePage({ params }: { params: Promise<{ id:
           <Card>
             <SectionTitle>Pagos y garantía</SectionTitle>
             <div className="space-y-2 text-[12.5px]">
+              {ctx.registros.pagos.length === 0 && (
+                <Empty>Sin cuotas cargadas. Entran desde la planilla.</Empty>
+              )}
+              {ctx.registros.pagos.length > 0 && (() => {
+                const pagas = ctx.registros.pagos.filter((p) => p.estado === 'pagado');
+                const vencidas = ctx.registros.pagos.filter((p) => p.estado === 'vencido');
+                return (
+                  <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2 border-b border-line pb-2">
+                    <span className="text-ink-2">
+                      {pagas.length} de {ctx.registros.pagos.length} cuotas pagas
+                      {vencidas.length > 0 && (
+                        <span style={{ color: 'var(--critical-ink)' }}> · {vencidas.length} vencida{vencidas.length > 1 ? 's' : ''}</span>
+                      )}
+                    </span>
+                    <span className="tnum font-medium">
+                      {plata(pagas.reduce((n, p) => n + p.monto, 0), ctx.registros.pagos[0].moneda)}
+                      <span className="text-ink-3"> de {plata(ctx.registros.pagos.reduce((n, p) => n + p.monto, 0), ctx.registros.pagos[0].moneda)}</span>
+                    </span>
+                  </div>
+                );
+              })()}
               {ctx.registros.pagos.map((p) => (
                 <div key={p.id} className="flex justify-between">
                   <span>Cuota {p.numeroCuota} · {formatDate(p.fechaVencimiento)}</span>

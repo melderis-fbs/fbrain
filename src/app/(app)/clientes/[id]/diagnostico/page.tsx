@@ -3,6 +3,8 @@ import { notFound, redirect } from 'next/navigation';
 import { getUsuario, veTodo } from '@/server/auth';
 import { getWorkspace } from '@/server/workspace';
 import { Diagnostico } from '@/components/Diagnostico';
+import { hayModelo } from '@/server/modelo';
+import { correrDiagnostico } from '@/server/acciones-motores';
 import { borradorLocal, construirPromptDiagnostico } from '@/domain/motores/diagnostico';
 import { BLOQUEO_LABEL } from '@/domain/fases';
 import { BLOQUE_COMO_LLENAR, BLOQUE_LABEL } from '@/domain/expediente';
@@ -60,7 +62,9 @@ export default async function DiagnosticoPage({ params }: { params: Promise<{ id
         bloqueos={Object.entries(BLOQUEO_LABEL).map(([v2, l]) => ({ v: v2, l }))}
         habilitado={ctx.habilitaDiagnostico}
         faltantes={faltantes}
-        conectado={false}
+        clienteId={id}
+        conectado={hayModelo()}
+        correr={correrDiagnostico}
       />
 
       {previos.length > 0 && (

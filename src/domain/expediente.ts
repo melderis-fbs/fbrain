@@ -2,6 +2,7 @@ import { daysBetween, mondayOf } from '@/lib/date';
 import { esperadoAlDia, objetivoSemanal, type ObjetivoSemanal } from './cuenta-inversa';
 import { FASES, HITOS, type FaseNegocio, type HitoDef } from './fases';
 import type {
+  DocumentoCliente,
   Alerta,
   AsistenciaMentoria,
   AtribucionManual,
@@ -48,6 +49,7 @@ export interface RegistrosCliente {
   alertas: Alerta[];
   traspasos: Traspaso[];
   diagnosticos: Diagnostico[];
+  documentos: DocumentoCliente[];
   prorrogas: Prorroga[];
   bajas: Baja[];
   atribuciones: AtribucionManual[];

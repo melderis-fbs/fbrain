@@ -80,6 +80,7 @@ export const getWorkspace = cache(async (): Promise<Workspace> => {
   const compromisos = porCliente(dataset.compromisos);
   const pagos = porCliente(dataset.pagos);
   const asistencias = porCliente(dataset.asistencias);
+  const documentos = porCliente(dataset.documentos);
   const hitos = porCliente(dataset.hitos);
   const lecturas = porCliente(dataset.lecturas);
   const alertas = porCliente(dataset.alertas);
@@ -108,6 +109,7 @@ export const getWorkspace = cache(async (): Promise<Workspace> => {
       alertas: alertas.get(cliente.id) ?? [],
       traspasos: traspasos.get(cliente.id) ?? [],
       diagnosticos: diagnosticos.get(cliente.id) ?? [],
+      documentos: (documentos.get(cliente.id) ?? []).sort((a, b) => b.fecha.localeCompare(a.fecha)),
       prorrogas: prorrogas.get(cliente.id) ?? [],
       bajas: (bajas.get(cliente.id) ?? []).sort((a, b) => b.fecha.localeCompare(a.fecha)),
       atribuciones: (atribuciones.get(cliente.id) ?? []).sort((a, b) => b.at.localeCompare(a.at)),
