@@ -11,6 +11,26 @@ se hace desde el navegador.
 > Los nombres de los menús que menciono son los que tiene el panel hoy. Si
 > alguno cambió de lugar, la idea es la misma y el buscador del panel te lleva.
 
+## Antes de empezar: dónde se pega todo
+
+Vas a pegar código **tres veces**, y las tres en el mismo lugar: el
+**SQL Editor** de Supabase.
+
+Está en el menú de la izquierda, con un ícono de terminal. Cada vez es el mismo
+gesto: **SQL Editor → New query → pegar → botón Run** (o `Ctrl+Enter`). Cuando
+sale bien, abajo dice **Success. No rows returned**.
+
+Las tres pegadas son:
+
+| # | Qué pegás | De dónde lo sacás |
+|---|---|---|
+| 1 | El esquema: crea las 38 tablas | El archivo `instalar.sql` del repo, link en el paso 3 |
+| 2 | El equipo: las 7 personas | `equipo.sql`, PARTE 1 |
+| 3 | El enlace con los usuarios | `equipo.sql`, PARTE 2 |
+
+Entre la 2 y la 3 hay un paso a mano en el panel: crear los usuarios. Por eso
+son dos pegadas separadas y no una.
+
 ---
 
 ## 1 · Crear la cuenta
@@ -47,24 +67,26 @@ Dale a **Create new project** y esperá. Tarda uno o dos minutos en aprovisionar
 
 Acá es donde se arma toda la estructura. Es un solo copiar y pegar.
 
-**3.1 ·** Abrí este archivo del repo:
+**3.1 · Abrí este link en otra pestaña:**
 
 ```
-https://github.com/melderis-fbs/fbrain/blob/main/supabase/instalar.sql
+https://raw.githubusercontent.com/melderis-fbs/fbrain/main/supabase/instalar.sql
 ```
 
-Arriba a la derecha del archivo hay un botón para copiarlo entero (el ícono de
-dos hojitas, "Copy raw file"). Copialo.
+Vas a ver una pared de texto plano. Es correcto: eso es el archivo.
 
-**3.2 ·** En Supabase, menú de la izquierda → **SQL Editor** → **New query**.
+**3.2 · Seleccioná todo y copiá.** Click en cualquier parte del texto, después
+`Ctrl+A` (o `Cmd+A` en Mac) y `Ctrl+C`. Son 101 KB, así que la selección va a
+tardar un segundo.
 
-**3.3 ·** Pegá todo y apretá **Run** (o `Ctrl+Enter`).
+**3.3 ·** Volvé a Supabase → menú izquierdo → **SQL Editor** → **New query**.
 
-Son 101 KB de SQL, así que tarda unos segundos. Cuando termina, abajo dice
-algo como **Success. No rows returned**. Eso es lo correcto: crea tablas, no
-devuelve filas.
+**3.4 ·** Pegá con `Ctrl+V` y apretá **Run** (o `Ctrl+Enter`).
 
-**3.4 · Verificá que quedó.** Menú izquierdo → **Table Editor**. Tenés que ver
+Tarda unos segundos. Cuando termina, abajo dice **Success. No rows returned**.
+Eso es lo correcto: crea tablas, no devuelve filas.
+
+**3.5 · Verificá que quedó.** Menú izquierdo → **Table Editor**. Tenés que ver
 una lista larga de tablas: `alertas`, `clientes`, `consultoras`, `documentos_cliente`,
 `metricas_semanales`, `pagos`, `sesiones` y varias más. Son 38 en total.
 
@@ -77,7 +99,9 @@ una lista larga de tablas: `alertas`, `clientes`, `consultoras`, `documentos_cli
 
 ## 4 · Cargar el equipo
 
-Otra query en el **SQL Editor** → **New query**. Pegá esto y **Run**:
+Segunda pegada, **mismo lugar**: **SQL Editor → New query**.
+
+Es la PARTE 1 de `supabase/equipo.sql`, que también podés copiar de acá:
 
 ```sql
 insert into consultoras (nombre, email, rol, cupo_maximo) values
@@ -120,11 +144,16 @@ Repetilo para las siete.
 
 ## 6 · Enlazar las dos cosas
 
-Este es **el paso que más se saltea y el que rompe todo en silencio**. Si no lo
-hacés, la app abre pero se ve completamente vacía, sin ningún mensaje de error:
-la base no le devuelve nada a nadie porque no sabe quién es quién.
+Ya tenés dos listas separadas: en el paso 4 cargaste **quién es quién en el
+equipo**, y en el paso 5 creaste **con qué se loguea cada uno**. La base
+todavía no sabe que Kathe-la-consultora y Kathe-la-que-se-loguea son la misma
+persona. Esto las une.
 
-**SQL Editor** → **New query** → pegá y **Run**:
+Es **el paso que más se saltea y el que rompe todo en silencio**: si no lo
+hacés, la app abre y se ve completamente vacía, sin ningún mensaje de error.
+
+Tercera y última pegada, **mismo lugar de siempre**: **SQL Editor → New
+query**. Es la PARTE 2 de `supabase/equipo.sql`:
 
 ```sql
 update consultoras c
