@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "inspect": "tsx scripts/inspect.ts",
-    "seed:sql": "tsx scripts/gen-seed.ts"
+    "seed:sql": "tsx scripts/gen-seed.ts",
+    "sql:instalar": "tsx scripts/gen-instalar.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",

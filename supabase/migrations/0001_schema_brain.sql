@@ -15,7 +15,10 @@
 
 create extension if not exists "pgcrypto";
 create extension if not exists "vector";
-create extension if not exists "pg_cron";
+-- pg_cron NO se crea acá: sólo lo necesita el trabajo nocturno, que es
+-- opcional y vive en supabase/opcional/cron-nocturno.sql. En Supabase esta
+-- extensión se habilita desde Database → Extensions, y tenerla acá hacía
+-- fallar TODA esta migración —el esquema entero— en una base recién creada.
 
 -- ============================================================================
 -- TIPOS

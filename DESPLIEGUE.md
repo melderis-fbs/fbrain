@@ -3,6 +3,10 @@
 Para quien lo va a desplegar. Está escrita para hacerse de arriba abajo sin
 volver a preguntar nada.
 
+> **¿Nunca usaste Supabase?** Empezá por
+> [`SUPABASE-PASO-A-PASO.md`](./SUPABASE-PASO-A-PASO.md), que es la parte 1
+> explicada clic por clic. Después volvé acá para Vercel.
+
 Tiempo: **una hora** hasta tener la app andando con la base conectada. La carga
 de datos es aparte y no es código.
 
@@ -39,21 +43,17 @@ de la base: no se vuelve a mostrar.
 Región: la más cercana al equipo. Con ~85 clientes el plan gratuito alcanza de
 sobra para empezar.
 
-### 1.2 · Correr las migraciones en orden
+### 1.2 · Crear el esquema
 
-En **SQL Editor**, pegar y ejecutar una por una, en este orden exacto. Cada una
-asume la anterior:
+En **SQL Editor → New query**, pegar entero `supabase/instalar.sql` y correrlo.
+Son las siete migraciones y el seed en un solo archivo, en orden. No hace falta
+habilitar ninguna extensión a mano: crea las que usa.
 
-```
-supabase/migrations/0001_schema_brain.sql        el esquema del paquete
-supabase/migrations/0002_fusion.sql              objetivos, hitos, lecturas
-supabase/migrations/0003_reglas_duras_brain.sql  RD-01 a RD-10
-supabase/migrations/0004_reglas_fusion.sql       RD-11 a RD-17, CR-01, CR-02
-supabase/migrations/0005_revision_cartera.sql    atribución, cobranza, bajas
-supabase/migrations/0006_ficha_y_llamadas.sql    teléfono, log de llamadas
-supabase/migrations/0007_documentos_cliente.sql  documentos del cliente
-supabase/seed.sql                                catálogo de 12 hitos
-```
+Si preferís correrlas una por una, están en `supabase/migrations/` numeradas en
+el orden en que hay que aplicarlas, y el catálogo de hitos en `supabase/seed.sql`.
+
+Verificado corriendo las ocho contra un PostgreSQL 16 limpio: aplican sin
+errores y dejan 38 tablas, 12 hitos y 16 funciones de reglas.
 
 ### 1.3 · Cargar el equipo
 

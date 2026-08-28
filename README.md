@@ -23,8 +23,10 @@ npm run seed:sql  # regenera supabase/seed.sql (catálogo de hitos)
 
 ---
 
-> **¿Vas a desplegarlo?** Empezá por [`DESPLIEGUE.md`](./DESPLIEGUE.md): Supabase +
-> Vercel paso a paso, con los dos lugares donde es fácil romper algo caro.
+> **¿Vas a desplegarlo?** [`DESPLIEGUE.md`](./DESPLIEGUE.md) es Supabase + Vercel
+> de arriba abajo. Si nunca usaste Supabase, empezá por
+> [`SUPABASE-PASO-A-PASO.md`](./SUPABASE-PASO-A-PASO.md), que lo explica clic
+> por clic.
 >
 > **¿Vas a implementarlo?** Seguí por [`IMPLEMENTACION.md`](./IMPLEMENTACION.md):
 > orden de carga de datos y qué decisiones no conviene

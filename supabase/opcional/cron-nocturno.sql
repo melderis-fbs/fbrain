@@ -21,6 +21,8 @@
 --     leer la bandeja. Recuperar esa confianza cuesta semanas. Es el error más
 --     caro del arranque.
 
+create extension if not exists "pg_cron";
+
 select cron.schedule(
   'reglas-duras-nocturnas',
   '0 6 * * *',  -- 03:00 en Buenos Aires
