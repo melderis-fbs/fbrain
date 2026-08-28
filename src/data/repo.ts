@@ -1,6 +1,6 @@
 import type {
   Alerta, AsistenciaMentoria, AtribucionManual, Autoridad, Baja, Cliente, Compromiso, Consultora,
-  Diagnostico, EstrategiaVersion, HitoCliente, LecturaConsultora, MetricaSemanal,
+  Diagnostico, DocumentoCliente, EstrategiaVersion, HitoCliente, LecturaConsultora, MetricaSemanal,
   Negocio, ObjetivoComercial, Pago, Prorroga, RevisionCaso, Sesion, Traspaso,
 } from '@/domain/types';
 
@@ -21,6 +21,7 @@ export interface Dataset {
   alertas: Alerta[];
   traspasos: Traspaso[];
   diagnosticos: Diagnostico[];
+  documentos: DocumentoCliente[];
   prorrogas: Prorroga[];
   bajas: Baja[];
   atribuciones: AtribucionManual[];
@@ -49,6 +50,9 @@ export interface Repo {
   /** Lo que entra desde la planilla consolidada. */
   guardarPago(p: Pago): Promise<void>;
   guardarAsistencia(a: AsistenciaMentoria): Promise<void>;
+  /** Los documentos que sube el consultor: transcripciones, llamada de venta. */
+  guardarDocumento(d: DocumentoCliente): Promise<void>;
+  borrarDocumento(id: string): Promise<void>;
   guardarSesion(s: Sesion): Promise<void>;
   guardarMetrica(m: MetricaSemanal): Promise<void>;
   guardarCompromiso(c: Compromiso): Promise<void>;

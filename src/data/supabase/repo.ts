@@ -33,6 +33,7 @@ const M = {
   lectura: { id: 'id', cliente_id: 'clienteId', consultora_id: 'consultoraId', sesion_id: 'sesionId', fecha: 'fecha', percepcion: 'percepcion', bloqueo_declarado: 'bloqueoDeclarado', necesita_intervencion: 'necesitaIntervencion', potencial_renovacion: 'potencialRenovacion', comentario: 'comentario' },
   alerta: { id: 'id', cliente_id: 'clienteId', sesion_id: 'sesionId', codigo: 'codigo', origen: 'origen', estado_semaforo: 'estadoSemaforo', titulo: 'titulo', cuerpo: 'cuerpo', cita_textual: 'citaTextual', fecha_cita: 'fechaCita', pedido: 'pedido', destinatario: 'destinatario', plazo_horas: 'plazoHoras', prioridad: 'prioridad', emitida_at: 'emitidaAt', emitida_en_semana: 'emitidaEnSemana', diferida: 'diferida', cerrada_at: 'cerradaAt', cerrada_por: 'cerradaPor', texto_cierre: 'textoCierre', escalada_a_id: 'escaladaAId', veces_emitida: 'vecesEmitida' },
   traspaso: { id: 'id', cliente_id: 'clienteId', consultora_origen_id: 'consultoraOrigenId', consultora_destino_id: 'consultoraDestinoId', fecha: 'fecha', motivo: 'motivo' },
+  documento: { id: 'id', cliente_id: 'clienteId', tipo: 'tipo', titulo: 'titulo', contenido: 'contenido', fecha: 'fecha', subido_por: 'subidoPor', creado_at: 'creadoAt', archivo: 'archivo' },
   diagnostico: { id: 'id', cliente_id: 'clienteId', consultora_id: 'consultoraId', pregunta: 'pregunta', hipotesis_consultora: 'hipotesisConsultora', cuello_botella: 'cuelloBotella', tipo_bloqueo: 'tipoBloqueo', eslabon_roto: 'eslabonRoto', coincidio: 'coincidio', payload: 'payload', prompt_version: 'promptVersion', modelo: 'modelo', created_at: 'createdAt' },
   prorroga: { id: 'id', cliente_id: 'clienteId', pago_id: 'pagoId', dias_otorgados: 'diasOtorgados', autorizada_por: 'autorizadaPor', autorizada_at: 'autorizadaAt', nueva_fecha: 'nuevaFecha', motivo: 'motivo', resultado: 'resultado', resuelta_at: 'resueltaAt' },
   baja: { id: 'id', cliente_id: 'clienteId', fecha: 'fecha', motivo: 'motivo', solicitada_por: 'solicitadaPor', pidio_reembolso: 'pidioReembolso', nota: 'nota', pasos: 'pasos' },
@@ -56,11 +57,11 @@ export const supabaseRepo: Repo = {
       'consultoras', 'clientes', 'negocio', 'autoridad', 'estrategia_versiones',
       'objetivos_comerciales', 'metricas_semanales', 'sesiones', 'compromisos',
       'pagos', 'asistencias_mentoria', 'hitos_cliente', 'lecturas_consultora',
-      'alertas', 'traspasos', 'diagnosticos',
+      'alertas', 'traspasos', 'diagnosticos', 'documentos_cliente',
       'prorrogas', 'bajas', 'atribuciones', 'revisiones_caso',
     ];
     const res = await Promise.all(tablas.map((t) => sb.from(t).select('*')));
-    const [eq, cl, ne, au, es, ob, me, se, co, pa, as, hi, le, al, tr, di, pr, ba, at, rv] =
+    const [eq, cl, ne, au, es, ob, me, se, co, pa, as, hi, le, al, tr, di, dc, pr, ba, at, rv] =
       res.map((r) => r.data ?? []);
 
     return {
@@ -80,6 +81,7 @@ export const supabaseRepo: Repo = {
       alertas: al.map((r) => camel(r, M.alerta)),
       traspasos: tr.map((r) => camel(r, M.traspaso)),
       diagnosticos: di.map((r) => camel(r, M.diagnostico)),
+      documentos: dc.map((r) => camel(r, M.documento)),
       prorrogas: pr.map((r) => camel(r, M.prorroga)),
       bajas: ba.map((r: any) => ({ ...camel(r, M.baja), pasos: r.pasos ?? [] })),
       atribuciones: at.map((r) => camel(r, M.atribucion)),
@@ -103,6 +105,14 @@ export const supabaseRepo: Repo = {
   async guardarObjetivo(o) {
     const sb = await clienteSupabase();
     await sb.from('objetivos_comerciales').insert(snake(o as never, M.objetivo));
+  },
+  async guardarDocumento(d) {
+    const sb = await clienteSupabase();
+    await sb.from('documentos_cliente').upsert(snake(d as never, M.documento));
+  },
+  async borrarDocumento(id) {
+    const sb = await clienteSupabase();
+    await sb.from('documentos_cliente').delete().eq('id', id);
   },
   async guardarPago(p) {
     const sb = await clienteSupabase();

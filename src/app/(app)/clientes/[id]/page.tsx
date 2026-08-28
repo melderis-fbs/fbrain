@@ -132,6 +132,9 @@ export default async function ExpedientePage({ params }: { params: Promise<{ id:
           <Link href={`/clientes/${id}/tracker`} className="rounded-lg border border-line px-3 py-2 text-[12.5px] font-medium hover:border-accent">
             Cargar la semana
           </Link>
+          <Link href={`/clientes/${id}/documentos`} className="rounded-lg border border-line px-3 py-2 text-[12.5px] font-medium hover:border-accent">
+            Documentos{v.ctx.registros.documentos.length > 0 && ` (${v.ctx.registros.documentos.length})`}
+          </Link>
         </div>
       </Card>
 

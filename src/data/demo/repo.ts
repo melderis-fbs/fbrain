@@ -23,7 +23,7 @@ let cache: { key: string; data: Dataset } | null = null;
 function asegurar(hoy: string): Dataset {
   if (cache && cache.key === hoy) return cache.data;
   const base = generarDataset(hoy);
-  cache = { key: hoy, data: { equipo: equipoDe(hoy), ...base } };
+  cache = { key: hoy, data: { equipo: equipoDe(hoy), documentos: [], ...base } };
   return cache.data;
 }
 
@@ -63,6 +63,21 @@ export const demoRepo: Repo = {
     const d = cache?.data;
     if (!d) return;
     d.objetivos.push(o);
+  },
+
+  async guardarDocumento(x) {
+    const d = cache?.data;
+    if (!d) return;
+    const i = d.documentos.findIndex((y) => y.id === x.id);
+    if (i >= 0) d.documentos[i] = x;
+    else d.documentos.unshift(x);
+  },
+
+  async borrarDocumento(id) {
+    const d = cache?.data;
+    if (!d) return;
+    const i = d.documentos.findIndex((x) => x.id === id);
+    if (i >= 0) d.documentos.splice(i, 1);
   },
 
   async guardarPago(p) {

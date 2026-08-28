@@ -16,9 +16,14 @@ export default async function PlanillaPage() {
     <div className="mx-auto max-w-3xl">
       <h1 className="text-[22px] font-semibold tracking-tight">La planilla</h1>
       <p className="mt-1 text-[13px] leading-relaxed text-ink-2">
-        Una sola planilla en Drive con cuatro solapas, y la app la lee. Nadie carga dos veces: lo
-        que ya vive en finanzas y en el tracker entra desde acá, y en la app se carga sólo lo que
-        sale de la cabeza del consultor —la sesión, el reporte, los compromisos y el onboarding.
+        Una sola planilla en Drive con tres solapas, y la app la lee. Nadie carga dos veces: lo
+        que ya vive en la planilla de finanzas entra desde acá.
+      </p>
+      <p className="mt-2 text-[13px] leading-relaxed text-ink-2">
+        Las <strong>métricas semanales no están acá</strong>: viven en la base del CRM y se cargan
+        desde el tracker de cada cliente. Tenerlas en los dos lados obliga a decidir cuál gana cada
+        vez que difieren, y la que cargó la consultora mirando el caso es justamente la que una
+        importación diaria pisaría sin avisar.
       </p>
 
       <div className="mt-4">
@@ -39,8 +44,8 @@ export default async function PlanillaPage() {
           </li>
           <li>
             <strong>3.</strong> Nombrar las solapas <code>{SOLAPAS.clientes}</code>,{' '}
-            <code>{SOLAPAS.metricas}</code>, <code>{SOLAPAS.pagos}</code> y{' '}
-            <code>{SOLAPAS.asistencias}</code>. Los nombres se pueden cambiar por entorno.
+            <code>{SOLAPAS.pagos}</code> y <code>{SOLAPAS.asistencias}</code>. Los nombres se
+            pueden cambiar por entorno.
           </li>
           <li>
             <strong>4.</strong> Los encabezados se comparan sin acentos ni mayúsculas, y cada campo
@@ -63,8 +68,9 @@ export default async function PlanillaPage() {
             adivina por parecido de nombre. Todo lo salteado aparece arriba con su motivo.
           </li>
           <li>
-            · <strong>La planilla no pisa lo que se carga en la app.</strong> Sesiones, reportes,
-            compromisos, lecturas y alertas no se tocan desde acá.
+            · <strong>La planilla no pisa lo que se carga en la app.</strong> Las métricas
+            semanales, las sesiones, los reportes, los compromisos, las lecturas y las alertas no
+            se tocan desde acá.
           </li>
         </ul>
       </section>

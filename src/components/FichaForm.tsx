@@ -84,6 +84,7 @@ export function FichaForm({
   equipo,
   esAdmin,
   conectado,
+  guardados,
   accion,
 }: {
   clienteId: string;
@@ -91,6 +92,8 @@ export function FichaForm({
   equipo: { id: string; nombre: string }[];
   esAdmin: boolean;
   conectado: boolean;
+  /** Los documentos ya cargados del cliente, para no tener que pegarlos otra vez. */
+  guardados: { titulo: string; fecha: string; contenido: string }[];
   accion: (clienteId: string, fd: FormData) => Promise<void>;
 }) {
   const [campos, setCampos] = useState<Campos>(inicial);
@@ -102,13 +105,14 @@ export function FichaForm({
 
   const set = (k: string, v: string) => setCampos((c) => ({ ...c, [k]: v }));
 
-  async function extraer() {
+  async function extraer(desde?: string) {
+    const fuente = desde ?? documento;
     setExtrayendo(true);
     setError(null);
     setFuentes([]);
     setContradicciones([]);
     try {
-      const r = await extraerFicha(documento);
+      const r = await extraerFicha(fuente);
       if (!r.ok) {
         setError([r.error, ...(r.errores ?? [])].join(' · '));
         return;
@@ -172,7 +176,8 @@ export function FichaForm({
         <h2 className="text-[14px] font-semibold">Arrancar desde lo que ya tenés</h2>
         <p className="mb-3 mt-0.5 text-[11.5px] leading-relaxed text-ink-3">
           Pegá la transcripción de la llamada de venta, el formulario de onboarding o lo que haya en
-          Notion. El extractor completa los campos vacíos y deja la cita de dónde sacó cada cosa.
+          Notion — o usá lo que ya subiste en Documentos. El extractor completa los campos vacíos y
+          deja la cita de dónde sacó cada cosa.
           {' '}No pisa nada que ya hayas escrito, y lo que no está en el documento lo deja en blanco.
         </p>
         <textarea
@@ -183,14 +188,35 @@ export function FichaForm({
           className={CLASE_INPUT}
         />
         <div className="mt-2 flex flex-wrap items-center gap-3">
+          {guardados.length > 0 && (
+            <button
+              type="button"
+              onClick={() =>
+                extraer(
+                  guardados
+                    .map((d) => `### ${d.titulo} · ${d.fecha}\n\n${d.contenido}`)
+                    .join('\n\n---\n\n'),
+                )
+              }
+              disabled={!conectado || extrayendo}
+              className="rounded-lg px-3 py-1.5 text-[12px] font-semibold text-white disabled:opacity-40"
+              style={{ background: 'var(--accent)' }}
+            >
+              {extrayendo ? 'Leyendo…' : `Extraer de los ${guardados.length} documentos cargados`}
+            </button>
+          )}
           <button
             type="button"
-            onClick={extraer}
+            onClick={() => extraer()}
             disabled={!conectado || extrayendo || documento.trim().length < 50}
-            className="rounded-lg px-3 py-1.5 text-[12px] font-semibold text-white disabled:opacity-40"
-            style={{ background: 'var(--accent)' }}
+            className={
+              guardados.length > 0
+                ? 'rounded-lg border border-line px-3 py-1.5 text-[12px] font-medium hover:border-accent disabled:opacity-40'
+                : 'rounded-lg px-3 py-1.5 text-[12px] font-semibold text-white disabled:opacity-40'
+            }
+            style={guardados.length > 0 ? undefined : { background: 'var(--accent)' }}
           >
-            {extrayendo ? 'Leyendo…' : 'Extraer del documento'}
+            {extrayendo ? 'Leyendo…' : 'Extraer de lo pegado acá'}
           </button>
           {!conectado && (
             <span className="text-[11.5px] text-ink-3">

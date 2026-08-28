@@ -103,9 +103,13 @@ Una sola planilla en Drive con cuatro solapas, que la app lee desde
 | Solapa | Qué entra |
 |---|---|
 | `Clientes` | Las columnas de finanzas tal como están, **las cuatro cuotas con su fecha y estado**, y el expediente: negocio, autoridad, estrategia y meta |
-| `Metricas` | Una fila por cliente por semana |
 | `Pagos` | Las cuotas en formato largo, si se prefiere sobre las columnas |
 | `Asistencias` | Una fila por mentoría |
+
+Las **métricas semanales no vienen de la planilla**: viven en la base del CRM y
+se cargan desde el tracker de cada cliente. Tenerlas en los dos lados obliga a
+decidir cuál gana cada vez que difieren, y la que cargó la consultora mirando
+el caso es justamente la que una importación diaria pisaría sin avisar.
 
 - Se lee por el **export CSV de Google**: alcanza con compartir la planilla por
   enlace. Sin service account, sin credenciales, y funciona en WebContainer.
@@ -117,6 +121,24 @@ Una sola planilla en Drive con cuatro solapas, que la app lee desde
 - **La planilla no pisa lo que se carga en la app**: sesiones, reportes,
   compromisos, lecturas y alertas no se tocan desde ahí.
 - Estrategia y objetivo entran append-only, y sólo si algo cambió.
+
+## Los documentos del cliente
+
+`/clientes/[id]/documentos` es donde el consultor sube todo lo que tiene: la
+transcripción de la llamada de venta, el formulario de onboarding, las
+transcripciones de sesión, el contrato. Archivos de texto (.txt, .md, .vtt,
+.srt) leídos en el navegador, o pegado directo. Un PDF o un .docx hay que
+copiarlo y pegarlo: extraerlos necesitaría librerías nativas que no corren en
+WebContainer, y es mejor decirlo que fallar en silencio.
+
+Van a la tabla `documentos_cliente` —no a `corpus_documentos`, que es el corpus
+del método y lo comparte toda la cartera— y **el diagnóstico, el onboarding y el
+chat los leen**. Es lo que permite que el motor cite textual: sin cita textual
+el método no emite nada.
+
+Si por tamaño algún documento queda afuera del contexto, el prompt lo dice con
+nombre y fecha. Truncar en silencio es la forma más rápida de que el modelo
+concluya sobre la mitad del caso y nadie se entere.
 
 ## Lo que todavía no existe
 

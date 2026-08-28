@@ -38,7 +38,6 @@ describe('sincronizar', () => {
   it('importa las plantillas del paquete sin saltear nada', async () => {
     mockearDrive({
       Clientes: PLANTILLA('Clientes'),
-      Metricas: PLANTILLA('Metricas'),
       Pagos: PLANTILLA('Pagos'),
       Asistencias: PLANTILLA('Asistencias'),
     });
@@ -48,7 +47,6 @@ describe('sincronizar', () => {
     const porSolapa = Object.fromEntries(r.solapas.map((s) => [s.solapa, s]));
     expect(porSolapa.Clientes.error).toBeUndefined();
     expect(porSolapa.Clientes.aplicadas).toBe(1);
-    expect(porSolapa.Metricas.aplicadas).toBe(2);
     expect(porSolapa.Pagos.aplicadas).toBe(3);
     expect(porSolapa.Asistencias.aplicadas).toBe(2);
     for (const s of r.solapas) expect(s.salteadas).toEqual([]);
@@ -57,7 +55,6 @@ describe('sincronizar', () => {
   it('deja los datos en la base con las cuotas y su estado', async () => {
     mockearDrive({
       Clientes: PLANTILLA('Clientes'),
-      Metricas: PLANTILLA('Metricas'),
       Pagos: PLANTILLA('Pagos'),
       Asistencias: PLANTILLA('Asistencias'),
     });
@@ -91,46 +88,38 @@ describe('sincronizar', () => {
     expect(objetivo?.ticket).toBe(900);
   });
 
-  it('respeta que una celda vacía no es un cero', async () => {
-    mockearDrive({
-      Clientes: PLANTILLA('Clientes'),
-      Metricas: PLANTILLA('Metricas'),
-      Pagos: PLANTILLA('Pagos'),
-      Asistencias: PLANTILLA('Asistencias'),
-    });
-    const { sincronizar } = await import('./planilla');
-    const { demoRepo } = await import('@/data/demo/repo');
-    await sincronizar(HOY);
-    const d = await demoRepo.cargarTodo(HOY);
-    const ana = d.clientes.find((c) => c.nombre === 'Ana Pérez')!;
-
-    const s1 = d.metricas.find((m) => m.clienteId === ana.id && m.semanaIso === '2026-03-16')!;
-    // La primera semana declara 0 ventas: se midió y dio cero.
-    expect(s1.ventas).toBe(0);
-    // Y no declara leads: nadie los midió. Eso NO es cero.
-    expect(s1.leads).toBeNull();
-
-    const s2 = d.metricas.find((m) => m.clienteId === ana.id && m.semanaIso === '2026-03-23')!;
-    expect(s2.conversacionesAvanzadas).toBeNull();
-    expect(s2.ventas).toBe(1);
-    expect(s2.facturado).toBe(900);
-  });
-
   it('saltea la fila con cliente no identificable en vez de adivinar', async () => {
     mockearDrive({
       Clientes: PLANTILLA('Clientes'),
-      Metricas: 'Cliente,Semana,Ventas\nQuien Sabe,16/03/2026,2\nAna Pérez,30/03/2026,1',
-      Pagos: 'Cliente,Cuota,Monto,Vencimiento,Estado\n',
-      Asistencias: 'Cliente,Mentoria,Fecha,Asistio\n',
+      Pagos: 'Cliente,Cuota,Monto,Vencimiento,Estado\nQuien Sabe,1,100,04/03/2026,pagado\nAna Pérez,1,1000,04/03/2026,pagado',
+      Asistencias: PLANTILLA('Asistencias'),
     });
     const { sincronizar } = await import('./planilla');
     const r = await sincronizar(HOY);
-    const metricas = r.solapas.find((s) => s.solapa === 'Metricas')!;
+    const pagos = r.solapas.find((s) => s.solapa === 'Pagos')!;
 
-    expect(metricas.aplicadas).toBe(1);
-    expect(metricas.salteadas).toHaveLength(1);
-    expect(metricas.salteadas[0].motivo).toContain('Quien Sabe');
-    expect(metricas.salteadas[0].fila).toBe(2);
+    expect(pagos.aplicadas).toBe(1);
+    expect(pagos.salteadas).toHaveLength(1);
+    expect(pagos.salteadas[0].motivo).toContain('Quien Sabe');
+    expect(pagos.salteadas[0].fila).toBe(2);
+  });
+
+  it('no toca las métricas semanales: viven en la base del CRM', async () => {
+    mockearDrive({
+      Clientes: PLANTILLA('Clientes'),
+      Pagos: PLANTILLA('Pagos'),
+      Asistencias: PLANTILLA('Asistencias'),
+      // Si alguien agrega una solapa Metricas a la planilla, se ignora.
+      Metricas: 'Cliente,Semana,Ventas\nAna Pérez,16/03/2026,99',
+    });
+    const { sincronizar } = await import('./planilla');
+    const { demoRepo } = await import('@/data/demo/repo');
+    const r = await sincronizar(HOY);
+    const d = await demoRepo.cargarTodo(HOY);
+    const ana = d.clientes.find((c) => c.nombre === 'Ana Pérez')!;
+
+    expect(r.solapas.map((s) => s.solapa)).toEqual(['Clientes', 'Pagos', 'Asistencias']);
+    expect(d.metricas.find((m) => m.clienteId === ana.id && m.semanaIso === '2026-03-16')).toBeUndefined();
   });
 
   it('avisa con un mensaje accionable cuando la planilla no está compartida', async () => {

@@ -99,6 +99,11 @@ export default async function FichaPage({ params }: { params: Promise<{ id: stri
         equipo={ws.consultoras.map((c) => ({ id: c.id, nombre: c.nombre }))}
         esAdmin={veTodo(usuario.rol)}
         conectado={hayModelo()}
+        guardados={v.ctx.registros.documentos.map((d) => ({
+          titulo: d.titulo,
+          fecha: d.fecha,
+          contenido: d.contenido,
+        }))}
         accion={guardarFicha}
       />
     </div>

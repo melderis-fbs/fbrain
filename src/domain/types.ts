@@ -454,6 +454,33 @@ export interface Evidencia {
   cita?: string;
 }
 
+/**
+ * Lo que el consultor sube: transcripciones, la llamada de venta, el
+ * formulario de onboarding, un contrato. Es la materia prima del expediente y
+ * del diagnóstico, y por eso vive con el cliente y no en el corpus del método.
+ */
+export type TipoDocumento =
+  | 'transcripcion'
+  | 'llamada_venta'
+  | 'formulario_onboarding'
+  | 'contrato'
+  | 'reporte'
+  | 'otro';
+
+export interface DocumentoCliente {
+  id: string;
+  clienteId: string;
+  tipo: TipoDocumento;
+  titulo: string;
+  contenido: string;
+  /** La fecha del hecho, no la de la carga: una transcripción es de su sesión. */
+  fecha: string;
+  subidoPor?: string;
+  creadoAt: string;
+  /** Si la carga vino de un archivo, cuál. Sirve para no subir dos veces lo mismo. */
+  archivo?: string;
+}
+
 export interface Diagnostico {
   id: string;
   clienteId: string;

@@ -12,9 +12,15 @@
  * mismo. El primero que aparezca en la fila gana.
  */
 
+/**
+ * Tres solapas, no cuatro. Las métricas semanales NO vienen de la planilla:
+ * viven en la base del CRM y se cargan desde `/clientes/[id]/tracker`. Tenerlas
+ * en los dos lados obliga a decidir cuál gana cada vez que difieren, y la
+ * respuesta correcta —la que cargó la consultora mirando el caso— es
+ * justamente la que una importación diaria pisaría sin avisar.
+ */
 export const SOLAPAS = {
   clientes: process.env.SHEETS_SOLAPA_CLIENTES || 'Clientes',
-  metricas: process.env.SHEETS_SOLAPA_METRICAS || 'Metricas',
   pagos: process.env.SHEETS_SOLAPA_PAGOS || 'Pagos',
   asistencias: process.env.SHEETS_SOLAPA_ASISTENCIAS || 'Asistencias',
 } as const;
@@ -110,28 +116,7 @@ export const CUOTAS: { monto: string[]; fecha: string[]; metodo: string[]; estad
   },
 ];
 
-/** Solapa 2 · una fila por cliente por semana. */
-export const METRICAS: Mapeo = {
-  cliente: ['cliente', 'nombre'],
-  semana: ['semana', 'semana iso', 'lunes'],
-  contenidoPublicado: ['contenido publicado', 'contenido'],
-  alcanceTotal: ['alcance total', 'alcance'],
-  alcanceNoSeguidores: ['alcance no seguidores'],
-  dmsIniciados: ['dms iniciados', 'dms'],
-  conversacionesAvanzadas: ['conversaciones avanzadas', 'conversaciones'],
-  leads: ['leads'],
-  leadsCalificados: ['leads calificados'],
-  agendas: ['agendas'],
-  asistencias: ['asistencias'],
-  cancelaciones: ['cancelaciones'],
-  ofertasRealizadas: ['ofertas realizadas', 'ofertas'],
-  ventas: ['ventas'],
-  facturado: ['facturado'],
-  ticketPromedio: ['ticket promedio'],
-  inversionAds: ['inversion ads', 'inversión en ads', 'ads'],
-};
-
-/** Solapa 3 · pagos en formato largo, si preferís una fila por cuota. */
+/** Solapa 2 · pagos en formato largo, si preferís una fila por cuota. */
 export const PAGOS: Mapeo = {
   cliente: ['cliente', 'nombre'],
   numeroCuota: ['cuota', 'numero cuota', 'nro cuota'],
@@ -142,7 +127,7 @@ export const PAGOS: Mapeo = {
   estado: ['estado', 'estado pago'],
 };
 
-/** Solapa 4 · asistencias a mentorías. */
+/** Solapa 3 · asistencias a mentorías. */
 export const ASISTENCIAS: Mapeo = {
   cliente: ['cliente', 'nombre'],
   mentoria: ['mentoria', 'mentoría', 'modulo', 'módulo'],

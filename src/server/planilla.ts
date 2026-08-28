@@ -1,14 +1,13 @@
 import 'server-only';
 import { getRepo } from '@/data';
-import { mondayOf } from '@/lib/date';
 import { fechaDePlanilla as fecha, normalizarEncabezado as normalizar, numeroDePlanilla as numero, parsearCsv } from '@/lib/csv';
 import type {
-  AsistenciaMentoria, Autoridad, Cliente, EstrategiaVersion, MetricaSemanal,
+  AsistenciaMentoria, Autoridad, Cliente, EstrategiaVersion,
   Mentoria, Negocio, ObjetivoComercial, Pago,
 } from '@/domain/types';
 import {
   ASISTENCIAS, CLIENTES, CUOTAS, ESTADO_CLIENTE, ESTADO_PAGO, MENTORIAS,
-  METRICAS, PAGOS, SOLAPAS, type Mapeo,
+  PAGOS, SOLAPAS, type Mapeo,
 } from './planilla-mapeo';
 
 /**
@@ -26,7 +25,8 @@ import {
  *  2. Fila con cliente no identificable: se saltea y se informa. No se inventa
  *     y no se adivina por parecido de nombre.
  *  3. Nada de lo que el consultor carga en la app se pisa desde la planilla:
- *     sesiones, reportes, compromisos, lecturas y alertas no se tocan acá.
+ *     las métricas semanales, las sesiones, los reportes, los compromisos, las
+ *     lecturas y las alertas no se tocan acá.
  */
 
 export function hayPlanilla(): boolean {
@@ -280,51 +280,7 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
   }
   solapas.push(rc);
 
-  // ------------------------------------------------------------ 2 · métricas
-  const rm: ReporteSolapa = { solapa: SOLAPAS.metricas, leidas: 0, aplicadas: 0, salteadas: [] };
-  try {
-    const filas = await bajar(SOLAPAS.metricas);
-    rm.leidas = filas.length;
-    for (const [i, f] of filas.entries()) {
-      const nombre = leer(f, METRICAS, 'cliente');
-      const c = porNombre.get(normalizar(nombre));
-      if (!c) { rm.salteadas.push({ fila: i + 2, motivo: `Cliente «${nombre || '(vacío)'}» no identificable.` }); continue; }
-      const semanaCruda = fecha(leer(f, METRICAS, 'semana'));
-      if (!semanaCruda) { rm.salteadas.push({ fila: i + 2, motivo: `Semana ilegible para «${nombre}».` }); continue; }
-      const semana = mondayOf(semanaCruda);
-
-      const m: MetricaSemanal = {
-        id: `${c.id}-${semana}`,
-        clienteId: c.id,
-        semanaIso: semana,
-        contenidoPublicado: numero(leer(f, METRICAS, 'contenidoPublicado')),
-        alcanceTotal: numero(leer(f, METRICAS, 'alcanceTotal')),
-        alcanceNoSeguidores: numero(leer(f, METRICAS, 'alcanceNoSeguidores')),
-        dmsIniciados: numero(leer(f, METRICAS, 'dmsIniciados')),
-        conversacionesAvanzadas: numero(leer(f, METRICAS, 'conversacionesAvanzadas')),
-        leads: numero(leer(f, METRICAS, 'leads')),
-        leadsCalificados: numero(leer(f, METRICAS, 'leadsCalificados')),
-        agendas: numero(leer(f, METRICAS, 'agendas')),
-        asistencias: numero(leer(f, METRICAS, 'asistencias')),
-        cancelaciones: numero(leer(f, METRICAS, 'cancelaciones')),
-        llamadas: numero(leer(f, METRICAS, 'asistencias')),
-        ofertasRealizadas: numero(leer(f, METRICAS, 'ofertasRealizadas')),
-        ventas: numero(leer(f, METRICAS, 'ventas')),
-        facturado: numero(leer(f, METRICAS, 'facturado')),
-        ticketPromedio: numero(leer(f, METRICAS, 'ticketPromedio')),
-        inversionAds: numero(leer(f, METRICAS, 'inversionAds')),
-        objeciones: [],
-        origenOportunidades: {},
-      };
-      await repo.guardarMetrica(m);
-      rm.aplicadas++;
-    }
-  } catch (e) {
-    rm.error = e instanceof Error ? e.message : 'Error desconocido.';
-  }
-  solapas.push(rm);
-
-  // --------------------------------------------------------------- 3 · pagos
+  // --------------------------------------------------------------- 2 · pagos
   const rp: ReporteSolapa = { solapa: SOLAPAS.pagos, leidas: 0, aplicadas: 0, salteadas: [] };
   try {
     const filas = await bajar(SOLAPAS.pagos);
@@ -356,7 +312,7 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
   }
   solapas.push(rp);
 
-  // --------------------------------------------------------- 4 · asistencias
+  // --------------------------------------------------------- 3 · asistencias
   const ra: ReporteSolapa = { solapa: SOLAPAS.asistencias, leidas: 0, aplicadas: 0, salteadas: [] };
   try {
     const filas = await bajar(SOLAPAS.asistencias);

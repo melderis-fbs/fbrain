@@ -103,6 +103,7 @@ function registros(over: Partial<RegistrosCliente> = {}): RegistrosCliente {
     alertas: over.alertas ?? [],
     traspasos: over.traspasos ?? [],
     diagnosticos: over.diagnosticos ?? [],
+    documentos: [],
     prorrogas: over.prorrogas ?? [],
     bajas: over.bajas ?? [],
     atribuciones: over.atribuciones ?? [],

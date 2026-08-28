@@ -5,6 +5,7 @@ import { serializarExpediente } from '@/domain/motores/diagnostico';
 import { getUsuario, veTodo } from '@/server/auth';
 import { getWorkspace } from '@/server/workspace';
 import { hayModelo } from '@/server/modelo';
+import { documentosParaPrompt } from '@/server/contexto-documentos';
 
 export const runtime = 'nodejs';
 
@@ -79,7 +80,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       { type: 'text', text: CONSTITUCION },
       {
         type: 'text',
-        text: `## EXPEDIENTE DEL CLIENTE\n\n${serializarExpediente(v.ctx, v.alertas)}\n\n${INSTRUCCIONES}`,
+        text:
+          `## EXPEDIENTE DEL CLIENTE\n\n${serializarExpediente(v.ctx, v.alertas)}\n\n` +
+          `${documentosParaPrompt(v.ctx.registros.documentos).texto}\n\n${INSTRUCCIONES}`,
         cache_control: { type: 'ephemeral' },
       },
     ],

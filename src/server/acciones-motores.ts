@@ -29,6 +29,7 @@ import { fichaExtraidaSchema, PROMPT_FICHA, VERSION_FICHA } from '@/domain/motor
 import { getUsuario } from '@/server/auth';
 import { getWorkspace, hoyIso } from '@/server/workspace';
 import { correrMotor } from '@/server/modelo';
+import { documentosParaPrompt } from '@/server/contexto-documentos';
 import type { Diagnostico, DiagnosticoPayload, TipoBloqueo } from '@/domain/types';
 
 /**
@@ -61,11 +62,14 @@ export async function correrDiagnostico(clienteId: string, formData: FormData) {
   const pregunta = String(formData.get('pregunta') ?? '').trim() || undefined;
 
   const { user, version } = construirPromptDiagnostico(ctx, alertas, pregunta);
+  // Los números dicen qué pasó; los documentos, qué se dijo. Sin esto el motor
+  // no puede citar textual, y sin cita textual el método no emite nada.
+  const docs = documentosParaPrompt(ctx.registros.documentos);
 
   const r = await correrMotor({
     motor: 'diagnostico',
     promptMotor: PROMPT_DIAGNOSTICO,
-    contexto: user.join('\n\n'),
+    contexto: [...user, docs.texto].join('\n\n'),
     schema: diagnosticoSchema,
     promptVersion: version,
   });
@@ -173,6 +177,7 @@ export async function correrOnboarding(clienteId: string) {
     promptMotor: PROMPT_ONBOARDING,
     contexto:
       `${serializarExpediente(ctx, alertas)}\n\n` +
+      `${documentosParaPrompt(ctx.registros.documentos).texto}\n\n` +
       (cuenta ? `## CUENTA INVERSA\n${JSON.stringify(cuenta, null, 2)}` : '## CUENTA INVERSA\nSin meta ni ticket cargados: no se puede calcular. Decilo en el plan.'),
     schema: onboardingSchema,
     promptVersion: VERSION_ONBOARDING,
