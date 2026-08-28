@@ -34,6 +34,37 @@ export const demoRepo: Repo = {
     return asegurar(hoy);
   },
 
+  async guardarCliente(c) {
+    const d = cache?.data;
+    if (!d) return;
+    const i = d.clientes.findIndex((x) => x.id === c.id);
+    if (i >= 0) d.clientes[i] = c;
+    else d.clientes.push(c);
+  },
+
+  async guardarNegocio(n) {
+    const d = cache?.data;
+    if (!d) return;
+    const i = d.negocios.findIndex((x) => x.clienteId === n.clienteId);
+    if (i >= 0) d.negocios[i] = n;
+    else d.negocios.push(n);
+  },
+
+  async guardarAutoridad(a) {
+    const d = cache?.data;
+    if (!d) return;
+    const i = d.autoridades.findIndex((x) => x.clienteId === a.clienteId);
+    if (i >= 0) d.autoridades[i] = a;
+    else d.autoridades.push(a);
+  },
+
+  /** Append-only: cambiar la meta no borra contra qué se venía midiendo. */
+  async guardarObjetivo(o) {
+    const d = cache?.data;
+    if (!d) return;
+    d.objetivos.push(o);
+  },
+
   async guardarSesion(s) {
     const d = cache?.data;
     if (!d) return;

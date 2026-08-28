@@ -135,17 +135,23 @@ export const scoreSchema = z
     }
   });
 
-export const coherenciaSchema = z
-  .object({
-    perfilInferidoCiego: z.object({
-      quienEs: z.string().min(10),
-      nivelDolor: z.enum(['principiante', 'crecimiento']),
-      movimiento: z.enum(['escapar', 'capturar']),
-      capacidadPagoInferida: z.string(),
-      quienNoSeReconoce: z.string(),
-      frasesDecisivas: z.array(z.object({ cita: z.string(), senal: z.string() })).min(3).max(6),
-    }),
-    perfilDeclarado: z.string(),
+/**
+ * El test de coherencia son dos llamadas y el orden ES la funcionalidad: la
+ * primera lee el material a ciegas, sin saber nada del negocio; la segunda
+ * compara ese perfil contra el declarado. Por eso cada paso tiene su contrato
+ * propio, y las reglas cruzadas se validan sobre el objeto ya ensamblado.
+ */
+export const perfilCiegoSchema = z.object({
+  quienEs: z.string().min(10),
+  nivelDolor: z.enum(['principiante', 'crecimiento']),
+  movimiento: z.enum(['escapar', 'capturar']),
+  capacidadPagoInferida: z.string(),
+  quienNoSeReconoce: z.string(),
+  frasesDecisivas: z.array(z.object({ cita: z.string(), senal: z.string() })).min(3).max(6),
+});
+
+export const veredictoCoherenciaSchema = z.object({
+  perfilDeclarado: z.string(),
     veredicto: z.enum(['coherente', 'parcial', 'incoherente']),
     veredictoPorQue: z.string().min(10),
     brecha: z.array(
@@ -165,7 +171,10 @@ export const coherenciaSchema = z
     queNoHaria: z.array(z.string()).min(1),
     conclusionLeads: z.string(),
     principioFounders: z.string(),
-  })
+});
+
+export const coherenciaSchema = veredictoCoherenciaSchema
+  .extend({ perfilInferidoCiego: perfilCiegoSchema })
   .superRefine((c, ctx) => {
     // Si los leads son incorrectos, no se concluye segmentación primero.
     if (c.eslabonATocar === 'canal') {

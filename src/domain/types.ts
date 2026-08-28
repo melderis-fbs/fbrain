@@ -46,6 +46,7 @@ export interface Cliente {
   id: string;
   nombre: string;
   email?: string;
+  telefono?: string;
   programa: string;
   fechaAlta: string;
   fechaFinPrevista?: string;

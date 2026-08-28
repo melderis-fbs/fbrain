@@ -41,6 +41,11 @@ export interface CierreAlerta {
 export interface Repo {
   readonly modo: 'demo' | 'supabase';
   cargarTodo(hoy: string): Promise<Dataset>;
+  /** La ficha: los datos del cliente que hoy sólo se podían cargar por CSV. */
+  guardarCliente(c: Cliente): Promise<void>;
+  guardarNegocio(n: Negocio): Promise<void>;
+  guardarAutoridad(a: Autoridad): Promise<void>;
+  guardarObjetivo(o: ObjetivoComercial): Promise<void>;
   guardarSesion(s: Sesion): Promise<void>;
   guardarMetrica(m: MetricaSemanal): Promise<void>;
   guardarCompromiso(c: Compromiso): Promise<void>;

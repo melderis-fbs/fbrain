@@ -13,6 +13,8 @@ import { Hitos } from '@/components/Hitos';
 import { Timeline } from '@/components/Timeline';
 import { Tracker } from '@/components/Tracker';
 import { AlertaCard } from '@/components/AlertaCard';
+import { ChatCliente } from '@/components/ChatCliente';
+import { hayModelo } from '@/server/modelo';
 import { colorIndice, plata } from '@/lib/ui';
 import { formatDate, formatDateLong } from '@/lib/date';
 
@@ -124,8 +126,18 @@ export default async function ExpedientePage({ params }: { params: Promise<{ id:
           <Link href={`/clientes/${id}/coherencia`} className="rounded-lg border border-line px-3 py-2 text-[12.5px] font-medium hover:border-accent">
             Test de coherencia
           </Link>
+          <Link href={`/clientes/${id}/ficha`} className="rounded-lg border border-line px-3 py-2 text-[12.5px] font-medium hover:border-accent">
+            Editar la ficha
+          </Link>
+          <Link href={`/clientes/${id}/tracker`} className="rounded-lg border border-line px-3 py-2 text-[12.5px] font-medium hover:border-accent">
+            Cargar la semana
+          </Link>
         </div>
       </Card>
+
+      <div className="mb-4">
+        <ChatCliente clienteId={id} nombre={v.ctx.cliente.nombre} conectado={hayModelo()} />
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">

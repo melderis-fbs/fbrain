@@ -25,7 +25,11 @@ para no depender de ninguno.
 3. NO commitear `.next/`. Está en `.gitignore` por algo: son artefactos de
    build que pesan decenas de MB y rompen la importación del proyecto.
 
-4. NO tocar `src/domain/`. Es el motor del producto: TypeScript puro, sin
+4. NO cambiar el proveedor de IA. El proyecto usa la API de Anthropic
+   (`@anthropic-ai/sdk`) porque el paquete del método lo especifica así en
+   `paquete/09-integraciones`. No lo migres a OpenAI ni a ningún otro.
+
+5. NO tocar `src/domain/`. Es el motor del producto: TypeScript puro, sin
    React y sin Supabase, cubierto por 44 tests en `src/domain/motor.test.ts`.
    Si un cambio ahí es necesario, corré `npm test` y que pasen los 44.
 
@@ -51,6 +55,12 @@ Entrás por `/login` y elegís con qué usuario recorrerla.
 
 Si se cargan `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 (ver `.env.example`), la app pasa sola a usar Supabase.
+
+Los motores de IA y el chat necesitan `ANTHROPIC_API_KEY`. Sin ella la app
+funciona igual: los motores quedan "sin conectar" y responde el motor de
+reglas local. Esta key es de Anthropic (Claude), NO de OpenAI, y NUNCA lleva
+prefijo `NEXT_PUBLIC_`: si lo llevara, viajaría al browser de cualquiera que
+abra la app.
 
 ## Verificación
 

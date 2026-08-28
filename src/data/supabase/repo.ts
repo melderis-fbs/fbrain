@@ -19,7 +19,7 @@ const camel = <T,>(row: any, mapa: Record<string, string>): T => {
 
 const M = {
   consultora: { id: 'id', nombre: 'nombre', email: 'email', rol: 'rol', cupo_maximo: 'cupoMaximo', acepta_nuevos: 'aceptaNuevos', activa: 'activa', color: 'color', mano_levantada_at: 'manoLevantadaAt', mano_levantada_nota: 'manoLevantadaNota', sesiones_back_to_back: 'sesionesBackToBack' },
-  cliente: { id: 'id', nombre: 'nombre', email: 'email', programa: 'programa', fecha_alta: 'fechaAlta', fecha_fin_prevista: 'fechaFinPrevista', plan_pago: 'planPago', tiene_garantia: 'tieneGarantia', fuente: 'fuente', consultora_id: 'consultoraId', estado: 'estado', drive_folder_id: 'driveFolderId', horas_reales_semana: 'horasRealesSemana', dias_gracia_pago: 'diasGraciaPago', nivel_desalineado: 'nivelDesalineado', nivel_vendido: 'nivelVendido' },
+  cliente: { id: 'id', nombre: 'nombre', email: 'email', telefono: 'telefono', programa: 'programa', fecha_alta: 'fechaAlta', fecha_fin_prevista: 'fechaFinPrevista', plan_pago: 'planPago', tiene_garantia: 'tieneGarantia', fuente: 'fuente', consultora_id: 'consultoraId', estado: 'estado', drive_folder_id: 'driveFolderId', horas_reales_semana: 'horasRealesSemana', dias_gracia_pago: 'diasGraciaPago', nivel_desalineado: 'nivelDesalineado', nivel_vendido: 'nivelVendido' },
   negocio: { cliente_id: 'clienteId', que_vende: 'queVende', a_quien: 'aQuien', precio: 'precio', moneda: 'moneda', como_entrega: 'comoEntrega', facturacion_mensual: 'facturacionMensual', cantidad_clientes: 'cantidadClientes', origen_clientes: 'origenClientes', que_funciono: 'queFunciono', que_no_funciono: 'queNoFunciono', actualizado_at: 'actualizadoAt' },
   autoridad: { cliente_id: 'clienteId', hace_excepcionalmente_bien: 'haceExcepcionalmenteBien', experiencia_profesional: 'experienciaProfesional', resultados_propios: 'resultadosPropios', resultados_terceros: 'resultadosTerceros', industrias_que_conoce: 'industriasQueConoce', autoridad_desperdiciada: 'autoridadDesperdiciada', actualizado_at: 'actualizadoAt' },
   estrategia: { id: 'id', cliente_id: 'clienteId', version: 'version', cliente_ideal: 'clienteIdeal', problema: 'problema', deseo: 'deseo', promesa: 'promesa', oferta: 'oferta', mecanismo: 'mecanismo', canal: 'canal', precio: 'precio', moneda: 'moneda', vigente_desde: 'vigenteDesde', motivo_cambio: 'motivoCambio', iniciativa: 'iniciativa', sesion_id: 'sesionId', creada_por: 'creadaPor' },
@@ -87,6 +87,23 @@ export const supabaseRepo: Repo = {
     } as Dataset;
   },
 
+  async guardarCliente(c) {
+    const sb = await clienteSupabase();
+    await sb.from('clientes').upsert(snake(c as never, M.cliente));
+  },
+  async guardarNegocio(n) {
+    const sb = await clienteSupabase();
+    await sb.from('negocio').upsert(snake(n as never, M.negocio), { onConflict: 'cliente_id' });
+  },
+  async guardarAutoridad(a) {
+    const sb = await clienteSupabase();
+    await sb.from('autoridad').upsert(snake(a as never, M.autoridad), { onConflict: 'cliente_id' });
+  },
+  /** Append-only: cambiar la meta no borra contra qué se venía midiendo. */
+  async guardarObjetivo(o) {
+    const sb = await clienteSupabase();
+    await sb.from('objetivos_comerciales').insert(snake(o as never, M.objetivo));
+  },
   async guardarSesion(s) {
     const sb = await clienteSupabase();
     await sb.from('sesiones').upsert(snake(s as never, M.sesion));

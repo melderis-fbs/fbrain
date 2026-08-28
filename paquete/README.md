@@ -50,22 +50,65 @@ repo, byte a byte:
 - **2 alertas de lectura de la consultora** (`CR-01`, `CR-02`), que no vienen
   del paquete sino del CRM de Customer Success.
 
-## Lo que el paquete especifica y todavía no existe
+## La capa de modelo · construida
 
-`09-integraciones/integraciones-y-entorno.md` describe la capa que conecta la
-app con el mundo, y **nada de eso está construido**:
+`09-integraciones` especificaba la llamada a modelo y no existía. Ahora sí:
 
-- La llamada a modelo. El documento define `ANTHROPIC_API_KEY`,
-  `MODELO_CRITERIO`, `MODELO_EXTRACCION`, `MODELO_JUEZ` y
-  `MAX_REINTENTOS_VALIDACION`. Hoy los 6 motores figuran con
-  `estado: 'sin_conectar'` en `src/domain/motores/otros.ts`, la pantalla
-  `/modelo` los muestra así, y `diagnostico/page.tsx` pasa `conectado={false}`
-  fijo. Los prompts, los contratos Zod y el armado del contexto están hechos;
-  falta quien haga la llamada.
-- Google Drive (transcripciones) y Google Sheets (tracker y cartera).
-- Slack para el enrutamiento de alertas.
-- Observabilidad: log por llamada con `prompt_version`, tokens y costo.
-- Los umbrales como configuración en vez de constantes en el código.
+| Pieza | Dónde |
+|---|---|
+| Cliente, reintentos y observabilidad | `src/server/modelo.ts` |
+| Un botón por motor | `src/server/acciones-motores.ts` |
+| Chat sobre el expediente de un cliente | `src/app/api/clientes/[id]/chat/route.ts` |
+| Extractor de ficha desde documentos | `src/domain/motores/ficha.ts` |
+| Log de cada llamada | `supabase/migrations/0006_ficha_y_llamadas.sql` |
+
+Cómo se comporta:
+
+- **La disciplina está en el código, no en el prompt.** La salida se valida
+  contra su schema Zod. Si no cumple, el error de validación vuelve *dentro del
+  mensaje* y el modelo corrige sobre lo que ya escribió. Tres intentos
+  (`MAX_REINTENTOS_VALIDACION`); después el fallo es visible, nunca silencioso.
+- **El test de coherencia son dos llamadas y el orden es la funcionalidad.** La
+  primera lee el material sin saber nada del negocio; recién la segunda ve el
+  cliente ideal declarado. En una sola llamada el modelo acomodaría el perfil
+  inferido al declarado y el test no mediría nada.
+- **La hipótesis de la consultora no viaja al modelo.** Si la viera, acomodaría
+  su conclusión, y la franja de comparación es la razón de ser del flujo.
+- **Sin `ANTHROPIC_API_KEY` la app funciona igual.** Los motores quedan
+  `sin conectar`, `/modelo` lo muestra, y responde el motor de reglas local.
+- La constitución y el prompt de cada motor van cacheados: no cambian entre
+  llamadas y son la mayor parte de los tokens de entrada.
+
+## La ficha y el tracker
+
+- `/clientes/[id]/ficha` — los cuatro bloques del expediente en un formulario.
+  Arriba, una caja donde pegar la transcripción de la llamada de venta o el
+  formulario de onboarding: el extractor completa los campos vacíos y deja la
+  cita de dónde sacó cada dato. No pisa lo que ya escribió una persona, y lo
+  que no está en el documento lo deja en blanco. Si el documento se contradice,
+  no elige: deja el campo vacío y lo dice.
+- `/clientes/[id]/tracker` — la carga semanal, con las últimas 12 semanas a la
+  vista. Un campo vacío se guarda como `null`, no como cero: el guión de la
+  grilla es una semana que nadie cargó, y el motor los trata distinto.
+- Estrategia y objetivo son append-only. Cambiar la meta no borra contra qué se
+  venía midiendo, y el drift entre versiones es lo que mira el test de
+  coherencia.
+
+## Lo que todavía no existe
+
+Del resto de `09-integraciones`:
+
+- **Google Drive** (transcripciones) y **Google Sheets** (tracker, cartera y la
+  planilla de finanzas). Hoy la carga es manual por la ficha y el tracker.
+- **Slack**: el enrutamiento de alertas (amarillo → DM a la consultora, rojo →
+  canal de revisión, negro → DM a administración) y la lectura del canal de
+  asistencias a mentorías.
+- **Vista de gasto por mes y por motor.** La tabla `llamadas_modelo` ya existe
+  y cada llamada se registra en el log del servidor, pero falta persistirla y
+  la pantalla que la lee.
+- **Los umbrales como configuración** en vez de constantes en el código.
+- **Pantalla 9 · Post mortem.** Existe como paso del checklist de baja, no como
+  pantalla propia.
 
 ## Lo que no se trajo, y por qué
 

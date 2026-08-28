@@ -2,6 +2,7 @@ import { Card, Chip, SectionTitle } from '@/components/ui';
 import { CRITERIOS, REGLAS } from '@/domain/alertas';
 import { HITOS_POR_FASE } from '@/domain/fases';
 import { MOTORES } from '@/domain/motores/otros';
+import { hayModelo } from '@/server/modelo';
 import { CONSTITUCION_HASH } from '@/domain/motores/constitucion';
 import { SEMAFORO_QUE_SIGNIFICA } from '@/domain/semaforo';
 import { UMBRALES } from '@/domain/cuenta-inversa';
@@ -21,6 +22,8 @@ const PILARES = [
 ];
 
 export default function ModeloPage() {
+  // El estado real: no lo declara un registro estático, lo declara el entorno.
+  const conectado = hayModelo();
   return (
     <div className="mx-auto max-w-4xl space-y-4">
       <header className="mb-2">
@@ -307,8 +310,8 @@ alcance_semanal        = (dms / 4) / tasa_dm_sobre_alcance`}</pre>
                   <td className="py-2 pr-3 text-ink-2">{m.modelo}</td>
                   <td className="py-2 pr-3 tnum text-[11px] text-ink-3">{m.version}</td>
                   <td className="py-2">
-                    <Chip tone={m.estado === 'listo' ? 'good' : 'warning'}>
-                      {m.estado === 'listo' ? 'conectado' : 'sin conectar'}
+                    <Chip tone={conectado ? 'good' : 'warning'}>
+                      {conectado ? 'conectado' : 'sin conectar'}
                     </Chip>
                   </td>
                 </tr>
