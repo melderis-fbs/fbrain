@@ -27,7 +27,7 @@ npm run seed:sql  # regenera supabase/seed.sql (catálogo de hitos)
 > Vercel paso a paso, con los dos lugares donde es fácil romper algo caro.
 >
 > **¿Vas a implementarlo?** Seguí por [`IMPLEMENTACION.md`](./IMPLEMENTACION.md):
-> orden de carga de datos, cuándo activar el cron y qué decisiones no conviene
+> orden de carga de datos y qué decisiones no conviene
 > tocar. Este README explica el porqué; ése explica el cómo.
 
 ---
@@ -183,18 +183,10 @@ El motor no importa nada de React ni de Supabase: por eso se testea sin infraest
    Y `dias_gracia_pago` por cliente: 5 para los contratos viejos, 3 para los nuevos.
 5. Cargar `objetivos_comerciales`: meta y ticket de cada cliente. Sin esto no hay KPI semanal.
 6. Copiar `.env.example` a `.env.local` y completar Supabase.
-7. **Recién ahora** activar el cron:
-   ```sql
-   select cron.schedule(
-     'reglas-duras-nocturnas',
-     '0 6 * * *',
-     $$ select fn_correr_reglas_duras(); select fn_aplicar_techo_semanal(10); $$
-   );
-   ```
-
-Activar el cron antes de cargar los datos emite decenas de alertas falsas y el equipo pierde la confianza en el sistema la primera semana. Es el error más caro del arranque.
-
-**Ojo con esto:** la migración `0003` deja el trabajo nocturno **ya programado**. Apenas la corras, apagalo con `select cron.unschedule('reglas-duras-nocturnas');` y volvé a encenderlo recién en este paso. `DESPLIEGUE.md` lo detalla.
+7. Listo. **No hace falta configurar ningún cron**: la app corre las 23 reglas
+   duras ella misma en cada request. Cuando la cartera crezca y convenga
+   moverlo a un trabajo nocturno, está en `supabase/opcional/cron-nocturno.sql`
+   con lo único que hay que cuidar.
 
 ### Permisos
 

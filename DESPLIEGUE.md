@@ -1,11 +1,14 @@
 # Poner Brain en producción · Supabase + Vercel
 
 Para quien lo va a desplegar. Está escrita para hacerse de arriba abajo sin
-volver a preguntar nada, y marca los dos pasos donde es fácil romper algo de
-forma cara.
+volver a preguntar nada.
 
 Tiempo: **una hora** hasta tener la app andando con la base conectada. La carga
 de datos es aparte y no es código.
+
+**No hace falta configurar ningún trabajo programado para arrancar.** La app
+corre las 23 reglas duras ella misma en cada request. El cron es una
+optimización para cuando la cartera crezca, y está al final como apéndice.
 
 ---
 
@@ -36,14 +39,7 @@ de la base: no se vuelve a mostrar.
 Región: la más cercana al equipo. Con ~85 clientes el plan gratuito alcanza de
 sobra para empezar.
 
-### 1.2 · Habilitar `pg_cron` ANTES de las migraciones
-
-**Database → Extensions → buscar `pg_cron` → Enable.**
-
-No es opcional y no es un detalle: la migración `0003` programa el trabajo
-nocturno y **falla entera** si la extensión no existe.
-
-### 1.3 · Correr las migraciones en orden
+### 1.2 · Correr las migraciones en orden
 
 En **SQL Editor**, pegar y ejecutar una por una, en este orden exacto. Cada una
 asume la anterior:
@@ -51,7 +47,7 @@ asume la anterior:
 ```
 supabase/migrations/0001_schema_brain.sql        el esquema del paquete
 supabase/migrations/0002_fusion.sql              objetivos, hitos, lecturas
-supabase/migrations/0003_reglas_duras_brain.sql  RD-01 a RD-10  ← ojo, ver 1.4
+supabase/migrations/0003_reglas_duras_brain.sql  RD-01 a RD-10
 supabase/migrations/0004_reglas_fusion.sql       RD-11 a RD-17, CR-01, CR-02
 supabase/migrations/0005_revision_cartera.sql    atribución, cobranza, bajas
 supabase/migrations/0006_ficha_y_llamadas.sql    teléfono, log de llamadas
@@ -59,25 +55,7 @@ supabase/migrations/0007_documentos_cliente.sql  documentos del cliente
 supabase/seed.sql                                catálogo de 12 hitos
 ```
 
-### 1.4 · Apagar el cron hasta que estén los datos
-
-**Este es el paso que más caro sale saltearse.**
-
-La migración `0003` deja el trabajo nocturno **ya programado**. Si corre sobre
-una base a medio cargar, a la mañana siguiente el equipo se encuentra con
-decenas de alertas falsas —clientes "sin sesión hace 40 días" que en realidad
-no tienen las sesiones importadas todavía— y deja de leer la bandeja. Recuperar
-esa confianza cuesta semanas.
-
-Apagalo apenas termines `0003`:
-
-```sql
-select cron.unschedule('reglas-duras-nocturnas');
-```
-
-Se vuelve a encender en el paso 5, con los datos adentro.
-
-### 1.5 · Cargar el equipo
+### 1.3 · Cargar el equipo
 
 Siete filas a mano, en **Table Editor → consultoras**, o por SQL:
 
@@ -92,7 +70,7 @@ insert into consultoras (nombre, email, rol, cupo_maximo) values
   ('Romi',   'romi@foundersbs.com',   'consultora', 12);
 ```
 
-### 1.6 · Crear los usuarios y enlazarlos
+### 1.4 · Crear los usuarios y enlazarlos
 
 En **Authentication → Users → Add user**, uno por persona, con el mismo email
 que pusiste arriba.
@@ -189,23 +167,28 @@ En este orden, porque cada paso depende del anterior:
 
 ---
 
-## 5 · Recién ahora, encender el cron
+## Listo
 
-Con los datos adentro y la verificación hecha:
+Con eso el equipo ya puede trabajar: ficha, tracker, sesiones, documentos,
+alertas y los motores de IA. Lo que sigue es opcional.
 
-```sql
-select cron.schedule(
-  'reglas-duras-nocturnas',
-  '0 6 * * *',
-  $$ select fn_correr_reglas_duras(); select fn_aplicar_techo_semanal(10); $$
-);
+---
 
--- Confirmar que quedó programado
-select jobname, schedule, active from cron.job;
-```
+## Apéndice · El trabajo nocturno (no lo necesitás todavía)
 
-Corre a las 06:00 UTC, que son las 03:00 en Buenos Aires. A la mañana siguiente
-la bandeja de alertas tiene contenido real por primera vez.
+La app corre las 23 reglas duras en TypeScript cada vez que alguien abre una
+pantalla. Con ~85 clientes eso es instantáneo, y es de donde salen las alertas
+que ves en la bandeja. **No hay nada que programar.**
+
+El día que la cartera crezca lo suficiente como para que calcularlo en cada
+request deje de ser gratis, ese cálculo se muda a un trabajo nocturno en la
+base sin tocar una sola pantalla —el motor no importa nada de React ni de
+Supabase justamente para permitir esa mudanza.
+
+Cuando llegue ese día: habilitá `pg_cron` en **Database → Extensions**, y corré
+`supabase/opcional/cron-nocturno.sql`. Ese archivo explica lo único que hay que
+cuidar: no encenderlo sobre una base a medio cargar, porque emite decenas de
+alertas falsas y el equipo deja de leer la bandeja.
 
 ---
 

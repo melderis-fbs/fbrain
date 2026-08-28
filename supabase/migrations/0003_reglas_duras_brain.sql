@@ -353,11 +353,19 @@ end $$;
 
 
 -- ============================================================================
--- PROGRAMACIÓN · todas las noches a las 03:00 hora de Buenos Aires (06:00 UTC)
+-- PROGRAMACIÓN · movida a supabase/opcional/cron-nocturno.sql
 -- ============================================================================
-
-select cron.schedule(
-  'reglas-duras-nocturnas',
-  '0 6 * * *',
-  $$ select fn_correr_reglas_duras(); select fn_aplicar_techo_semanal(10); $$
-);
+--
+-- Acá había un `cron.schedule(...)`. Se movió afuera por dos razones:
+--
+--  1. Obligaba a habilitar pg_cron sólo para poder aplicar esta migración. Sin
+--     la extensión, esto fallaba y con ello toda la migración, que es lo que
+--     define las reglas duras. Un requisito de infraestructura no debería
+--     bloquear el esquema.
+--
+--  2. Dejaba el trabajo nocturno andando desde el minuto cero, sobre una base
+--     todavía vacía. Eso emite decenas de alertas falsas la primera noche y el
+--     equipo deja de leer la bandeja.
+--
+-- Las funciones quedan definidas acá arriba y se pueden llamar a mano. La app
+-- no las necesita: corre las mismas reglas en TypeScript en cada request.
