@@ -1,0 +1,12 @@
+# Brain no se puede publicar como sitio estático: 14 de sus 17 rutas se
+# renderizan en el servidor y hay Server Actions, cookies y middleware. El
+# runtime de Next de Netlify es lo que las sirve; sin él el deploy queda vacío.
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
