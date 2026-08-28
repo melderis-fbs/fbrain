@@ -94,12 +94,38 @@ Cómo se comporta:
   venía midiendo, y el drift entre versiones es lo que mira el test de
   coherencia.
 
+## La planilla consolidada · construida
+
+Una sola planilla en Drive con cuatro solapas, que la app lee desde
+`/planilla`. Las plantillas con los encabezados exactos están en
+`paquete/planilla/`.
+
+| Solapa | Qué entra |
+|---|---|
+| `Clientes` | Las columnas de finanzas tal como están, **las cuatro cuotas con su fecha y estado**, y el expediente: negocio, autoridad, estrategia y meta |
+| `Metricas` | Una fila por cliente por semana |
+| `Pagos` | Las cuotas en formato largo, si se prefiere sobre las columnas |
+| `Asistencias` | Una fila por mentoría |
+
+- Se lee por el **export CSV de Google**: alcanza con compartir la planilla por
+  enlace. Sin service account, sin credenciales, y funciona en WebContainer.
+- El mapeo de columnas vive en `src/server/planilla-mapeo.ts` con alias por
+  campo, así que renombrar una columna en Drive no requiere tocar nada más.
+- **Celda vacía no es cero.** Vacío entra como `null`.
+- **Una fila con cliente no identificable se saltea y se informa**, con el
+  número de fila y el motivo. No se adivina por parecido de nombre.
+- **La planilla no pisa lo que se carga en la app**: sesiones, reportes,
+  compromisos, lecturas y alertas no se tocan desde ahí.
+- Estrategia y objetivo entran append-only, y sólo si algo cambió.
+
 ## Lo que todavía no existe
 
 Del resto de `09-integraciones`:
 
-- **Google Drive** (transcripciones) y **Google Sheets** (tracker, cartera y la
-  planilla de finanzas). Hoy la carga es manual por la ficha y el tracker.
+- **La sincronización automática.** Hoy la dispara una persona desde
+  `/planilla`. Falta el cron diario.
+- **Google Drive** para transcripciones: siguen entrando pegadas a mano en el
+  cierre de sesión.
 - **Slack**: el enrutamiento de alertas (amarillo → DM a la consultora, rojo →
   canal de revisión, negro → DM a administración) y la lectura del canal de
   asistencias a mentorías.

@@ -402,6 +402,27 @@ export default async function ExpedientePage({ params }: { params: Promise<{ id:
           <Card>
             <SectionTitle>Pagos y garantía</SectionTitle>
             <div className="space-y-2 text-[12.5px]">
+              {ctx.registros.pagos.length === 0 && (
+                <Empty>Sin cuotas cargadas. Entran desde la planilla.</Empty>
+              )}
+              {ctx.registros.pagos.length > 0 && (() => {
+                const pagas = ctx.registros.pagos.filter((p) => p.estado === 'pagado');
+                const vencidas = ctx.registros.pagos.filter((p) => p.estado === 'vencido');
+                return (
+                  <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2 border-b border-line pb-2">
+                    <span className="text-ink-2">
+                      {pagas.length} de {ctx.registros.pagos.length} cuotas pagas
+                      {vencidas.length > 0 && (
+                        <span style={{ color: 'var(--critical-ink)' }}> · {vencidas.length} vencida{vencidas.length > 1 ? 's' : ''}</span>
+                      )}
+                    </span>
+                    <span className="tnum font-medium">
+                      {plata(pagas.reduce((n, p) => n + p.monto, 0), ctx.registros.pagos[0].moneda)}
+                      <span className="text-ink-3"> de {plata(ctx.registros.pagos.reduce((n, p) => n + p.monto, 0), ctx.registros.pagos[0].moneda)}</span>
+                    </span>
+                  </div>
+                );
+              })()}
               {ctx.registros.pagos.map((p) => (
                 <div key={p.id} className="flex justify-between">
                   <span>Cuota {p.numeroCuota} · {formatDate(p.fechaVencimiento)}</span>

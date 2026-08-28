@@ -46,6 +46,9 @@ export interface Repo {
   guardarNegocio(n: Negocio): Promise<void>;
   guardarAutoridad(a: Autoridad): Promise<void>;
   guardarObjetivo(o: ObjetivoComercial): Promise<void>;
+  /** Lo que entra desde la planilla consolidada. */
+  guardarPago(p: Pago): Promise<void>;
+  guardarAsistencia(a: AsistenciaMentoria): Promise<void>;
   guardarSesion(s: Sesion): Promise<void>;
   guardarMetrica(m: MetricaSemanal): Promise<void>;
   guardarCompromiso(c: Compromiso): Promise<void>;

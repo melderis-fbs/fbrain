@@ -47,6 +47,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               { href: '/cartera', label: 'Cartera', icon: '▦' },
               { href: '/cobranza', label: 'Cobranza', icon: '$', badge: cobrar, badgeTone: 'critical' as const },
               { href: '/consultoras', label: 'Consultoras', icon: '☰' },
+              { href: '/planilla', label: 'Planilla', icon: '⤓' },
             ]
           : []),
         { href: '/modelo', label: 'Cómo se calcula', icon: '⚙' },

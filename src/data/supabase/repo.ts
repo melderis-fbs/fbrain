@@ -104,6 +104,14 @@ export const supabaseRepo: Repo = {
     const sb = await clienteSupabase();
     await sb.from('objetivos_comerciales').insert(snake(o as never, M.objetivo));
   },
+  async guardarPago(p) {
+    const sb = await clienteSupabase();
+    await sb.from('pagos').upsert(snake(p as never, M.pago), { onConflict: 'cliente_id,numero_cuota' });
+  },
+  async guardarAsistencia(a) {
+    const sb = await clienteSupabase();
+    await sb.from('asistencias_mentoria').upsert(snake(a as never, M.asistencia));
+  },
   async guardarSesion(s) {
     const sb = await clienteSupabase();
     await sb.from('sesiones').upsert(snake(s as never, M.sesion));

@@ -65,6 +65,24 @@ export const demoRepo: Repo = {
     d.objetivos.push(o);
   },
 
+  async guardarPago(p) {
+    const d = cache?.data;
+    if (!d) return;
+    const i = d.pagos.findIndex((x) => x.clienteId === p.clienteId && x.numeroCuota === p.numeroCuota);
+    if (i >= 0) d.pagos[i] = p;
+    else d.pagos.push(p);
+  },
+
+  async guardarAsistencia(a) {
+    const d = cache?.data;
+    if (!d) return;
+    const i = d.asistencias.findIndex(
+      (x) => x.clienteId === a.clienteId && x.mentoria === a.mentoria && x.fecha === a.fecha,
+    );
+    if (i >= 0) d.asistencias[i] = a;
+    else d.asistencias.push(a);
+  },
+
   async guardarSesion(s) {
     const d = cache?.data;
     if (!d) return;
