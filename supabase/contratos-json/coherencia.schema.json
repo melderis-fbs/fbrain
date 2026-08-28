@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foundersbs.com/schemas/coherencia.json",
+  "title": "Test de coherencia",
+  "description": "Salida del Motor 3. perfil_inferido_ciego viene de la llamada A, hecha SIN acceso al expediente. El resto viene de la llamada B. No hay campo de reescritura del material a propósito: primero se dice qué está mal y por qué.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["perfil_inferido_ciego", "perfil_declarado", "veredicto", "brecha", "palabras_responsables", "eslabon_a_tocar", "que_no_haria", "conclusion_leads", "principio_founders"],
+  "properties": {
+    "perfil_inferido_ciego": {
+      "description": "Llamada A. Quién se reconoce en el material, leído sin conocer el negocio.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["quien_se_reconoce", "nivel_dolor", "movimiento", "quien_no_se_reconoce", "frases_decisivas"],
+      "properties": {
+        "quien_se_reconoce": { "type": "string", "minLength": 50 },
+        "industria_o_profesion": { "type": ["string", "null"] },
+        "facturacion_aproximada": { "type": ["string", "null"] },
+        "madurez": { "type": ["string", "null"] },
+        "tamano_equipo": { "type": ["string", "null"] },
+        "nivel_dolor": {
+          "type": "string",
+          "enum": ["principiante", "crecimiento", "ambiguo"],
+          "description": "Análisis obligatorio. Muchos mensajes atraen malos leads porque hablan de un nivel de dolor equivocado."
+        },
+        "movimiento": { "type": "string", "enum": ["escapa_de_un_problema", "captura_una_oportunidad", "ambiguo"] },
+        "capacidad_pago_inferida": { "type": ["string", "null"] },
+        "quien_no_se_reconoce": {
+          "type": "string",
+          "description": "A quién repele. Si no repele a nadie, decirlo: es un hallazgo, no un vacío."
+        },
+        "frases_decisivas": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["cita", "senal"],
+            "properties": {
+              "cita": { "type": "string", "description": "Literal del material" },
+              "senal": { "type": "string", "description": "Qué señal manda esta expresión" }
+            }
+          }
+        }
+      }
+    },
+    "perfil_declarado": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cliente_ideal", "version", "vigente_desde"],
+      "properties": {
+        "cliente_ideal": { "type": "string" },
+        "version": { "type": "integer" },
+        "vigente_desde": { "type": "string", "format": "date" }
+      }
+    },
+    "veredicto": { "type": "string", "enum": ["coherente", "parcial", "incoherente"] },
+    "veredicto_por_que": { "type": "string", "minLength": 30 },
+    "brecha": {
+      "description": "Dimensión por dimensión: qué coincide y qué no.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["dimension", "inferido", "declarado", "coincide"],
+        "properties": {
+          "dimension": { "type": "string", "enum": ["madurez", "facturacion", "tipo_dolor", "capacidad_pago", "industria", "momento", "tamano"] },
+          "inferido": { "type": "string" },
+          "declarado": { "type": "string" },
+          "coincide": { "type": "boolean" }
+        }
+      }
+    },
+    "palabras_responsables": {
+      "description": "Las expresiones textuales que corren el mensaje hacia el público equivocado.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["cita", "a_quien_atrae", "alternativa"],
+        "properties": {
+          "cita": { "type": "string", "description": "Debe existir literalmente en el material" },
+          "a_quien_atrae": { "type": "string" },
+          "alternativa": { "type": "string", "description": "Qué diría en su lugar alguien que quisiera atraer al cliente declarado" }
+        }
+      }
+    },
+    "eslabon_a_tocar": {
+      "description": "Qué revisar PRIMERO. Nunca 'canal' como primer paso: si los leads son incorrectos, no se asume problema de segmentación.",
+      "type": "string",
+      "enum": ["cliente", "problema", "deseo", "oferta", "promesa", "mensaje", "lead", "setting", "canal"]
+    },
+    "orden_de_revision": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "El orden completo sugerido. Targeting va último."
+    },
+    "drift": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hay_drift"],
+      "properties": {
+        "hay_drift": { "type": "boolean" },
+        "desde_cuando": { "type": ["string", "null"], "format": "date" },
+        "hacia_donde": { "type": ["string", "null"] },
+        "iniciativa": { "type": ["string", "null"], "enum": ["consultora", "cliente", "conjunta", null] },
+        "detalle": { "type": ["string", "null"] }
+      }
+    },
+    "que_no_haria": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" }
+    },
+    "conclusion_leads": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["muestra", "suficiente"],
+      "properties": {
+        "muestra": { "type": "integer", "minimum": 0 },
+        "suficiente": {
+          "type": "boolean",
+          "description": "false si la muestra es menor a 10. En ese caso no se concluye sobre calidad de leads."
+        },
+        "porcentaje_encaje": { "type": ["number", "null"] },
+        "que_falta_juntar": { "type": ["string", "null"] },
+        "lectura": { "type": ["string", "null"] }
+      }
+    },
+    "principio_founders": { "type": "string", "minLength": 30 }
+  }
+}

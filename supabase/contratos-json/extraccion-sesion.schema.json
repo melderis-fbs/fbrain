@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foundersbs.com/schemas/extraccion-sesion.json",
+  "title": "Extracción de una sesión",
+  "description": "Salida del extractor. Todo lo que produce es una PROPUESTA: nada se persiste sin que la consultora lo firme. Las citas son literales.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["reporte", "compromisos", "numeros", "cambios_estrategia", "frases_candidatas", "senales", "datos_expediente", "calidad_transcripcion"],
+  "properties": {
+    "reporte": {
+      "type": "string",
+      "minLength": 150,
+      "description": "5 a 10 líneas: qué se trabajó, a qué se llegó, qué quedó abierto. Tono de registro interno, directo."
+    },
+    "compromisos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["descripcion", "responsable", "sin_fecha"],
+        "properties": {
+          "descripcion": { "type": "string" },
+          "responsable": { "type": "string" },
+          "fecha_vencimiento": { "type": ["string", "null"], "format": "date", "description": "Resuelta a fecha concreta contando desde la fecha de la sesión" },
+          "sin_fecha": { "type": "boolean", "description": "true si se acordó sin fecha. Eso es en sí mismo una señal." },
+          "cita": { "type": "string" }
+        }
+      }
+    },
+    "numeros": {
+      "description": "Todo dato cuantitativo dicho en la sesión. No estimar, no completar, no redondear.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["campo", "valor", "cita", "aproximado"],
+        "properties": {
+          "campo": {
+            "type": "string",
+            "enum": ["contenido_publicado", "alcance_total", "alcance_no_seguidores", "dms_iniciados", "conversaciones_avanzadas", "leads", "leads_calificados", "agendas", "asistencias", "cancelaciones", "llamadas", "ofertas_realizadas", "ventas", "facturado", "ticket_promedio", "inversion_ads", "precio", "otro"]
+          },
+          "valor": { "type": "number" },
+          "periodo": { "type": ["string", "null"], "description": "A qué período se refiere: la semana, el mes, desde el inicio" },
+          "cita": { "type": "string" },
+          "aproximado": { "type": "boolean", "description": "true si el cliente dijo 'unos veinte' y no 'veinte'" }
+        }
+      }
+    },
+    "cambios_estrategia": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["campo", "de", "a", "iniciativa", "cita"],
+        "properties": {
+          "campo": { "type": "string", "enum": ["cliente_ideal", "problema", "deseo", "promesa", "oferta", "mecanismo", "canal", "precio"] },
+          "de": { "type": ["string", "number", "null"] },
+          "a": { "type": ["string", "number"] },
+          "iniciativa": {
+            "type": "string",
+            "enum": ["consultora", "cliente", "conjunta"],
+            "description": "Importa: un cambio de precio a iniciativa del cliente sin llamada de venta de por medio es criterio de alerta rojo."
+          },
+          "ya_ejecutado": { "type": "boolean", "description": "false si dijo que lo va a hacer y todavía no lo hizo" },
+          "cita": { "type": "string" }
+        }
+      }
+    },
+    "frases_candidatas": {
+      "description": "Citas que podrían corresponder a un criterio de riesgo. Literales. El extractor NO clasifica el estado: eso lo hace el motor de alertas.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["cita", "por_que_llama_atencion"],
+        "properties": {
+          "cita": { "type": "string" },
+          "por_que_llama_atencion": { "type": "string" },
+          "quien_lo_dijo": { "type": "string", "enum": ["cliente", "consultora"] }
+        }
+      }
+    },
+    "senales": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["menciono_numeros", "se_fue_en_herramienta", "cerro_con_compromiso", "abrio_repasando", "pct_habla_cliente"],
+      "properties": {
+        "menciono_numeros": { "type": "boolean" },
+        "se_fue_en_herramienta": { "type": "boolean" },
+        "cerro_con_compromiso": { "type": "boolean" },
+        "abrio_repasando": { "type": "boolean" },
+        "pct_habla_cliente": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "tema_declarado": { "type": ["string", "null"] },
+        "tema_tratado": { "type": ["string", "null"] }
+      }
+    },
+    "datos_expediente": {
+      "description": "Información que llena bloques vacíos del expediente. Esto es lo que hace que el expediente se llene solo con el tiempo.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["bloque", "campo", "valor", "cita"],
+        "properties": {
+          "bloque": { "type": "string", "enum": ["negocio", "autoridad", "identidad"] },
+          "campo": { "type": "string" },
+          "valor": { "type": "string" },
+          "cita": { "type": "string" }
+        }
+      }
+    },
+    "calidad_transcripcion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["completa"],
+      "properties": {
+        "completa": { "type": "boolean" },
+        "problema": { "type": ["string", "null"], "description": "Cortada, audio malo, hablantes no identificados, etc." }
+      }
+    }
+  }
+}

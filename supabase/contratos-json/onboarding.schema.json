@@ -1,0 +1,198 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foundersbs.com/schemas/onboarding.json",
+  "title": "Plan de onboarding 60 días",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["necesidades", "cuenta_inversa", "mapa_60_dias", "sprint_1", "sesion_1", "riesgos", "brief_consultora", "que_no_haria"],
+  "properties": {
+    "necesidades": {
+      "description": "Máximo 5, ordenadas por lo que más mueve una venta. Cada una con su cita.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["orden", "necesidad", "evidencia"],
+        "properties": {
+          "orden": { "type": "integer", "minimum": 1 },
+          "necesidad": { "type": "string", "minLength": 15 },
+          "evidencia": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["cita", "origen"],
+            "properties": {
+              "cita": { "type": "string", "description": "Literal de la llamada de venta o del onboarding" },
+              "origen": { "type": "string", "enum": ["llamada_venta", "onboarding", "otro"] },
+              "fecha": { "type": ["string", "null"], "format": "date" },
+              "minuto": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+    "cuenta_inversa": {
+      "description": "Lo primero de la sesión 1 y lo que más se saltea. Dos columnas: embudo en objetivo y embudo en rojo.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ticket", "meta_mensual", "objetivo", "rojo", "kpi_operativo_semanal"],
+      "properties": {
+        "ticket": { "type": "number" },
+        "moneda": { "type": "string" },
+        "meta_mensual": { "type": "number" },
+        "meta_es_realista": { "type": "boolean" },
+        "ticket_que_haria_la_meta_alcanzable": { "type": ["number", "null"] },
+        "objetivo": { "$ref": "#/$defs/embudo" },
+        "rojo": { "$ref": "#/$defs/embudo" },
+        "kpi_operativo_semanal": {
+          "type": "string",
+          "description": "El número que el cliente tiene que cumplir todas las semanas. Ej: 19 DMs y 5-6 agendas."
+        },
+        "lectura": {
+          "type": "string",
+          "description": "El argumento: con el embudo en objetivo necesita una fracción del alcance que necesita con el embudo en rojo, para facturar lo mismo."
+        }
+      }
+    },
+    "mapa_60_dias": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dias_1_7", "dias_8_14", "dias_15_30", "dias_31_45", "dias_46_60"],
+      "properties": {
+        "dias_1_7": { "$ref": "#/$defs/tramo" },
+        "dias_8_14": { "$ref": "#/$defs/tramo" },
+        "dias_15_30": { "$ref": "#/$defs/tramo" },
+        "dias_31_45": { "$ref": "#/$defs/tramo" },
+        "dias_46_60": { "$ref": "#/$defs/tramo" },
+        "ritmo_distinto_porque": {
+          "type": ["string", "null"],
+          "description": "Si el diagnóstico indica otro ritmo que el de referencia, explicarlo acá. El diagnóstico manda sobre el mapa."
+        }
+      }
+    },
+    "sprint_1": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["objetivo", "hipotesis", "acciones", "metrica", "resultado_esperado", "fecha_revision"],
+      "properties": {
+        "objetivo": { "type": "string" },
+        "hipotesis": { "type": "string" },
+        "acciones": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["accion", "responsable"],
+            "properties": {
+              "accion": { "type": "string" },
+              "responsable": { "type": "string" },
+              "asistida": {
+                "type": "boolean",
+                "description": "true si se hace dentro de la sesión. Obligatorio si el cliente declaró que la tarea sola no le funciona."
+              }
+            }
+          }
+        },
+        "metrica": { "type": "string" },
+        "resultado_esperado": { "type": "string" },
+        "fecha_revision": { "type": "string", "format": "date" }
+      }
+    },
+    "sesion_1": {
+      "description": "Tres cosas concretas y verificables. Con garantía firmada, una es leer las condiciones en voz alta.",
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 4,
+      "items": { "type": "string", "minLength": 15 }
+    },
+    "riesgos": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["riesgo", "evidencia", "mitigacion"],
+        "properties": {
+          "riesgo": { "type": "string" },
+          "evidencia": { "type": "string", "description": "Cita textual" },
+          "mitigacion": { "type": "string" },
+          "cuando_aparece": { "type": ["string", "null"], "description": "Ej: mes 2, cuando llega la segunda cuota" }
+        }
+      }
+    },
+    "datos_faltantes": {
+      "description": "Lo que no se sabe y no se asume. horas_reales_semana va acá si no se preguntó.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["dato", "como_conseguirlo"],
+        "properties": {
+          "dato": { "type": "string" },
+          "como_conseguirlo": { "type": "string" }
+        }
+      }
+    },
+    "brief_consultora": {
+      "description": "Para pegar tal cual en el canal, sin editar. Escrito para alguien que no escuchó la llamada.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["encabezado", "quien_es", "que_tiene_hoy", "que_compro", "restriccion_real", "como_funciona_con_esta_persona", "preguntar_en_sesion_1"],
+      "properties": {
+        "encabezado": { "type": "string", "description": "Nombre · programa · garantía · plan · fuente" },
+        "quien_es": { "type": "string" },
+        "que_tiene_hoy": { "type": "string" },
+        "que_compro": { "type": "string" },
+        "restriccion_real": { "type": "string", "description": "La variable crítica: tiempo, plata, familia, empleo" },
+        "como_funciona_con_esta_persona": { "type": "string" },
+        "preguntar_en_sesion_1": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "que_no_haria": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" }
+    },
+    "activos_sin_usar": {
+      "description": "Contenido grabado, comunidad, testimonios, contactos, autoridad previa. El arranque más rápido casi siempre sale de acá.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["activo", "como_usarlo"],
+        "properties": {
+          "activo": { "type": "string" },
+          "como_usarlo": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "embudo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ventas_mes", "asistencias", "agendas", "conversaciones_avanzan", "dms_mes", "dms_semana", "alcance_semanal"],
+      "properties": {
+        "ventas_mes": { "type": "number" },
+        "asistencias": { "type": "number" },
+        "agendas": { "type": "number" },
+        "conversaciones_avanzan": { "type": "number" },
+        "dms_mes": { "type": "number" },
+        "dms_semana": { "type": "number" },
+        "alcance_semanal": { "type": "number" }
+      }
+    },
+    "tramo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["que_se_resuelve", "senal_esperada"],
+      "properties": {
+        "que_se_resuelve": { "type": "array", "minItems": 1, "maxItems": 4, "items": { "type": "string" } },
+        "senal_esperada": { "type": "string", "description": "Qué señal del mercado esperamos ver en este tramo" }
+      }
+    }
+  }
+}

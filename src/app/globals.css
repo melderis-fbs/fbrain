@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+/*
+  FOUNDERS · CS OS — sistema visual
+  Paleta de estado validada (good / warning / serious / critical). El color
+  nunca comunica solo: siempre va con etiqueta y con icono.
+*/
+
+:root {
+  color-scheme: light;
+
+  --page: #f4f4f1;
+  --surface: #fcfcfb;
+  --surface-2: #f0efec;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --ink-3: #898781;
+  --line: #e1e0d9;
+  --line-strong: #c3c2b7;
+
+  --accent: #4a3aa7;
+  --accent-soft: #ecebfa;
+  --accent-ink: #3a2d85;
+
+  --good: #0ca30c;
+  --good-ink: #006300;
+  --good-soft: #e4f5e4;
+
+  --warning: #fab219;
+  --warning-ink: #7d5500;
+  --warning-soft: #fdf1d8;
+
+  --serious: #ec835a;
+  --serious-ink: #a1461f;
+  --serious-soft: #fbeae2;
+
+  --critical: #d03b3b;
+  --critical-ink: #a52222;
+  --critical-soft: #fae3e3;
+
+  --shadow: 0 1px 2px rgba(11, 11, 11, 0.05), 0 8px 24px -18px rgba(11, 11, 11, 0.25);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --surface-2: #232322;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --ink-3: #898781;
+    --line: #2c2c2a;
+    --line-strong: #383835;
+
+    --accent: #9085e9;
+    --accent-soft: #262247;
+    --accent-ink: #b3abf1;
+
+    --good: #0ca30c;
+    --good-ink: #4cc44c;
+    --good-soft: #122a12;
+
+    --warning: #fab219;
+    --warning-ink: #f0b83e;
+    --warning-soft: #2e2410;
+
+    --serious: #ec835a;
+    --serious-ink: #f09a78;
+    --serious-soft: #2f1e15;
+
+    --critical: #d03b3b;
+    --critical-ink: #e46a6a;
+    --critical-soft: #2e1414;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -18px rgba(0, 0, 0, 0.8);
+  }
+}
+
+@theme inline {
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-good: var(--good);
+  --color-good-ink: var(--good-ink);
+  --color-good-soft: var(--good-soft);
+  --color-warning: var(--warning);
+  --color-warning-ink: var(--warning-ink);
+  --color-warning-soft: var(--warning-soft);
+  --color-serious: var(--serious);
+  --color-serious-ink: var(--serious-ink);
+  --color-serious-soft: var(--serious-soft);
+  --color-critical: var(--critical);
+  --color-critical-ink: var(--critical-ink);
+  --color-critical-soft: var(--critical-soft);
+  --font-sans: var(--font-inter, ui-sans-serif), system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", sans-serif;
+}
+
+html,
+body {
+  background: var(--page);
+  color: var(--ink);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  border-color: var(--line);
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+/* Scrollbar discreta para una herramienta que se usa 8 horas por día */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 999px;
+  border: 3px solid var(--page);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}

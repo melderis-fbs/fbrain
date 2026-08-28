@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foundersbs.com/schemas/score.json",
+  "title": "Score de salud comercial",
+  "description": "Salida del Motor 4A. Cada puntaje lleva su evidencia: un score sin evidencia es un número que nadie va a creer la segunda vez. null honesto es mejor que un 5 inventado.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["dimensiones", "limitantes", "promesa_detalle", "lectura_general"],
+  "properties": {
+    "dimensiones": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["dimension", "valor"],
+        "properties": {
+          "dimension": {
+            "type": "string",
+            "enum": ["cliente_ideal", "problema", "deseo", "oferta", "promesa", "mensaje", "autoridad", "adquisicion", "volumen", "ventas", "entrega", "ejecucion"]
+          },
+          "valor": { "type": ["integer", "null"], "minimum": 1, "maximum": 10 },
+          "evidencia": { "type": ["string", "null"], "minLength": 20 },
+          "dato_faltante": {
+            "type": ["string", "null"],
+            "description": "Obligatorio cuando valor es null: qué dato hace falta para poder calificar."
+          }
+        },
+        "allOf": [
+          {
+            "if": { "properties": { "valor": { "type": "integer" } }, "required": ["valor"] },
+            "then": { "required": ["evidencia"] }
+          },
+          {
+            "if": { "properties": { "valor": { "const": null } } },
+            "then": { "required": ["dato_faltante"] }
+          }
+        ]
+      }
+    },
+    "limitantes": {
+      "description": "Exactamente 3. NO son los tres más bajos: son los tres cuya mejora movería más las ventas.",
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["dimension", "por_que_limita", "que_desbloquea"],
+        "properties": {
+          "dimension": {
+            "type": "string",
+            "enum": ["cliente_ideal", "problema", "deseo", "oferta", "promesa", "mensaje", "autoridad", "adquisicion", "volumen", "ventas", "entrega", "ejecucion"]
+          },
+          "por_que_limita": { "type": "string", "minLength": 30 },
+          "que_desbloquea": { "type": "string" }
+        }
+      }
+    },
+    "promesa_detalle": {
+      "description": "La promesa se califica además por componente. Todo lo que esté abajo de 7 se explica.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["especificidad", "relevancia", "deseo", "credibilidad", "diferenciacion", "claridad"],
+      "properties": {
+        "especificidad": { "$ref": "#/$defs/componente" },
+        "relevancia": { "$ref": "#/$defs/componente" },
+        "deseo": { "$ref": "#/$defs/componente" },
+        "credibilidad": { "$ref": "#/$defs/componente" },
+        "diferenciacion": { "$ref": "#/$defs/componente" },
+        "claridad": { "$ref": "#/$defs/componente" }
+      }
+    },
+    "jerarquia_respetada": {
+      "type": "boolean",
+      "description": "Chequeo: no se propone trabajar un eslabón bajo de la jerarquía si uno alto está en rojo. cliente → problema → oferta → promesa → mensaje → validación → adquisición → ventas → entrega → escala."
+    },
+    "lectura_general": { "type": "string", "minLength": 50 }
+  },
+  "$defs": {
+    "componente": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["valor"],
+      "properties": {
+        "valor": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "por_que": { "type": ["string", "null"], "description": "Obligatorio si valor < 7" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "valor": { "maximum": 6 } } },
+          "then": { "required": ["por_que"] }
+        }
+      ]
+    }
+  }
+}
