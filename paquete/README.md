@@ -140,6 +140,22 @@ Si por tamaño algún documento queda afuera del contexto, el prompt lo dice con
 nombre y fecha. Truncar en silencio es la forma más rápida de que el modelo
 concluya sobre la mitad del caso y nadie se entere.
 
+## Correr esto en WebContainer (Bolt / StackBlitz)
+
+Un `npm install` normal deja `node_modules` en **1,1 GB**, y 320 MB de eso son
+binarios nativos que WebContainer no puede ejecutar: `@next/swc-linux-x64-gnu`
+y `-musl` (137 MB cada uno, y npm baja los dos porque no puede decidir la
+libc) más `sharp`. Ahí adentro `npm install --omit=optional` deja 347 MB, cero
+binarios nativos, y el build y el dev funcionan igual: Next usa su compilador
+WASM, que es lo que usa en WebContainer de todos modos.
+
+Lo que ese flag rompe es `npm test`, porque vitest necesita el binding de
+rolldown y también es opcional. Los tests se corren fuera del contenedor.
+
+Aun así, Next.js instalado son ~145 MB de base y el runtime del framework es
+pesado para un sandbox del navegador. Para uso real conviene un host de Node
+de verdad.
+
 ## Lo que todavía no existe
 
 Del resto de `09-integraciones`:

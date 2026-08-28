@@ -44,10 +44,20 @@ Es correcto y esperado: es Next.js detectando que no hay binario nativo y
 cayendo a su build WASM. No es un error. No intentes instalar el paquete
 nativo ni cambiar la config para evitarlo.
 
-## Cómo se arranca
+## Cómo se arranca EN BOLT
 
-    npm install
+    npm install --omit=optional
     npm run dev
+
+El `--omit=optional` no es opcional acá: sin él npm baja 274 MB de binarios
+`@next/swc-linux-x64-*` y 46 MB de `sharp` que WebContainer NO PUEDE EJECUTAR.
+Son peso muerto que ahoga el contenedor. Con el flag, `node_modules` pasa de
+1,1 GB a 347 MB y el build funciona igual, porque Next cae a su compilador
+WASM —que es lo que usa acá de todos modos.
+
+El costo: `npm test` no corre con esa instalación (vitest necesita el binding
+de rolldown, que también es opcional). Los tests se corren fuera de Bolt, con
+un `npm install` normal.
 
 Sin variables de entorno la app arranca en modo demostración con 85 clientes
 ficticios. NO hace falta Supabase ni ninguna base de datos para verla andar.
