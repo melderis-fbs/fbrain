@@ -1,4 +1,5 @@
 import 'server-only';
+import { nuevoId } from '@/lib/id';
 import { getRepo } from '@/data';
 import { fechaDePlanilla as fecha, normalizarEncabezado as normalizar, numeroDePlanilla as numero, parsearCsv } from '@/lib/csv';
 import type {
@@ -74,7 +75,6 @@ const opcional = (v: string) => (v.trim() === '' ? undefined : v.trim());
 
 const booleano = (v: string): boolean => ['si', 'sí', 'true', 'x', '1', 'yes', 'ok'].includes(normalizar(v));
 
-const idDe = (nombre: string) => normalizar(nombre).replace(/ /g, '-').slice(0, 48);
 
 // ------------------------------------------------------------------ reporte
 
@@ -129,7 +129,7 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
       if (!nombre) { rc.salteadas.push({ fila: i + 2, motivo: 'Sin nombre de cliente.' }); continue; }
 
       const previo = porNombre.get(normalizar(nombre));
-      const id = previo?.id ?? idDe(nombre);
+      const id = previo?.id ?? nuevoId();
       const alta = fecha(leer(f, CLIENTES, 'fechaAlta')) ?? previo?.fechaAlta;
       if (!alta) { rc.salteadas.push({ fila: i + 2, motivo: `«${nombre}» no tiene fecha de alta y es cliente nuevo.` }); continue; }
 
@@ -217,7 +217,7 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
       );
       if (hayEstrategia && cambio) {
         const nueva: EstrategiaVersion = {
-          id: `${id}-e${Date.now()}`,
+          id: nuevoId(),
           clienteId: id,
           version: (previa?.version ?? 0) + 1,
           ...est,
@@ -236,7 +236,7 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
       if (meta !== null && ticket !== null &&
           (!objPrevio || objPrevio.metaMensual !== meta || objPrevio.ticket !== ticket)) {
         const objetivo: ObjetivoComercial = {
-          id: `${id}-o${Date.now()}`,
+          id: nuevoId(),
           clienteId: id,
           metaMensual: meta,
           ticket,
@@ -261,7 +261,7 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
 
         const estado = ESTADO_PAGO[estadoCrudo] ?? (venc && venc < hoy ? 'vencido' : 'pendiente');
         const pago: Pago = {
-          id: `${id}-c${n + 1}`,
+          id: nuevoId(),
           clienteId: id,
           numeroCuota: n + 1,
           monto: monto ?? 0,
@@ -295,7 +295,7 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
 
       const pagado = fecha(leer(f, PAGOS, 'fechaPago'));
       const p: Pago = {
-        id: `${c.id}-c${cuota}`,
+        id: nuevoId(),
         clienteId: c.id,
         numeroCuota: cuota,
         monto: numero(leer(f, PAGOS, 'monto')) ?? 0,
@@ -329,7 +329,7 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
         continue;
       }
       const a: AsistenciaMentoria = {
-        id: `${c.id}-${mentoria}-${f2}`,
+        id: nuevoId(),
         clienteId: c.id,
         mentoria: mentoria as Mentoria,
         fecha: f2,

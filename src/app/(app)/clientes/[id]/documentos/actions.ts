@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { nuevoId } from '@/lib/id';
 import { revalidatePath } from 'next/cache';
 import { getRepo } from '@/data';
 import { getUsuario, veTodo } from '@/server/auth';
@@ -33,7 +34,7 @@ export async function subirDocumento(clienteId: string, formData: FormData) {
   if (!fecha) return { ok: false as const, error: 'Falta la fecha del documento. La de carga no sirve: una transcripción es de su sesión.' };
 
   const doc: DocumentoCliente = {
-    id: `${clienteId}-d${Date.now()}`,
+    id: nuevoId(),
     clienteId,
     tipo: (String(formData.get('tipo') ?? 'otro') as TipoDocumento),
     titulo,

@@ -20,14 +20,14 @@ create type tipo_documento_cliente as enum (
 );
 
 create table documentos_cliente (
-  id          text primary key,
-  cliente_id  text not null references clientes(id) on delete cascade,
+  id          uuid primary key default gen_random_uuid(),
+  cliente_id  uuid not null references clientes(id) on delete cascade,
   tipo        tipo_documento_cliente not null default 'otro',
   titulo      text not null,
   contenido   text not null,
   -- La fecha del hecho, no la de la carga: una transcripción es de su sesión.
   fecha       date not null,
-  subido_por  text references consultoras(id) on delete set null,
+  subido_por  uuid references consultoras(id) on delete set null,
   archivo     text,
   creado_at   timestamptz not null default now()
 );

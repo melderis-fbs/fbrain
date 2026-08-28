@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { nuevoId } from '@/lib/id';
 import { revalidatePath } from 'next/cache';
 import { getRepo } from '@/data';
 import { getUsuario, veTodo } from '@/server/auth';
@@ -126,7 +127,7 @@ export async function guardarFicha(clienteId: string, formData: FormData) {
 
   if (hayAlgo && cambio) {
     const estrategia: EstrategiaVersion = {
-      id: `${clienteId}-e${Date.now()}`,
+      id: nuevoId(),
       clienteId,
       version: (anterior?.version ?? 0) + 1,
       ...campos,
@@ -145,7 +146,7 @@ export async function guardarFicha(clienteId: string, formData: FormData) {
   if (meta !== undefined && ticket !== undefined &&
       (!objPrevio || objPrevio.metaMensual !== meta || objPrevio.ticket !== ticket)) {
     const objetivo: ObjetivoComercial = {
-      id: `${clienteId}-o${Date.now()}`,
+      id: nuevoId(),
       clienteId,
       metaMensual: meta,
       ticket,

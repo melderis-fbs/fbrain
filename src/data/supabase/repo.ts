@@ -120,7 +120,7 @@ export const supabaseRepo: Repo = {
   },
   async guardarAsistencia(a) {
     const sb = await clienteSupabase();
-    await sb.from('asistencias_mentoria').upsert(snake(a as never, M.asistencia));
+    await sb.from('asistencias_mentoria').upsert(snake(a as never, M.asistencia), { onConflict: 'cliente_id,mentoria,fecha' });
   },
   async guardarSesion(s) {
     const sb = await clienteSupabase();

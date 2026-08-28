@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { nuevoId } from '@/lib/id';
 import { revalidatePath } from 'next/cache';
 import { getRepo } from '@/data';
 import {
@@ -78,7 +79,7 @@ export async function correrDiagnostico(clienteId: string, formData: FormData) {
   const payload = r.datos as DiagnosticoPayload;
   const hoy = hoyIso();
   const registro: Diagnostico = {
-    id: `${clienteId}-${hoy}-${Math.random().toString(36).slice(2, 7)}`,
+    id: nuevoId(),
     clienteId,
     consultoraId: usuario.id,
     pregunta,

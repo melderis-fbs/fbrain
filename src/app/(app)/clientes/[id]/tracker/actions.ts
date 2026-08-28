@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { nuevoId } from '@/lib/id';
 import { revalidatePath } from 'next/cache';
 import { getRepo } from '@/data';
 import { getUsuario, veTodo } from '@/server/auth';
@@ -43,7 +44,7 @@ export async function guardarSemana(clienteId: string, formData: FormData) {
   const semana = mondayOf(String(formData.get('semana') || hoyIso()));
 
   const m: MetricaSemanal = {
-    id: `${clienteId}-${semana}`,
+    id: nuevoId(),
     clienteId,
     semanaIso: semana,
     contenidoPublicado: num(formData.get('contenidoPublicado')),

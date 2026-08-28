@@ -15,8 +15,8 @@ alter table clientes add column if not exists telefono text;
 create table if not exists llamadas_modelo (
   id                uuid primary key default gen_random_uuid(),
   motor             text        not null,
-  cliente_id        text        references clientes(id) on delete set null,
-  consultora_id     text        references consultoras(id) on delete set null,
+  cliente_id        uuid        references clientes(id) on delete set null,
+  consultora_id     uuid        references consultoras(id) on delete set null,
   prompt_version    text        not null,
   modelo            text        not null,
   tokens_entrada    integer     not null default 0,

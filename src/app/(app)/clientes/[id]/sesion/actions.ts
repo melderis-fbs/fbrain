@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { nuevoId } from '@/lib/id';
 import { revalidatePath } from 'next/cache';
 import { getRepo } from '@/data';
 import { CRITERIOS } from '@/domain/alertas';
@@ -49,7 +50,7 @@ export async function firmarSesion(clienteId: string, formData: FormData) {
 
   const fecha = String(formData.get('fecha') || hoy);
   const estadoAgenda = (String(formData.get('estadoAgenda') || 'realizada')) as EstadoAgenda;
-  const sesionId = `${clienteId}-${fecha}-${Math.random().toString(36).slice(2, 7)}`;
+  const sesionId = nuevoId();
   const transcripcion = String(formData.get('transcripcion') ?? '').trim();
   const reporte = String(formData.get('reporte') ?? '').trim();
 
@@ -78,9 +79,9 @@ export async function firmarSesion(clienteId: string, formData: FormData) {
 
   // ----------------------------------------------------------- compromisos
   const vencimiento = String(formData.get('vencimientoCompromisos') || '');
-  for (const [i, texto] of lineas(formData.get('compromisos')).entries()) {
+  for (const texto of lineas(formData.get('compromisos'))) {
     const c: Compromiso = {
-      id: `${sesionId}-k${i}`,
+      id: nuevoId(),
       clienteId,
       sesionId,
       descripcion: texto,
@@ -94,7 +95,7 @@ export async function firmarSesion(clienteId: string, formData: FormData) {
   // ----------------------------------------------------------- métricas
   if (formData.get('cargarNumeros') === 'si') {
     const m: MetricaSemanal = {
-      id: `${clienteId}-${mondayOf(fecha)}`,
+      id: nuevoId(),
       clienteId,
       semanaIso: mondayOf(fecha),
       contenidoPublicado: num(formData.get('contenidoPublicado')),
@@ -139,7 +140,7 @@ export async function firmarSesion(clienteId: string, formData: FormData) {
 
   // ----------------------------------------------------------- lectura
   const lectura: LecturaConsultora = {
-    id: `${sesionId}-lectura`,
+    id: nuevoId(),
     clienteId,
     consultoraId: usuario.id,
     sesionId,
@@ -159,7 +160,7 @@ export async function firmarSesion(clienteId: string, formData: FormData) {
     const def = CRITERIOS.find((c) => c.codigo === codigo);
     if (def) {
       const alerta: Alerta = {
-        id: `${sesionId}-${codigo}`,
+        id: nuevoId(),
         clienteId,
         sesionId,
         codigo,
