@@ -1,0 +1,911 @@
+<title>Founders Brain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+
+<style>
+  :root {
+    --bg:        #F2F5F3;
+    --surface:   #FFFFFF;
+    --surface-2: #EAEFEC;
+    --ink:       #10201F;
+    --ink-2:     #3D4F4D;
+    --muted:     #6B7B78;
+    --rule:      #D3DBD8;
+    --rule-soft: #E4EAE7;
+    --accent:    #0B4A52;
+    --accent-2:  #10707C;
+    --accent-soft:#E1EEEF;
+    --verde:     #2F6D4F;
+    --amarillo:  #96660A;
+    --rojo:      #A8261E;
+    --negro:     #21201E;
+    --shadow:    0 1px 2px rgba(16,32,31,.05), 0 8px 24px -16px rgba(16,32,31,.18);
+
+    --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --f-body:    "Source Serif 4", Georgia, "Times New Roman", serif;
+    --f-mono:    "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #0B1312;
+      --surface:   #111D1C;
+      --surface-2: #172524;
+      --ink:       #E5EDEA;
+      --ink-2:     #B6C6C2;
+      --muted:     #8B9A97;
+      --rule:      #263634;
+      --rule-soft: #1D2B2A;
+      --accent:    #6CC5CE;
+      --accent-2:  #9BDDE3;
+      --accent-soft:#12302F;
+      --verde:     #6FBF92;
+      --amarillo:  #D9A845;
+      --rojo:      #E28078;
+      --negro:     #C9C7C2;
+      --shadow:    0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg:        #0B1312;
+    --surface:   #111D1C;
+    --surface-2: #172524;
+    --ink:       #E5EDEA;
+    --ink-2:     #B6C6C2;
+    --muted:     #8B9A97;
+    --rule:      #263634;
+    --rule-soft: #1D2B2A;
+    --accent:    #6CC5CE;
+    --accent-2:  #9BDDE3;
+    --accent-soft:#12302F;
+    --verde:     #6FBF92;
+    --amarillo:  #D9A845;
+    --rojo:      #E28078;
+    --negro:     #C9C7C2;
+    --shadow:    0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 17.5px;
+    line-height: 1.62;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 28px 120px;
+  }
+
+  /* ---------- masthead ---------- */
+
+  .masthead {
+    padding: 64px 0 34px;
+    border-bottom: 2px solid var(--ink);
+  }
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 20px;
+  }
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(42px, 8.5vw, 76px);
+    line-height: .96;
+    letter-spacing: -.035em;
+    margin: 0 0 22px;
+    text-wrap: balance;
+  }
+  h1 span { color: var(--muted); }
+  .thesis {
+    font-size: clamp(19px, 2.4vw, 23px);
+    line-height: 1.45;
+    color: var(--ink-2);
+    max-width: 40ch;
+    margin: 0;
+    text-wrap: pretty;
+  }
+  .metastrip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 28px;
+    margin-top: 34px;
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: .05em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .metastrip b { color: var(--ink-2); font-weight: 500; }
+
+  /* ---------- nav ---------- */
+
+  nav.toc {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 8px;
+  }
+  nav.toc .inner {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 11px 28px;
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  nav.toc .inner::-webkit-scrollbar { display: none; }
+  nav.toc a {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    white-space: nowrap;
+    padding: 2px 0;
+    border-bottom: 1px solid transparent;
+  }
+  nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ---------- sections ---------- */
+
+  section { padding-top: 62px; scroll-margin-top: 56px; }
+
+  .snum {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: .14em;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 12px;
+  }
+  h2 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: clamp(27px, 4vw, 36px);
+    line-height: 1.1;
+    letter-spacing: -.022em;
+    margin: 0 0 22px;
+    text-wrap: balance;
+  }
+  h3 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 20px;
+    line-height: 1.25;
+    letter-spacing: -.012em;
+    margin: 40px 0 12px;
+    text-wrap: balance;
+  }
+  h4 {
+    font-family: var(--f-mono);
+    font-weight: 500;
+    font-size: 12px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 30px 0 10px;
+  }
+  p { margin: 0 0 18px; max-width: 68ch; }
+  p.lead { font-size: 19.5px; color: var(--ink-2); max-width: 60ch; }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  strong { font-weight: 600; }
+  em { font-style: italic; color: var(--ink-2); }
+
+  ul, ol { max-width: 68ch; margin: 0 0 18px; padding-left: 1.25em; }
+  li { margin-bottom: 7px; }
+  li::marker { color: var(--muted); }
+
+  hr {
+    border: 0;
+    border-top: 1px solid var(--rule);
+    margin: 46px 0;
+  }
+
+  /* ---------- pull quote / principle ---------- */
+
+  .principio {
+    border-left: 3px solid var(--accent);
+    padding: 4px 0 4px 22px;
+    margin: 28px 0;
+    max-width: 62ch;
+  }
+  .principio .label {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 7px;
+  }
+  .principio p { font-size: 19px; margin: 0; color: var(--ink); }
+
+  /* ---------- cards ---------- */
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 26px 26px 8px;
+    margin: 0 0 18px;
+    box-shadow: var(--shadow);
+  }
+  .card > h3 { margin-top: 0; }
+  .card .kicker {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 8px;
+  }
+
+  .spec { border-top: 1px solid var(--rule-soft); margin-top: 18px; }
+  .spec .row {
+    display: grid;
+    grid-template-columns: 132px 1fr;
+    gap: 0 20px;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--rule-soft);
+    font-size: 16.5px;
+  }
+  .spec .row:last-child { border-bottom: 0; }
+  .spec .row dt {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-top: 4px;
+  }
+  .spec .row dd { margin: 0; color: var(--ink-2); }
+  .spec .row.veto dt { color: var(--rojo); }
+  @media (max-width: 620px) {
+    .spec .row { grid-template-columns: 1fr; gap: 5px; }
+  }
+
+  /* ---------- layer diagram ---------- */
+
+  .stack {
+    display: grid;
+    gap: 10px;
+    margin: 30px 0 34px;
+  }
+  .layer {
+    display: grid;
+    grid-template-columns: 92px 1fr;
+    gap: 0 22px;
+    align-items: start;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+    border-radius: 3px;
+    padding: 18px 22px;
+  }
+  .layer .tag {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    color: var(--accent);
+    padding-top: 3px;
+  }
+  .layer .name {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 18px;
+    letter-spacing: -.01em;
+    margin: 0 0 5px;
+  }
+  .layer .desc { font-size: 16px; color: var(--ink-2); margin: 0; max-width: 60ch; }
+  .layer .desc code { font-size: 13.5px; }
+  @media (max-width: 620px) {
+    .layer { grid-template-columns: 1fr; gap: 8px; }
+  }
+
+  /* ---------- chain ---------- */
+
+  .chain {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin: 24px 0 30px;
+    font-family: var(--f-mono);
+    font-size: 11px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+  .chain span {
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: 5px 9px;
+    color: var(--ink-2);
+  }
+  .chain span.hit {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--surface);
+  }
+  :root[data-theme="dark"] .chain span.hit,
+  :root:not([data-theme="light"]) .chain span.hit { color: #0B1312; }
+
+  /* ---------- tables ---------- */
+
+  .tw { overflow-x: auto; margin: 22px 0 28px; border: 1px solid var(--rule); border-radius: 4px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 15.5px; }
+  th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  th {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--rule);
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 14px; }
+  td strong { color: var(--ink); }
+
+  /* ---------- semaforo pills ---------- */
+
+  .pill {
+    display: inline-block;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 2px;
+    border: 1px solid currentColor;
+    white-space: nowrap;
+  }
+  .pill.v { color: var(--verde); }
+  .pill.a { color: var(--amarillo); }
+  .pill.r { color: var(--rojo); }
+  .pill.n { color: var(--negro); }
+
+  /* ---------- mock alert ---------- */
+
+  .alerta {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--amarillo);
+    border-radius: 3px;
+    padding: 20px 22px;
+    margin: 24px 0 28px;
+    font-size: 16.5px;
+  }
+  .alerta .head {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 16px;
+    letter-spacing: -.005em;
+    margin: 0 0 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  .alerta p { margin: 0 0 10px; font-size: 16.5px; max-width: none; }
+  .alerta p:last-child { margin-bottom: 0; }
+  .alerta .ask { color: var(--ink); }
+  .alerta .ask b { font-family: var(--f-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--amarillo); }
+
+  /* ---------- code / prompt blocks ---------- */
+
+  pre {
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-family: var(--f-mono);
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--ink-2);
+    margin: 20px 0 26px;
+  }
+  code { font-family: var(--f-mono); font-size: .88em; background: var(--surface-2); padding: 1px 4px; border-radius: 2px; }
+  pre code { background: none; padding: 0; font-size: inherit; }
+
+  /* ---------- callout ---------- */
+
+  .nota {
+    background: var(--accent-soft);
+    border-radius: 3px;
+    padding: 20px 22px;
+    margin: 26px 0;
+  }
+  .nota p { margin: 0; max-width: 62ch; }
+  .nota p + p { margin-top: 12px; }
+  .nota .label {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  /* ---------- footer ---------- */
+
+  footer {
+    margin-top: 80px;
+    padding-top: 26px;
+    border-top: 2px solid var(--ink);
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 28px;
+  }
+
+  :focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<nav class="toc">
+  <div class="inner">
+    <a href="#tesis">Tesis</a>
+    <a href="#capas">Capas</a>
+    <a href="#expediente">Expediente</a>
+    <a href="#motores">Motores</a>
+    <a href="#criterio">Tu criterio</a>
+    <a href="#prohibido">Prohibido</a>
+    <a href="#datos">Datos</a>
+    <a href="#pantallas">Pantallas</a>
+    <a href="#construccion">Construcción</a>
+    <a href="#riesgos">Riesgos</a>
+    <a href="#exito">Éxito</a>
+    <a href="#semana">Esta semana</a>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Blueprint de producto · Uso interno</p>
+    <h1>Founders<br><span>Brain</span></h1>
+    <p class="thesis">Un sistema que sostiene un expediente vivo de cada cliente y, cuando el consultor pregunta, contesta con un solo cuello de botella, la cita textual que lo prueba y qué hacer los próximos siete días.</p>
+    <div class="metastrip">
+      <span>V1 · <b>4 motores</b></span>
+      <span>Usuarios · <b>Consultoras + Vicky</b></span>
+      <span>Cartera · <b>~85 activos</b></span>
+      <span><b>25 ago 2026</b></span>
+    </div>
+  </header>
+
+  <section id="tesis">
+    <span class="snum">01</span>
+    <h2>La decisión que define todo lo demás</h2>
+    <p class="lead">Founders Brain no es un chat con el método. Es un expediente por cliente con un motor de criterio encima.</p>
+    <p>Esa distinción es todo el producto. Un chat es sin estado: cada consulta arranca de cero, el consultor tiene que volver a explicar el caso, y la calidad de la respuesta depende de cuánto contexto tuvo ganas de escribir ese día. Con seis consultoras y ochenta y cinco clientes, eso garantiza dos cosas: que nadie carga el contexto completo, y que la app nunca puede notar que algo <em>cambió</em>.</p>
+    <p>Y lo que hay que notar es justamente el cambio. Los dos casos que costaron plata este año —Parigi y Gianna— no se perdieron por falta de análisis. Se perdieron porque cinco escaladas emocionales en diez semanas quedaron cada una como una nota dentro de una sesión, y ninguna se comparó con la anterior. Una app sin memoria del caso vuelve a fallar igual, más rápido y con mejor prosa.</p>
+    <div class="principio">
+      <span class="label">Principio de arquitectura</span>
+      <p>Si la app no puede responder <em>“¿qué cambió desde la sesión pasada?”</em>, no es Founders Brain. Es un prompt con buena letra.</p>
+    </div>
+
+    <h3>Dónde queda “Hablá con Vicky”</h3>
+    <p>Son dos productos con el mismo cerebro y distinta unidad de trabajo. Conviene no fusionarlos: cada uno se rompe por motivos distintos.</p>
+    <div class="tw">
+      <table>
+        <thead>
+          <tr><th></th><th>Hablá con Vicky</th><th>Founders Brain</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Unidad</strong></td><td>La pregunta</td><td>El cliente</td></tr>
+          <tr><td><strong>Memoria</strong></td><td>La conversación</td><td>El expediente, permanente</td></tr>
+          <tr><td><strong>Quién pregunta</strong></td><td>Cualquiera del equipo</td><td>La consultora del caso</td></tr>
+          <tr><td><strong>Dispara solo</strong></td><td>No</td><td>Sí — alertas, vencimientos, incoherencias</td></tr>
+          <tr><td><strong>Falla cuando</strong></td><td>La pregunta es vaga</td><td>El expediente está vacío</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>El corpus de conocimiento es compartido. La diferencia es que Brain nunca contesta sin leer primero el expediente, y nunca contesta sin dejar constancia de qué contestó.</p>
+  </section>
+
+  <section id="capas">
+    <span class="snum">02</span>
+    <h2>Las cuatro capas</h2>
+    <p>Cada capa se puede construir, probar y romper por separado. Las de abajo no saben que existen las de arriba.</p>
+
+    <div class="stack">
+      <div class="layer">
+        <span class="tag">Capa 4</span>
+        <div>
+          <p class="name">Superficie</p>
+          <p class="desc">Lo que ve la consultora: la ficha del cliente, el botón que pide un diagnóstico, la bandeja de alertas. Y lo que ves vos: el tablero de cartera. Nada de chat abierto como entrada principal.</p>
+        </div>
+      </div>
+      <div class="layer">
+        <span class="tag">Capa 3</span>
+        <div>
+          <p class="name">Motores</p>
+          <p class="desc">Diagnóstico, Onboarding 60 días, Test de coherencia, Score y alertas. Cada uno con entrada definida, salida de formato fijo y una lista explícita de lo que se niega a hacer.</p>
+        </div>
+      </div>
+      <div class="layer">
+        <span class="tag">Capa 2</span>
+        <div>
+          <p class="name">Expediente</p>
+          <p class="desc">El estado de cada cliente: qué vende, a quién, a qué precio, sus números por semana, su historial de compromisos, cada transcripción y cada alerta abierta o cerrada. La única fuente que los motores leen.</p>
+        </div>
+      </div>
+      <div class="layer">
+        <span class="tag">Capa 1</span>
+        <div>
+          <p class="name">Cerebro</p>
+          <p class="desc">El rol de consultor estratégico como constitución, el método Founders, los umbrales del tracker de orgánico, los criterios de alerta, la cláusula de garantía y el corpus de casos ya resueltos. Es tu criterio, versionado.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>La decisión técnica que más importa</h3>
+    <p>Hay dos tipos de inteligencia adentro de esto y mezclarlas es el error más caro que se puede cometer.</p>
+    <div class="tw">
+      <table>
+        <thead>
+          <tr><th style="width:34%">Tipo</th><th>Qué resuelve</th><th style="width:22%">Cómo se implementa</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Regla dura</strong><br><span style="color:var(--muted)">determinística</span></td>
+            <td>Más de 21 días sin sesión. Dos cancelaciones seguidas. Cuota vencida hace 30 días. Cambio de coach en los últimos 30 días. Sesión sin transcripción. Día 90 sin una venta. Dos amarillas iguales en tres sesiones.</td>
+            <td>Consulta SQL programada. Sin modelo de lenguaje.</td>
+          </tr>
+          <tr>
+            <td><strong>Criterio</strong><br><span style="color:var(--muted)">interpretación</span></td>
+            <td>¿Esta frase es desesperanza sobre el proceso o un mal día? ¿Este mensaje atrae al cliente que declaramos? ¿Cuál de los ocho bloqueos es el que manda acá?</td>
+            <td>Modelo de lenguaje, obligado a citar la fuente.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Gianna dijo <em>“no nos vemos hace 3 o 4 semanas”</em> en la primera línea de su propia sesión. Eso no requiere inteligencia artificial: requiere una resta de fechas que nadie estaba haciendo. La mitad del valor de esta app son ocho consultas SQL que corren todas las noches, y son también la mitad más barata, más rápida y más confiable de construir. Empezá por ahí.</p>
+  </section>
+
+  <section id="expediente">
+    <span class="snum">03</span>
+    <h2>El expediente: la unidad de la app</h2>
+    <p>Todo lo demás es una vista de esto. El expediente tiene seis bloques, y el diseño de la pantalla debería hacer visible qué bloques están vacíos, porque un bloque vacío es exactamente lo que hace que un diagnóstico sea una opinión.</p>
+
+    <div class="tw">
+      <table>
+        <thead>
+          <tr><th style="width:24%">Bloque</th><th>Contenido</th><th style="width:26%">De dónde sale</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Identidad</strong></td><td>Programa, fecha de alta, plan de pago, garantía sí/no, fuente, consultora asignada, historial de traspasos.</td><td>Alta manual · CRM</td></tr>
+          <tr><td><strong>Negocio</strong></td><td>Qué vende, a quién, precio, cómo entrega, facturación actual e histórica, cantidad de clientes, de dónde vienen, qué intentó antes, qué funcionó, activos que ya tiene.</td><td>Onboarding + llamada de venta</td></tr>
+          <tr><td><strong>Autoridad</strong></td><td>Qué sabe hacer excepcionalmente bien, experiencia profesional, resultados propios y de terceros, industrias que conoce, autoridad desperdiciada.</td><td>Extraído de transcripciones</td></tr>
+          <tr><td><strong>Estrategia vigente</strong></td><td>Cliente ideal, problema, promesa, oferta, mecanismo, canal. <strong>Con versión y fecha</strong> — este bloque es el que permite detectar drift.</td><td>Sesiones · entregables</td></tr>
+          <tr><td><strong>Números</strong></td><td>Alcance, conversaciones, avance, agendas, asistencia, llamadas, ofertas, ventas, ticket, origen. Por semana.</td><td>Google Sheets del tracker</td></tr>
+          <tr><td><strong>Trazabilidad</strong></td><td>Cada sesión con fecha, transcripción y reporte; cada compromiso con fecha de vencimiento y si se cumplió; cada alerta con quién la cerró y qué escribió.</td><td>Drive + la app</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="nota">
+      <span class="label">Restricción de producto</span>
+      <p>El bloque <strong>Estrategia vigente</strong> se guarda versionado, no editado. Cuando el cliente cambia su oferta, la versión anterior no se sobreescribe: queda con su fecha. Sin eso no se puede detectar que Parigi bajó su precio de 20.000 a 15.000 por iniciativa propia el 02/07, que es un criterio rojo y pasó de largo.</p>
+    </div>
+
+    <h3>La regla de entrada</h3>
+    <p>Un expediente con menos de cuatro bloques cargados no habilita diagnóstico. La app no responde “no vende porque su oferta es débil” con tres datos; responde con la lista de lo que falta y las preguntas exactas para conseguirlo en la próxima sesión. Es la única forma de que el producto no se convierta en una máquina de opiniones bien escritas.</p>
+  </section>
+
+  <section id="motores">
+    <span class="snum">04</span>
+    <h2>Los cuatro motores del V1</h2>
+    <p>Cada motor tiene entrada definida, salida con formato fijo, y una lista de lo que se niega a hacer. Esa última fila es la que hace que la app tenga criterio en lugar de ganas de ayudar.</p>
+
+    <div class="card">
+      <p class="kicker">Motor 1</p>
+      <h3>Diagnóstico · ¿por qué no está vendiendo?</h3>
+      <p>El caso de uso central. La consultora no describe el caso: lo abre. La app ya tiene el expediente.</p>
+      <p>Por dentro recorre la cadena completa buscando la primera incoherencia, no la más visible:</p>
+      <div class="chain">
+        <span>Cliente</span><span>Problema</span><span>Deseo</span><span class="hit">Oferta</span><span>Promesa</span><span>Mensaje</span><span>Canal</span><span>Lead</span><span>Setting</span><span>Venta</span><span>Entrega</span><span>Resultado</span>
+      </div>
+      <p>Y clasifica el bloqueo en uno de ocho tipos —estratégico, mensaje, adquisición, comercial, entrega, operativo, ejecución, emocional— porque la acción es completamente distinta según cuál sea, y la confusión entre <em>ejecución</em> y <em>estrategia</em> es la que hace que un caso se re-diagnostique cuatro veces.</p>
+      <dl class="spec">
+        <div class="row"><dt>Entrada</dt><dd>Expediente + la pregunta de la consultora + su hipótesis previa (obligatoria).</dd></div>
+        <div class="row"><dt>Salida</dt><dd>El protocolo de 10 pasos, en ese orden: diagnóstico en 5 puntos · <strong>un</strong> cuello de botella · evidencia con hechos separados de hipótesis · qué no haría · hipótesis principal · plan ordenado con responsables · métricas · checkpoint · criterio de decisión (si X continuar, si Y corregir, si Z replantear) · preguntas abiertas.</dd></div>
+        <div class="row"><dt>Además</dt><dd>Tipo de bloqueo, eslabón donde se rompe la cadena, y el Principio Founders generalizable detrás de la conclusión.</dd></div>
+        <div class="row veto"><dt>Se niega a</dt><dd>Dar más de un cuello de botella. Listar más de cinco acciones. Decir “no funciona” sin declarar el tamaño de la muestra. Inventar un dato que no está en el expediente. Diagnosticar “mindset” cuando los números muestran un problema de oferta.</dd></div>
+      </dl>
+    </div>
+
+    <div class="card">
+      <p class="kicker">Motor 2</p>
+      <h3>Onboarding · plan de 60 días desde cero</h3>
+      <p>Hoy este trabajo lo hacés vos, a mano, y el resultado es un documento como el de Alejandrina: qué necesita en orden, con la evidencia textual de la llamada al lado de cada necesidad. Eso es exactamente el formato de salida que hay que reproducir, no un plan genérico de doce semanas.</p>
+      <p>El motor arranca de la transcripción de la llamada de venta más el formulario de onboarding, y lo primero que hace es lo que más se saltea: <strong>calcular la cuenta inversa desde la meta</strong>. Con el ticket y el objetivo del cliente, cuántas ventas, asistencias, agendas, conversaciones y cuánto alcance por semana. Ese número es lo que convierte un plan en un compromiso.</p>
+      <dl class="spec">
+        <div class="row"><dt>Entrada</dt><dd>Llamada de venta + onboarding + programa contratado + garantía sí/no + horas reales por semana declaradas.</dd></div>
+        <div class="row"><dt>Salida</dt><dd>Mapa 1-7 / 8-14 / 15-30 / 31-45 / 46-60 · el sprint de los primeros 7 días con 3 a 5 acciones · la cuenta inversa con sus números · las tres cosas para la sesión 1 · el brief para pegar en el canal de la consultora.</dd></div>
+        <div class="row"><dt>Además</dt><dd>Riesgos del caso con su evidencia textual, y las condiciones de la garantía si aplica, listadas para leer en voz alta.</dd></div>
+        <div class="row veto"><dt>Se niega a</dt><dd>Armar el plan contra las horas del pitch en lugar de las horas reales. Aplicar el mismo ritmo a todos los negocios. Poner “definir nicho” como tarea de la semana 4 cuando el cliente ya tiene seis mercados abiertos.</dd></div>
+      </dl>
+    </div>
+
+    <div class="card">
+      <p class="kicker">Motor 3 · el caso de Pame</p>
+      <h3>Test de coherencia · ¿a quién atrae esto realmente?</h3>
+      <p>Es el motor que resuelve el problema que trajiste: el cliente comunica y le llega otro tipo de cliente. La consultora pega un anuncio, un reel, un guion, una landing o diez DMs reales.</p>
+      <p>El truco de diseño está en el orden, y es lo que hace que este motor funcione mejor que preguntarle a un chat. La app corre <strong>un brief inverso a ciegas</strong>: lee el mensaje <em>sin</em> mirar el cliente ideal declarado en el expediente y escribe quién se reconocería en ese texto —nivel de facturación, madurez, tipo de dolor, si está escapando de un problema o capturando una oportunidad—. Después, y solo después, abre el expediente y compara las dos definiciones.</p>
+      <p>Ese es el diferencial: la app no puede autoengañarse confirmando la intención, porque cuando escribió su respuesta no conocía la intención.</p>
+      <dl class="spec">
+        <div class="row"><dt>Entrada</dt><dd>El material tal cual está publicado. Opcional: los leads que trajo, con lo que dijeron.</dd></div>
+        <div class="row"><dt>Salida</dt><dd>Perfil inferido a ciegas · perfil declarado · veredicto <span class="pill v">Coherente</span> <span class="pill a">Parcial</span> <span class="pill r">Incoherente</span> · las palabras exactas que corren el mensaje hacia el público equivocado · qué eslabón tocar primero, con la advertencia explícita de no ir directo a segmentación.</dd></div>
+        <div class="row"><dt>Además</dt><dd>Dolor de principiante vs. dolor de crecimiento, marcado. Y drift: en qué se fue moviendo el mensaje respecto de la versión de estrategia anterior, con fechas.</dd></div>
+        <div class="row veto"><dt>Se niega a</dt><dd>Recomendar cambiar segmentación antes de revisar qué dice el mensaje. Concluir sobre la calidad de los leads con menos de una decena de casos. Reescribir el material antes de decir qué está mal y por qué.</dd></div>
+      </dl>
+    </div>
+
+    <div class="card">
+      <p class="kicker">Motor 4</p>
+      <h3>Score de salud comercial y alertas</h3>
+      <p>Doce dimensiones del 1 al 10 —cliente ideal, problema, deseo, oferta, promesa, mensaje, autoridad, adquisición, volumen, ventas, entrega, ejecución— con las tres que más están limitando las ventas destacadas, y cada puntaje con la evidencia que lo justifica. Un score sin evidencia al lado es un número que nadie va a creer la segunda vez.</p>
+      <p>Encima corre el sistema de alertas, con la regla de formato que ya definiste: verde es solo color, y amarillo, rojo o negro son semáforo más tres líneas con cita textual y fecha. Así se ve una alerta en la bandeja:</p>
+      <div class="alerta">
+        <p class="head"><span class="pill a">Amarillo · 2ª vez</span> Eleonora Rolandi · sesión del 06/08</p>
+        <p>Sigue sin sentir la oferta como propia y dice que el sistema la abruma. Textual: <em>“son muchas cosas juntas y no sé por dónde empezar”</em>. Es el mismo bloqueo que en la sesión del 23/07, dos sesiones después del cambio de coach.</p>
+        <p class="ask"><b>Pedido</b> · que la consultora cierre este punto en la próxima sesión o lo escale. Si vuelve a aparecer, pasa a rojo automático.</p>
+      </div>
+      <dl class="spec">
+        <div class="row"><dt>Entrada</dt><dd>Transcripción de cada sesión + datos duros del CRM, finanzas y agenda.</dd></div>
+        <div class="row"><dt>Detecta</dt><dd>Lo que el cliente dice · las ausencias (ningún número en toda la sesión, sesión que se fue en configurar herramientas, cierre sin compromiso con fecha, el cliente habló menos del 30%) · las alertas sobre nosotros (sesión sin registro, reporte con más de 48 h de atraso, Coaching Log que no coincide) · los cruces duros de fechas y pagos.</dd></div>
+        <div class="row"><dt>Salida</dt><dd>Estado, las tres líneas, el pedido concreto, y a quién le llega: consultora, revisión de caso en 48 h con alguien que no sea su coach, o a vos el mismo día.</dd></div>
+        <div class="row veto"><dt>Se niega a</dt><dd>Cerrar una alerta por el paso del tiempo. Emitir una alerta sin cita textual y fecha. Alertar por dudas técnicas, mal día, o emoción fuerte con avance. Alertar sobre un cliente en sus primeras dos semanas. Y un techo duro: <strong>máximo 10 alertas por semana</strong>; si el sistema genera más, prioriza y guarda el resto para el informe mensual.</dd></div>
+      </dl>
+    </div>
+
+    <div class="principio">
+      <span class="label">Principio Founders</span>
+      <p>Ninguna alerta se cierra sola. Se cierra porque alguien escribió qué hizo. Y una alerta roja solo la puede cerrar quien hizo la revisión, no la consultora del caso.</p>
+    </div>
+  </section>
+
+  <section id="criterio">
+    <span class="snum">05</span>
+    <h2>Cómo se logra que piense con tu criterio</h2>
+    <p>Esto no se resuelve con un prompt largo. Son cinco piezas, y la quinta es la que casi nadie construye y la única que te dice si funcionó.</p>
+
+    <h4>1 · Constitución</h4>
+    <p>El rol que ya escribiste, fijo, versionado, idéntico en todas las corridas. No se edita por caso. Es lo que hace que dos consultoras distintas obtengan el mismo criterio.</p>
+
+    <h4>2 · Jurisprudencia</h4>
+    <p>El corpus de casos ya resueltos —Parigi, Gianna, Andy Videla, Curia, Catalina, Gaspar, Alejandrina— indexado y recuperable. No como ejemplos de estilo: como precedentes. Cuando aparece un caso nuevo, la app trae los dos o tres casos anteriores más parecidos y los cita. Un cliente que baja su precio solo tiene un precedente con nombre y fecha, y eso vale más que cualquier razonamiento desde cero.</p>
+
+    <h4>3 · Umbrales, no adjetivos</h4>
+    <p>Los números del tracker de orgánico entran como tabla, no como prosa: qué es alcance bajo, qué es cierre bajo, qué significa cada rojo. Sin esto la app dice “el alcance parece bajo”. Con esto dice “el alcance está en X, el objetivo para su meta y su ticket es Y, y con el embudo en rojo necesitaría cuatro veces más para facturar lo mismo”.</p>
+
+    <h4>4 · Formato de salida obligatorio</h4>
+    <p>Cada motor devuelve una estructura tipada, validada por el sistema, no texto libre. Si el modelo devuelve dos cuellos de botella, la respuesta se rechaza y se vuelve a pedir. La disciplina se impone en el código, no se le pide al modelo por favor.</p>
+
+    <h4>5 · Evaluación contra tus propias respuestas</h4>
+    <p>Acá está la diferencia entre una app que suena bien y una que sirve. Tomás quince casos que ya resolviste vos —los que están en el proyecto— y los convertís en un set de prueba: el expediente como entrada, tu conclusión como respuesta correcta. Cada vez que se cambia el prompt, el corpus o el modelo, se corre el set y se mide en cuántos casos la app llega al mismo cuello de botella que vos.</p>
+    <p>Ese número es la única definición honesta de “piensa como Vicky”, y es también el que te avisa cuando una mejora aparente empeoró el criterio. Sin este paso, cada cambio en el prompt es una apuesta a ciegas.</p>
+
+    <div class="nota">
+      <span class="label">Meta razonable</span>
+      <p>Coincidencia con tu diagnóstico en <strong>12 de 15</strong> casos antes de abrir la app a las consultoras. Debajo de eso, el producto todavía no está listo y va a enseñar criterio equivocado, que es peor que no enseñar ninguno.</p>
+    </div>
+  </section>
+
+  <section id="prohibido">
+    <span class="snum">06</span>
+    <h2>Lo que la app tiene prohibido</h2>
+    <p>Los guardarraíles son parte de la especificación, no una nota al pie. Van implementados como validaciones, no como sugerencias en el prompt.</p>
+    <ul>
+      <li><strong>Completar información faltante imaginándola.</strong> Todo dato del diagnóstico apunta a su origen: sesión, fecha, planilla. Lo que no tiene origen se declara como hipótesis, en su propia sección.</li>
+      <li><strong>Devolver más de un cuello de botella</strong> o más de cinco acciones por sprint.</li>
+      <li><strong>Concluir sin muestra.</strong> Toda afirmación sobre qué funciona o no viene con cuántos casos, sobre cuántos y qué porcentaje.</li>
+      <li><strong>Recomendar construcción antes de validar.</strong> CRM, funnels, automatizaciones, más inversión en ads y equipo comercial quedan bloqueados hasta que el expediente registre que alguien compró la oferta.</li>
+      <li><strong>Escalar lo que todavía no funciona.</strong> La jerarquía cliente → problema → oferta → promesa → mensaje → validación → adquisición → ventas → entrega → escala se respeta en el orden del plan.</li>
+      <li><strong>Cambiar de estrategia por un caso aislado.</strong> Un comentario, una llamada, una objeción no mueven nada. Se piden patrones.</li>
+      <li><strong>Cerrar una alerta sin texto escrito por una persona.</strong></li>
+      <li><strong>Contradecir al consultor es obligatorio, no opcional.</strong> Si la lectura de la consultora no coincide con el expediente, la app lo dice: “no veo evidencia suficiente para concluir eso todavía”, “esto es un síntoma y no la causa”, “antes de cambiar la oferta quiero revisar el mensaje”.</li>
+    </ul>
+  </section>
+
+  <section id="pantallas">
+    <span class="snum">07</span>
+    <h2>La app enseña criterio o lo reemplaza</h2>
+    <p>Tu misión declarada es que la consultora aprenda a pensar. Una app que devuelve la respuesta perfecta al primer click hace exactamente lo contrario: forma gente que consulta bien y diagnostica cada vez peor. El diseño tiene que empujar en la dirección opuesta, y se resuelve con dos decisiones de producto muy chicas.</p>
+
+    <h3>Primero tu hipótesis, después la mía</h3>
+    <p>Para pedir un diagnóstico, la consultora escribe antes, en dos líneas, cuál cree que es el cuello de botella. Es obligatorio y no se puede saltear. La app responde y, arriba de todo, muestra si coincidieron y en qué se separaron.</p>
+    <p>Eso convierte cada consulta en una repetición de entrenamiento en lugar de una consulta a un oráculo. Y te da, además, el dato de management que hoy no tenés: qué consultora acierta el cuello de botella y en qué tipo de caso se equivoca siempre.</p>
+
+    <h3>“Estoy concluyendo esto porque…”</h3>
+    <p>Toda respuesta incluye el razonamiento en una línea y el Principio Founders generalizable detrás. No para justificarse: para que la consultora reconozca el patrón sola en el próximo cliente.</p>
+
+    <h3>Las pantallas</h3>
+    <div class="tw">
+      <table>
+        <thead>
+          <tr><th style="width:30%">Pantalla</th><th>Para qué existe</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Mis clientes</strong><br><span style="color:var(--muted)">consultora</span></td><td>Lista con semáforo, días desde la última sesión, compromiso vigente y qué le toca a cada uno esta semana. Es la pantalla de inicio.</td></tr>
+          <tr><td><strong>Expediente</strong><br><span style="color:var(--muted)">consultora</span></td><td>Los seis bloques, con los vacíos marcados. Línea de tiempo de sesiones, compromisos y cambios de estrategia con fecha.</td></tr>
+          <tr><td><strong>Preparar sesión</strong><br><span style="color:var(--muted)">consultora</span></td><td>Objetivo en una frase, diagnóstico actual, las 5 preguntas que más información producirían, la decisión que tiene que salir de la sesión, y el sprint de 7 días. Se genera antes de cada reunión.</td></tr>
+          <tr><td><strong>Cerrar sesión</strong><br><span style="color:var(--muted)">consultora</span></td><td>Sube o pega la transcripción; la app propone el reporte, el compromiso con fecha y las alertas que detectó. La consultora corrige y firma. Esto es lo que hace que cargar el expediente cueste menos que no cargarlo.</td></tr>
+          <tr><td><strong>Bandeja de alertas</strong><br><span style="color:var(--muted)">consultora + Vicky</span></td><td>Amarillas, rojas y negras abiertas, con su pedido y su plazo. Se cierran escribiendo qué se hizo.</td></tr>
+          <tr><td><strong>Cartera</strong><br><span style="color:var(--muted)">Vicky</span></td><td>Los 85 clientes por estado, carga real por consultora contra el techo de 12, altas de la semana, clientes en día 60 y en día 90 sin venta, y expedientes ciegos por falta de registro.</td></tr>
+          <tr><td><strong>Post mortem</strong><br><span style="color:var(--muted)">Vicky</span></td><td>Todo cliente perdido: qué señal hubo, cuándo, y por qué no se actuó. Es la pantalla que audita si el sistema de alertas sirve.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="datos">
+    <span class="snum">08</span>
+    <h2>De dónde entran los datos</h2>
+    <div class="tw">
+      <table>
+        <thead>
+          <tr><th style="width:26%">Fuente</th><th>Qué trae</th><th style="width:24%">Cómo</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Transcripciones</strong></td><td>Casi todo el bloque de negocio y autoridad, los compromisos, las citas textuales de las alertas. Es la fuente más rica y la que hoy se desperdicia.</td><td>Watcher sobre la carpeta del cliente en Drive → extracción automática → la consultora valida.</td></tr>
+          <tr><td><strong>Google Sheets</strong></td><td>Los números semanales del tracker de orgánico y los datos de cartera y cupos por consultora.</td><td>Lectura programada, sin migrar nada de lugar.</td></tr>
+          <tr><td><strong>Formulario de onboarding</strong></td><td>La línea de base del cliente nuevo el día 1.</td><td>Ya existe. Se conecta y se completa lo que falte.</td></tr>
+          <tr><td><strong>Carga manual</strong></td><td>Lo que ninguna fuente tiene: precio real, activos, correcciones. Y el cierre de alertas.</td><td>Formularios cortos dentro de la app.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="nota">
+      <span class="label">Lo que hay que arreglar antes, y no es software</span>
+      <p>Hoy faltan reportes de unas veinte sesiones del período y las dos sesiones donde el caso Parigi se rompió no tienen registro. La app puede detectar y alertar esa ausencia, pero no puede inventar lo que nunca se grabó. <strong>Que todas las sesiones se transcriban y queden en la carpeta del cliente es un prerrequisito, no una funcionalidad.</strong> Sin eso, Founders Brain funciona a media máquina y la mitad ciega va a ser siempre la mitad donde están los casos que se pierden.</p>
+    </div>
+  </section>
+
+  <section id="construccion">
+    <span class="snum">09</span>
+    <h2>Plan de construcción</h2>
+    <p>Tres etapas, y la primera no necesita programador. El orden está elegido para que el valor aparezca antes que la app: si la etapa cero no cambia nada en la operación, la app tampoco lo va a hacer.</p>
+
+    <h3>V0 · Semanas 1 y 2 · sin código</h3>
+    <p>El objetivo es probar el criterio, no el producto. Se hace con lo que ya tenés.</p>
+    <ul>
+      <li>El rol y el método quedan como skill fija, y cada cliente como un expediente en el proyecto, con los seis bloques y el formato de salida obligatorio.</li>
+      <li>Las <strong>ocho reglas duras</strong> se implementan como fórmulas en la planilla de cartera: días sin sesión, cancelaciones seguidas, cuota vencida, cambio de coach, día 90 sin venta, sesión sin registro. Esto solo, sin nada más, es lo que hubiera atrapado a Gianna.</li>
+      <li>Dos consultoras usan el protocolo a mano en diez casos reales, y se compara con lo que hubieras dicho vos. Ese es el set de evaluación del V1.</li>
+    </ul>
+    <p><strong>Costo:</strong> tu tiempo y el de dos consultoras. <strong>Lo que se decide con esto:</strong> si el criterio se transfiere, y qué motor duele más. Si el V0 no se usa, no construyas el V1.</p>
+
+    <h3>V1 · Semanas 3 a 10 · la app</h3>
+    <div class="tw">
+      <table>
+        <thead><tr><th style="width:26%">Pieza</th><th>Elección</th><th>Por qué</th></tr></thead>
+        <tbody>
+          <tr><td>Front y back</td><td>Next.js en Vercel</td><td>Un solo repo, un solo lenguaje, deploy sin infraestructura.</td></tr>
+          <tr><td>Base y auth</td><td>Postgres en Supabase</td><td>Login, permisos por rol y almacenamiento resueltos. El expediente es relacional: no lo pongas en Notion.</td></tr>
+          <tr><td>Búsqueda del corpus</td><td>pgvector en la misma base</td><td>Recuperar método y precedentes sin sumar otro servicio.</td></tr>
+          <tr><td>Criterio</td><td>Claude · modelo grande</td><td>Diagnóstico, coherencia, onboarding. Salida tipada y validada.</td></tr>
+          <tr><td>Extracción</td><td>Claude · modelo chico</td><td>Leer transcripciones, sacar compromisos, números y frases candidatas. Corre por volumen, cuesta centavos.</td></tr>
+          <tr><td>Reglas duras</td><td>Cron sobre SQL</td><td>Las ocho alertas determinísticas, todas las noches. Sin modelo.</td></tr>
+          <tr><td>Ingesta</td><td>n8n o Make</td><td>Drive y Sheets sin escribir integraciones a mano.</td></tr>
+          <tr><td>Notificación</td><td>Slack + mail</td><td>La alerta va donde el equipo ya está. Nadie entra a una app a buscar alertas.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h4>Orden de construcción</h4>
+    <ol>
+      <li><strong>Expediente y reglas duras</strong> (semanas 3-4). Sin motores de criterio todavía. Ya sirve.</li>
+      <li><strong>Motor de diagnóstico + cerrar sesión con transcripción</strong> (semanas 5-6). El bucle central: cargar la sesión sale casi gratis y devuelve el reporte hecho.</li>
+      <li><strong>Alertas por criterio y bandeja</strong> (semana 7).</li>
+      <li><strong>Test de coherencia y score</strong> (semana 8).</li>
+      <li><strong>Onboarding 60 días y tablero de cartera</strong> (semanas 9-10).</li>
+    </ol>
+
+    <h4>Costos, en orden de magnitud</h4>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Concepto</th><th class="num">Estimado</th><th>Nota</th></tr></thead>
+        <tbody>
+          <tr><td>Desarrollo V1</td><td class="num">8 semanas · 1 full-stack senior</td><td>Único costo grande. Un solo desarrollador alcanza con este stack.</td></tr>
+          <tr><td>Infraestructura</td><td class="num">≈ USD 45–70 / mes</td><td>Vercel + Supabase + automatizaciones.</td></tr>
+          <tr><td>Extracción de sesiones</td><td class="num">≈ USD 40–120 / mes</td><td>Unas 340 sesiones mensuales con modelo chico.</td></tr>
+          <tr><td>Diagnósticos y coherencia</td><td class="num">≈ USD 80–250 / mes</td><td>Modelo grande, contexto largo. Escala con el uso, no con la cartera.</td></tr>
+          <tr><td>Transcripción</td><td class="num">≈ USD 30–90 / mes</td><td>Cero si la plataforma de videollamadas ya transcribe.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="color:var(--muted);font-size:15.5px">Los rangos son estimaciones de orden de magnitud sobre volumen propio y precios de lista vigentes; hay que confirmarlos contra la tarifa del día antes de presupuestar. El costo mensual de operación es chico. La decisión real es la del desarrollo.</p>
+
+    <h3>V2 · después del mes 3</h3>
+    <p>Solo lo que el uso pida: acceso del cliente a su propio sprint y sus números, cierre del circuito con el CRM y facturación, panel de patrones de cartera (qué cuello de botella predomina por programa y por consultora), y sugerencia de asignación de consultora con cupos, que hoy resolvés a mano cada vez.</p>
+
+    <h3>La alternativa honesta, sin programador</h3>
+    <p>Se puede llegar a un 70% con Airtable como expediente, formularios para la carga, Make llamando a la API de Claude, y Slack para las alertas. Se arma en dos o tres semanas sin escribir una línea de código.</p>
+    <p>Los dos límites, para que la decisión sea informada: la salida tipada y validada es frágil —difícil garantizar que nunca devuelva dos cuellos de botella—, y el versionado del bloque de estrategia, que es lo que detecta drift, es incómodo de hacer en Airtable. Si el V0 muestra que el motor de diagnóstico es lo que más falta, saltá directo al V1. Si muestra que lo que más falta son las alertas, la versión sin código puede ser suficiente por varios meses.</p>
+  </section>
+
+  <section id="riesgos">
+    <span class="snum">10</span>
+    <h2>Cómo fracasa esto</h2>
+    <p>Cuatro modos de falla, en orden de probabilidad, y cómo se desactiva cada uno.</p>
+    <div class="tw">
+      <table>
+        <thead><tr><th style="width:32%">Falla</th><th>Antídoto</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Nadie carga el expediente.</strong> El modo de falla más probable de todos: si cargar cuesta más que abrir un doc, la app queda vacía en tres semanas.</td><td>La única entrada de carga es “cerrar sesión”, y devuelve el reporte y el compromiso ya escritos. Cargar tiene que <em>ahorrar</em> trabajo el mismo día, no prometerlo para más adelante.</td></tr>
+          <tr><td><strong>Fatiga de alertas.</strong> Más de diez por semana y en un mes nadie las lee.</td><td>Techo duro de diez, priorizadas. Y la lista explícita de lo que no dispara alerta: dudas técnicas, mal día, emoción con avance, cliente en sus primeras dos semanas.</td></tr>
+          <tr><td><strong>Las consultoras dejan de pensar.</strong> Se vuelven buenas pidiéndole diagnósticos y malas haciéndolos.</td><td>Hipótesis obligatoria antes de la respuesta, el porqué en cada conclusión, y medición de aciertos por consultora.</td></tr>
+          <tr><td><strong>Basura entra, criterio sale.</strong> Con expedientes a medias la app produce opiniones bien escritas, que es peor que no producir nada porque parecen datos.</td><td>Umbral mínimo de bloques para habilitar diagnóstico, origen obligatorio para cada dato, y sección separada de hipótesis.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="exito">
+    <span class="snum">11</span>
+    <h2>Cómo medimos si funciona</h2>
+    <p>No con uso. Una app muy usada que no mueve las ventas del cliente es exactamente el problema que el método intenta evitar: actividad confundida con resultado. Cinco números, medidos contra los tres meses anteriores al lanzamiento.</p>
+    <ul>
+      <li><strong>Clientes con su primera venta antes del día 60.</strong> El número que define el producto.</li>
+      <li><strong>Casos perdidos que tenían señal previa sin actuar.</strong> Tiene que tender a cero. Es la razón por la que el sistema de alertas existe.</li>
+      <li><strong>Alertas amarillas cerradas con texto dentro del plazo.</strong> Mide si el circuito se cierra o solo se enciende.</li>
+      <li><strong>Horas para armar un plan de onboarding.</strong> Hoy son tus horas, y son el cuello de botella de la operación con diez altas por mes.</li>
+      <li><strong>Aciertos de cuello de botella por consultora, mes a mes.</strong> Mide lo único que escala de verdad: criterio en el equipo.</li>
+    </ul>
+    <div class="principio">
+      <span class="label">Regla final</span>
+      <p>La misma pregunta que la app le hace a cada cliente vale para la app: <em>¿esto acerca a una venta o solo mantiene ocupado a alguien?</em></p>
+    </div>
+  </section>
+
+  <section id="semana">
+    <span class="snum">12</span>
+    <h2>Lo primero, esta semana</h2>
+    <p>En este orden, y sin empezar por el software.</p>
+    <ol>
+      <li><strong>Las ocho reglas duras, en la planilla de cartera.</strong> Un día de trabajo, cero código, y es la mitad del valor de la app. Corren sobre los 85 clientes el viernes.</li>
+      <li><strong>Transcripción obligatoria de todas las sesiones</strong>, en la carpeta del cliente en Drive. Es el prerrequisito de todo lo demás y no depende de nadie externo.</li>
+      <li><strong>El set de evaluación.</strong> Quince casos que ya resolviste, con expediente y conclusión. Es el activo más valioso del proyecto y solo lo podés armar vos.</li>
+      <li><strong>Dos consultoras usando el protocolo a mano</strong> en sus próximos diez casos, con hipótesis escrita antes.</li>
+    </ol>
+    <p>Con eso, en dos semanas vas a saber tres cosas que hoy no sabés: qué motor duele más, si el criterio se transfiere por escrito, y si el equipo carga el expediente cuando nadie lo obliga. Recién ahí conviene contratar el desarrollo.</p>
+  </section>
+
+  <footer>
+    <span>Founders Brain</span>
+    <span>Blueprint V1</span>
+    <span>25 · 08 · 2026</span>
+  </footer>
+
+</div>
