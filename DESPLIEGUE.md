@@ -52,8 +52,16 @@ habilitar ninguna extensión a mano: crea las que usa.
 Si preferís correrlas una por una, están en `supabase/migrations/` numeradas en
 el orden en que hay que aplicarlas, y el catálogo de hitos en `supabase/seed.sql`.
 
-Verificado corriendo las ocho contra un PostgreSQL 16 limpio: aplican sin
-errores y dejan 38 tablas, 12 hitos y 16 funciones de reglas.
+El editor de Supabase va a mostrar dos advertencias antes de correrlo —una
+operación "destructiva" y tablas creadas sin RLS—. Las dos son esperables: la
+primera es un `drop trigger if exists` que se recrea acto seguido, y la segunda
+es cierta sólo mientras el archivo corre, porque las tablas se crean antes de
+activarles la seguridad.
+
+Verificado corriendo las nueve contra un PostgreSQL 16 limpio: aplican sin
+errores, dejan 12 hitos y 16 funciones de reglas, y **las 33 tablas terminan
+con RLS activo**. Probado además que una consultora ve al equipo pero no el set
+de evaluación, que administración sí lo ve, y que sin sesión no se ve nada.
 
 ### 1.3 · Cargar el equipo
 

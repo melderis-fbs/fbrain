@@ -83,10 +83,30 @@ tardar un segundo.
 
 **3.4 ·** Pegá con `Ctrl+V` y apretá **Run** (o `Ctrl+Enter`).
 
+**3.5 · Si aparece un cartel de advertencia, seguí adelante.**
+
+Supabase revisa el SQL antes de correrlo y para este archivo muestra dos avisos.
+Los dos son esperables:
+
+> *This query includes destructive operations.*
+
+Es por una sola línea: `drop trigger if exists tg_baja_marca_cliente on bajas`,
+que borra un disparador para volver a crearlo dos líneas más abajo. No borra
+ningún dato, y en una base recién creada no hay nada que borrar.
+
+> *This query creates tables without enabling Row Level Security.*
+
+Es cierto **mientras el archivo corre**: primero crea las tablas y después les
+activa la seguridad. Al terminar, **las 33 tablas quedan con RLS activo** —
+verificado corriendo el archivo entero contra un PostgreSQL limpio y
+consultando cuáles quedaban sin proteger: ninguna.
+
+Dale a **Run anyway** (o el botón que confirme).
+
 Tarda unos segundos. Cuando termina, abajo dice **Success. No rows returned**.
 Eso es lo correcto: crea tablas, no devuelve filas.
 
-**3.5 · Verificá que quedó.** Menú izquierdo → **Table Editor**. Tenés que ver
+**3.6 · Verificá que quedó.** Menú izquierdo → **Table Editor**. Tenés que ver
 una lista larga de tablas: `alertas`, `clientes`, `consultoras`, `documentos_cliente`,
 `metricas_semanales`, `pagos`, `sesiones` y varias más. Son 38 en total.
 
