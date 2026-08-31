@@ -63,7 +63,7 @@ export default async function MisClientesPage({
         </h1>
         <p className="mt-1.5 text-[13px] text-ink-2">
           {comercial
-            ? 'Por mes de ingreso, como la planilla. Con el semáforo y el índice al lado, que es lo que la planilla no puede decir.'
+            ? 'Cómo viene el cobro, por mes de ingreso: si paga en cuotas, cuántas están pagas y si hay algo vencido. El resto de la ficha está adentro de cada cliente.'
             : 'Ordenados por urgencia, no alfabéticamente. Arriba está el que más te necesita hoy.'}
         </p>
       </header>
@@ -71,7 +71,7 @@ export default async function MisClientesPage({
       <div className="mb-3 flex flex-wrap items-center gap-1.5 text-[12px]">
         <span className="text-ink-3">Ver:</span>
         <Vista href={`/mis-clientes?f=${filtro.key}`} activo={!comercial}>Seguimiento</Vista>
-        <Vista href={`/mis-clientes?f=${filtro.key}&v=comercial`} activo={comercial}>Comercial</Vista>
+        <Vista href={`/mis-clientes?f=${filtro.key}&v=comercial`} activo={comercial}>Pagos</Vista>
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
@@ -97,7 +97,7 @@ export default async function MisClientesPage({
       </div>
 
       {filas.length && comercial ? (
-        <ListaComercial vistas={filas} verConsultora={veTodo(usuario.rol)} />
+        <ListaComercial vistas={filas} verConsultora={veTodo(usuario.rol)} hoy={ws.hoy} />
       ) : filas.length ? (
         <Card pad={false}>
           <div className="overflow-x-auto">
