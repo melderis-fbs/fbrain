@@ -4,7 +4,7 @@ import { getUsuario, veTodo } from '@/server/auth';
 import { getWorkspace, type VistaCliente } from '@/server/workspace';
 import { Avatar, Card, Chip, Stat } from '@/components/ui';
 import { DESVIO_LABEL, RESPONSABLE_CORTO, RESPONSABLE_LABEL, type EstadoDesvio } from '@/domain/atribucion';
-import { HITOS } from '@/domain/fases';
+import { FASES, HITOS, type FaseNegocio } from '@/domain/fases';
 import { plata } from '@/lib/ui';
 
 export const metadata = { title: 'La grilla · Founders Brain' };
@@ -26,6 +26,32 @@ export const metadata = { title: 'La grilla · Founders Brain' };
  */
 
 type Filtro = { consultora?: string; solo?: string };
+
+/**
+ * El programa se vive en semanas, no en días. "Día 62" obliga a dividir por
+ * siete en la cabeza cada vez; "semana 9" se lee. El día queda en el title
+ * para cuando hace falta el número fino.
+ */
+const semana = (dia: number) => Math.max(1, Math.ceil(dia / 7));
+
+/**
+ * Los hitos agrupados por etapa, en el orden en que se viven. Es lo que
+ * convierte doce columnas sueltas en cinco bloques con sentido: cada etapa
+ * responde una pregunta, y las columnas de adentro son cómo se contesta.
+ */
+const ETAPAS = FASES.map((f) => ({
+  ...f,
+  hitos: HITOS.filter((h) => h.fase === f.key),
+})).filter((e) => e.hitos.length > 0);
+
+/** Un color por etapa, tenue, sólo para separar los bloques a simple vista. */
+const TINTE: Record<FaseNegocio, string> = {
+  definicion: 'var(--accent)',
+  mensaje: 'var(--good)',
+  volumen: 'var(--warning)',
+  conversion: 'var(--serious)',
+  escala: 'var(--critical)',
+};
 
 const COLOR: Record<string, { bg: string; borde: string; titulo: string }> = {
   cumplido: { bg: 'var(--good)', borde: 'var(--good)', titulo: 'Cumplido' },
@@ -85,9 +111,11 @@ export default async function GrillaPage({
       <header className="mb-5">
         <h1 className="text-[22px] font-semibold tracking-tight">La grilla</h1>
         <p className="mt-1.5 max-w-3xl text-[13px] leading-relaxed text-ink-2">
-          Toda la cartera contra el reloj del programa, en una pantalla. Cada columna es un hito con
-          día esperado, así que el color sale de una resta y no del criterio de quien completa la
-          planilla. La última columna es la que el Excel no tenía: de quién es el atraso.
+          Toda la cartera contra el reloj del programa, en una pantalla. Las columnas están
+          agrupadas por <strong>etapa</strong> —cada etapa responde una pregunta del negocio— y
+          cada hito dice en qué <strong>semana</strong> ya debería estar hecho, así que el color
+          sale de una resta de fechas y no del criterio de quien completa la planilla. La última
+          columna es la que el Excel no tenía: de quién es el atraso.
         </p>
       </header>
 
@@ -120,19 +148,52 @@ export default async function GrillaPage({
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-line bg-surface" style={{ boxShadow: 'var(--shadow)' }}>
-        <table className="w-full min-w-[1080px] border-collapse text-[12.5px]">
+        <table className="w-full min-w-[1120px] border-collapse text-[12.5px]">
           <thead>
-            <tr className="border-b border-line-strong">
-              <th className="sticky left-0 z-10 bg-surface px-3 py-2 text-left font-medium text-ink-3">Cliente</th>
-              <th className="px-2 py-2 text-right font-medium text-ink-3">Día</th>
-              {HITOS.map((h) => (
-                <th key={h.key} className="px-1 py-2 text-center font-medium text-ink-3" title={`${h.label} · día ${h.dia}`}>
-                  <div className="mx-auto w-6 truncate text-[10px] leading-tight">{abrev(h.label)}</div>
-                  <div className="tnum text-[9px] text-ink-3">{h.dia}{h.gate ? '·G' : ''}</div>
+            {/* Fila 1 · las etapas. Es lo que da sentido a las doce columnas. */}
+            <tr>
+              <th className="sticky left-0 z-20 bg-surface px-3 pb-1 pt-2.5 text-left" />
+              <th className="pb-1 pt-2.5" />
+              {ETAPAS.map((e) => (
+                <th
+                  key={e.key}
+                  colSpan={e.hitos.length}
+                  className="border-l border-line px-2 pb-1 pt-2.5 text-center"
+                  title={e.pregunta}
+                >
+                  <span
+                    className="inline-block rounded-md px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-[0.05em]"
+                    style={{ color: TINTE[e.key], background: 'var(--surface-2)' }}
+                  >
+                    {e.nombre}
+                  </span>
                 </th>
               ))}
-              <th className="px-2 py-2 text-right font-medium text-ink-3">Vtas</th>
-              <th className="px-3 py-2 text-left font-medium text-ink-3">¿De quién es el atraso?</th>
+              <th className="border-l border-line pb-1 pt-2.5" />
+              <th className="pb-1 pt-2.5" />
+            </tr>
+
+            {/* Fila 2 · el hito y la semana en la que ya debería estar hecho. */}
+            <tr className="border-b border-line-strong">
+              <th className="sticky left-0 z-20 bg-surface px-3 pb-2 text-left font-medium text-ink-3">Cliente</th>
+              <th className="px-2 pb-2 text-right font-medium text-ink-3">Semana</th>
+              {ETAPAS.map((e) =>
+                e.hitos.map((h, i) => (
+                  <th
+                    key={h.key}
+                    className={`px-1 pb-2 text-center font-medium text-ink-2 ${i === 0 ? 'border-l border-line' : ''}`}
+                    title={`${h.label} · semana ${semana(h.dia)} (día ${h.dia})${h.gate ? ' · es un gate: bloquea lo que viene después' : ''}`}
+                  >
+                    <div className="whitespace-nowrap text-[10.5px] leading-tight">
+                      {abrev(h.label)}
+                      {h.gate && <span style={{ color: 'var(--critical-ink)' }}> ▪</span>}
+                    </div>
+                    <div className="tnum text-[9.5px] font-normal text-ink-3">s{semana(h.dia)}</div>
+                  </th>
+                )),
+              )}
+              <th className="border-l border-line px-2 pb-2 text-right font-medium text-ink-3">Vtas</th>
+              <th className="px-2.5 pb-2 text-left font-medium text-ink-3">¿De quién es el atraso?</th>
             </tr>
           </thead>
           <tbody>
@@ -160,10 +221,15 @@ export default async function GrillaPage({
         ))}
       </div>
 
-      <p className="mt-3 max-w-3xl text-[12px] leading-relaxed text-ink-3">
+      <p className="mt-2 max-w-3xl text-[12px] leading-relaxed text-ink-3">
+        El <span style={{ color: 'var(--critical-ink)' }}>▪</span> en una cabecera marca un{' '}
+        <strong>gate</strong>: hasta que no está, lo que viene después no puede avanzar. Por eso
+        tienen la mitad del margen que el resto y se ponen rojos antes.
+      </p>
+
+      <p className="mt-2 max-w-3xl text-[12px] leading-relaxed text-ink-3">
         El amarillo es deliberado y es el estado que faltaba: un hito que se pasó de fecha pero
         todavía está dentro del margen no es una alerta, es el momento en que corregirlo sale barato.
-        Los gates tienen la mitad del margen que el resto, porque bloquean todo lo que viene después.
       </p>
     </div>
   );
@@ -171,6 +237,7 @@ export default async function GrillaPage({
 
 function Fila({ v }: { v: VistaCliente }) {
   const { ctx, desvio, atribucion } = v;
+  const etapa = ETAPAS.find((e) => e.key === ctx.fase);
   const tone =
     atribucion.responsable === 'nosotros' || atribucion.responsable === 'ambos'
       ? 'critical'
@@ -182,7 +249,7 @@ function Fila({ v }: { v: VistaCliente }) {
 
   return (
     <tr className="border-b border-line last:border-0 hover:bg-surface-2/50">
-      <td className="sticky left-0 z-10 max-w-[190px] bg-surface px-3 py-1.5">
+      <td className="sticky left-0 z-10 max-w-[170px] bg-surface px-2.5 py-1.5">
         <div className="flex items-center gap-2">
           <Avatar persona={v.consultora} size={18} />
           <Link href={`/clientes/${ctx.cliente.id}`} className="truncate font-medium hover:underline">
@@ -190,34 +257,46 @@ function Fila({ v }: { v: VistaCliente }) {
           </Link>
         </div>
       </td>
-      <td className="tnum px-2 py-1.5 text-right text-ink-2">{ctx.dia}</td>
-      {HITOS.map((h) => {
-        const cumplido = ctx.hitos.get(h.key)?.estado === 'cumplido';
-        const atraso = desvio.atrasados.find((a) => a.hito.key === h.key);
-        const k = cumplido
-          ? 'cumplido'
-          : !atraso
-            ? 'pendiente'
-            : atraso.incipiente
-              ? 'incipiente'
-              : h.gate
-                ? 'grave'
-                : 'atrasado';
-        const c = COLOR[k];
-        return (
-          <td key={h.key} className="px-1 py-1.5 text-center">
-            <span
-              className="mx-auto inline-block h-4 w-4 rounded-[3px]"
-              style={{ background: c.bg, border: `1px solid ${c.borde}` }}
-              title={`${h.label} · día ${h.dia} · ${c.titulo}${atraso ? ` (${atraso.diasDeAtraso} días de más)` : ''}`}
-            />
-          </td>
-        );
-      })}
-      <td className="tnum px-2 py-1.5 text-right text-ink-2" title={plata(ctx.facturado)}>
+      <td className="px-2 py-1.5 text-right" title={`Día ${ctx.dia} del programa · etapa ${etapa?.nombre ?? ctx.fase}`}>
+        <span className="tnum text-[12.5px] font-medium">s{semana(ctx.dia)}</span>
+        {etapa && (
+          <div className="text-[10px] leading-tight" style={{ color: TINTE[etapa.key] }}>
+            {etapa.nombre}
+          </div>
+        )}
+      </td>
+      {ETAPAS.map((e) =>
+        e.hitos.map((h, i) => {
+          const cumplido = ctx.hitos.get(h.key)?.estado === 'cumplido';
+          const atraso = desvio.atrasados.find((a) => a.hito.key === h.key);
+          const k = cumplido
+            ? 'cumplido'
+            : !atraso
+              ? 'pendiente'
+              : atraso.incipiente
+                ? 'incipiente'
+                : h.gate
+                  ? 'grave'
+                  : 'atrasado';
+          const c = COLOR[k];
+          return (
+            <td key={h.key} className={`px-1 py-1.5 text-center ${i === 0 ? 'border-l border-line' : ''}`}>
+              <span
+                className="mx-auto flex h-5 w-5 items-center justify-center rounded-[4px] text-[11px] font-bold leading-none text-white"
+                style={{ background: c.bg, border: `1px solid ${c.borde}` }}
+                title={`${h.label} · semana ${semana(h.dia)} · ${c.titulo}${atraso ? ` (${atraso.diasDeAtraso} días de más)` : ''}`}
+              >
+                {/* El glifo hace que la grilla se lea sin depender del color. */}
+                {k === 'cumplido' ? '✓' : k === 'grave' ? '!' : ''}
+              </span>
+            </td>
+          );
+        }),
+      )}
+      <td className="tnum border-l border-line px-2 py-1.5 text-right text-ink-2" title={plata(ctx.facturado)}>
         {ctx.ventas}
       </td>
-      <td className="max-w-[300px] px-3 py-1.5">
+      <td className="max-w-[210px] px-2.5 py-1.5">
         <div className="flex items-center gap-2">
           <span className="whitespace-nowrap" title={RESPONSABLE_LABEL[atribucion.responsable]}>
             <Chip tone={tone}>{RESPONSABLE_CORTO[atribucion.responsable]}</Chip>
@@ -247,21 +326,26 @@ function Filtro({ href, activo, children }: { href: string; activo: boolean; chi
   );
 }
 
-/** Abreviatura estable para la cabecera; el nombre completo va en el title. */
+/**
+ * Nombre corto para la cabecera. Antes esto se cortaba con `truncate` dentro
+ * de 24 píxeles y quedaba «On…», «Ct…», que no dice nada: la grilla sólo se
+ * podía leer pasando el mouse por cada casillero. Ahora la celda se adapta al
+ * texto y el nombre completo sigue en el `title`.
+ */
 function abrev(label: string): string {
   const m: Record<string, string> = {
-    'Onboarding hecho y expediente base cargado': 'Onbrd',
-    'Cuenta inversa hecha con el cliente': 'Cta.inv',
-    'Cliente ideal y problema cerrados': 'Ideal',
+    'Onboarding hecho y expediente base cargado': 'Onboarding',
+    'Cuenta inversa hecha con el cliente': 'Cuenta inv.',
+    'Cliente ideal y problema cerrados': 'Cliente ideal',
     'Oferta y promesa cerradas': 'Oferta',
-    'Mensaje y canal definidos': 'Mens',
-    'Primeras conversaciones que avanzan': 'Conv',
-    'KPI semanal de DMs sostenido 3 semanas': 'KPI',
-    'Primera agenda': 'Agend',
-    'Primera llamada realizada': 'Llam',
-    'Primera venta': 'VENTA',
-    'Segunda venta': '2ªvta',
-    'Sistema de seguimiento sostenible': 'Sist',
+    'Mensaje y canal definidos': 'Mensaje',
+    'Primeras conversaciones que avanzan': 'Convers.',
+    'KPI semanal de DMs sostenido 3 semanas': 'KPI DMs',
+    'Primera agenda': '1ª agenda',
+    'Primera llamada realizada': '1ª llamada',
+    'Primera venta': '1ª VENTA',
+    'Segunda venta': '2ª venta',
+    'Sistema de seguimiento sostenible': 'Sistema',
   };
-  return m[label] ?? label.slice(0, 6);
+  return m[label] ?? label;
 }

@@ -294,6 +294,31 @@ export function FichaForm({
           <input type="checkbox" name="nivelDesalineado" defaultChecked={inicial.nivelDesalineado === 'on'} />
           <span className="text-[12.5px]">Nivel desalineado con lo que compró</span>
         </label>
+
+        {/*
+          Lo comercial. Normalmente entra solo desde la planilla; se puede
+          editar acá para el cliente que todavía no está en ella o cuando hay
+          que corregir algo sin esperar a la próxima sincronización.
+        */}
+        <Campo name="closer" label="Closer" valor={campos} set={set} ancho="half" hint="Quién cerró la venta." />
+        <Campo name="setter" label="Setter" valor={campos} set={set} ancho="half" />
+        <Campo
+          name="montoTotal" label="Monto total" valor={campos} set={set} tipo="number" ancho="half"
+          hint="Lo contratado. No es la suma de las cuotas cargadas: si difieren, la diferencia es justamente lo que hay que mirar."
+        />
+        <Campo name="cantidadCuotas" label="Cantidad de cuotas" valor={campos} set={set} tipo="number" ancho="half" />
+        <Campo
+          name="estadoDeuda" label="Estado de deuda" valor={campos} set={set} ancho="half"
+          hint="El juicio de finanzas, que no siempre coincide con la aritmética de vencimientos."
+          opciones={[
+            { v: 'al_dia', l: 'Al día' },
+            { v: 'deudor', l: 'Deudor' },
+            { v: 'moroso', l: 'Moroso' },
+            { v: 'en_tramite', l: 'En trámite' },
+            { v: 'incobrable', l: 'Incobrable' },
+          ]}
+        />
+        <Campo name="notas" label="Notas" valor={campos} set={set} area={2} hint="Van al expediente como lo que son: algo que alguien anotó. Ningún motor las lee como un hecho." />
       </Seccion>
 
       {/* ------------------------------------------------ 2 · negocio */}

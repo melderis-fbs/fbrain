@@ -7,7 +7,7 @@ import type {
   Mentoria, Negocio, ObjetivoComercial, Pago,
 } from '@/domain/types';
 import {
-  ASISTENCIAS, CLIENTES, CUOTAS, ESTADO_CLIENTE, ESTADO_PAGO, MENTORIAS,
+  ASISTENCIAS, CLIENTES, CUOTAS, ESTADO_CLIENTE, ESTADO_DEUDA, ESTADO_PAGO, MENTORIAS,
   MONEDA_POR_DEFECTO, PAGOS, SOLAPAS, type Mapeo,
 } from './planilla-mapeo';
 
@@ -165,6 +165,12 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
       const alta = fecha(leer(f, CLIENTES, 'fechaAlta')) ?? previo?.fechaAlta;
       if (!alta) { rc.salteadas.push({ fila: i + 2, motivo: `«${nombre}» no tiene fecha de alta y es cliente nuevo.` }); continue; }
 
+      const deudaCruda = leer(f, CLIENTES, 'estadoDeuda');
+      const deuda = deudaCruda ? ESTADO_DEUDA[normalizar(deudaCruda)] : undefined;
+      if (deudaCruda && !deuda) {
+        rc.salteadas.push({ fila: i + 2, motivo: `«${nombre}» tiene un estado de deuda que no reconozco: «${deudaCruda}». El cliente entró; el estado quedó como estaba.` });
+      }
+
       const nombreConsultora = leer(f, CLIENTES, 'consultora');
       const consultoraId = nombreConsultora
         ? consultoraPorNombre.get(normalizar(nombreConsultora))
@@ -190,6 +196,15 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
         horasRealesSemana: numero(leer(f, CLIENTES, 'horasRealesSemana')) ?? previo?.horasRealesSemana,
         diasGraciaPago: numero(leer(f, CLIENTES, 'diasGraciaPago')) ?? previo?.diasGraciaPago,
         nivelVendido: opcional(leer(f, CLIENTES, 'nivelVendido')) ?? previo?.nivelVendido,
+
+        closer: opcional(leer(f, CLIENTES, 'closer')) ?? previo?.closer,
+        setter: opcional(leer(f, CLIENTES, 'setter')) ?? previo?.setter,
+        montoTotal: numero(leer(f, CLIENTES, 'montoTotal')) ?? previo?.montoTotal,
+        cantidadCuotas: numero(leer(f, CLIENTES, 'cantidadCuotas')) ?? previo?.cantidadCuotas,
+        // Vacío es "al día", que es el caso de casi toda la cartera: nadie
+        // escribe el estado normal. Un valor que no reconocemos no se inventa.
+        estadoDeuda: deuda ?? previo?.estadoDeuda ?? 'al_dia',
+        notas: opcional(leer(f, CLIENTES, 'notas')) ?? previo?.notas,
       };
       await repo.guardarCliente(cliente);
       porNombre.set(normalizar(nombre), cliente);

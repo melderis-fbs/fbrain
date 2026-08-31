@@ -68,6 +68,13 @@ export async function guardarFicha(clienteId: string, formData: FormData) {
     diasGraciaPago: num(formData.get('diasGraciaPago')),
     driveFolderId: txt(formData.get('driveFolderId')),
     nivelVendido: txt(formData.get('nivelVendido')),
+
+    closer: txt(formData.get('closer')),
+    setter: txt(formData.get('setter')),
+    montoTotal: num(formData.get('montoTotal')),
+    cantidadCuotas: num(formData.get('cantidadCuotas')),
+    estadoDeuda: (txt(formData.get('estadoDeuda')) as Cliente['estadoDeuda']) ?? previo.estadoDeuda,
+    notas: txt(formData.get('notas')),
     nivelDesalineado: formData.get('nivelDesalineado') === 'on',
   };
   // Reasignar cartera es de administración: una consultora no se autoasigna.

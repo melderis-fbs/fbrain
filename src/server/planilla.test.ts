@@ -247,6 +247,27 @@ describe('sincronizar · la planilla real de Founders', () => {
     expect(d.clientes.find((c) => c.nombre === 'Alan Turing')!.consultoraId).toBeUndefined();
   });
 
+  it('guarda lo comercial: closer, monto, cuotas, estado de deuda y notas', async () => {
+    mockearFounders();
+    const { sincronizar } = await import('./planilla');
+    const { getRepo } = await import('@/data');
+    await sincronizar(HOY);
+
+    const d = await getRepo().cargarTodo(HOY);
+    const grace = d.clientes.find((c) => c.nombre === 'Grace Hopper')!;
+    expect(grace.closer).toBe('Vicky');
+    expect(grace.setter).toBe('Kevin');
+    expect(grace.montoTotal).toBe(4900);
+    expect(grace.cantidadCuotas).toBe(3);
+    expect(grace.estadoDeuda).toBe('moroso');
+    expect(grace.notas).toBe('Pidió pausa');
+
+    // La celda vacía de «Estado deuda» es el caso normal: al día. Es lo que
+    // pasa en 151 de las 160 filas, y por eso nadie lo escribe.
+    expect(d.clientes.find((c) => c.nombre === 'Ada Lovelace')!.estadoDeuda).toBe('al_dia');
+    expect(d.clientes.find((c) => c.nombre === 'Alan Turing')!.estadoDeuda).toBe('deudor');
+  });
+
   it('sin solapa de pagos ni de asistencias lo dice, y no lo reporta como error', async () => {
     mockearFounders();
     const { sincronizar } = await import('./planilla');

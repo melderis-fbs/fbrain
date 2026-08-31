@@ -72,7 +72,45 @@ export interface Cliente {
   nivelDesalineado?: boolean;
   /** Qué se le vendió, para poder contrastarlo con lo que trajo. */
   nivelVendido?: string;
+
+  // --- lo comercial, tal como lo lleva finanzas -----------------------------
+
+  /** Quién cerró la venta. Sirve para leer la cartera por origen, no para culpar. */
+  closer?: string;
+  /** Quién la agendó. */
+  setter?: string;
+  /**
+   * Lo contratado. No es la suma de las cuotas cargadas: si faltan cuotas por
+   * cargar, este número sigue siendo el bueno y la diferencia es lo que hay
+   * que mirar.
+   */
+  montoTotal?: number;
+  /** En cuántas cuotas se pactó. Cuántas están pagas sale de `pagos`. */
+  cantidadCuotas?: number;
+  /**
+   * El juicio de finanzas sobre el cobro, que no siempre coincide con la
+   * aritmética de vencimientos: se puede tener una cuota vencida y estar
+   * "en trámite" porque el cliente ya avisó que paga el martes.
+   */
+  estadoDeuda?: EstadoDeuda;
+  /** Notas libres. Van al expediente como lo que son: algo que alguien anotó. */
+  notas?: string;
 }
+
+/**
+ * Los estados de cobro que escribe finanzas. `al_dia` es el estado por
+ * defecto y por eso casi nunca está escrito en la planilla: se asume cuando la
+ * celda está vacía.
+ */
+export type EstadoDeuda = 'al_dia' | 'deudor' | 'moroso' | 'en_tramite' | 'incobrable';
+
+export const ESTADO_DEUDA_LABEL: Record<EstadoDeuda, string> = {
+  al_dia: 'Al día',
+  deudor: 'Deudor',
+  moroso: 'Moroso',
+  en_tramite: 'En trámite',
+  incobrable: 'Incobrable',
+};
 
 export interface Traspaso {
   id: string;

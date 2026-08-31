@@ -40,6 +40,13 @@ export default async function FichaPage({ params }: { params: Promise<{ id: stri
     tieneGarantia: cliente.tieneGarantia ? 'on' : '',
     nivelDesalineado: cliente.nivelDesalineado ? 'on' : '',
 
+    closer: s(cliente.closer),
+    setter: s(cliente.setter),
+    montoTotal: s(cliente.montoTotal),
+    cantidadCuotas: s(cliente.cantidadCuotas),
+    estadoDeuda: s(cliente.estadoDeuda) || 'al_dia',
+    notas: s(cliente.notas),
+
     queVende: s(negocio?.queVende),
     aQuien: s(negocio?.aQuien),
     negocioPrecio: s(negocio?.precio),

@@ -53,18 +53,12 @@ export const CLIENTES: Mapeo = {
   programa: ['programa', 'producto'],
   moneda: ['moneda', 'divisa'],
 
-  /**
-   * Los cinco de acá abajo se leen de la planilla pero **todavía no se
-   * guardan**: `Cliente` no tiene dónde ponerlos. El monto total y la cantidad
-   * de cuotas se reconstruyen de las filas de `pagos`, así que no se pierden;
-   * las notas y el estado de deuda sí se pierden hasta que existan las
-   * columnas. Está acá y no borrado para que se vea qué falta, y porque
-   * agregarlo es agregar el campo al tipo, al repositorio y una migración.
-   */
-  montoTotal: ['monto total', 'total', 'valor total'],
+  // --- lo comercial, tal como lo lleva finanzas ---
+  montoTotal: ['monto total', 'valor total'],
   cantidadCuotas: ['cuotas', 'cantidad de cuotas', 'nro cuotas'],
-  estatusFinanciero: ['estado deuda', 'estado de deuda'],
-  reembolso: ['reembolso'],
+  estadoDeuda: ['estado deuda', 'estado de deuda'],
+  closer: ['closer', 'cerro', 'vendedor'],
+  setter: ['setter', 'agendo'],
   notas: ['notas', 'observaciones'],
 
   // --- expediente ---
@@ -185,6 +179,23 @@ export const ESTADO_PAGO: Record<string, 'pagado' | 'pendiente' | 'vencido' | 'i
   incobrable: 'incobrable',
   perdido: 'incobrable',
   reembolsado: 'incobrable',
+};
+
+/**
+ * Cómo lee finanzas el estado de cobro. Vacío no está acá: una celda vacía es
+ * "al día", que es el caso de 151 de las 160 filas y por eso nadie lo escribe.
+ */
+export const ESTADO_DEUDA: Record<string, 'deudor' | 'moroso' | 'en_tramite' | 'incobrable'> = {
+  deudor: 'deudor',
+  deudora: 'deudor',
+  debe: 'deudor',
+  moroso: 'moroso',
+  morosa: 'moroso',
+  'en tramite': 'en_tramite',
+  tramite: 'en_tramite',
+  'en gestion': 'en_tramite',
+  incobrable: 'incobrable',
+  perdido: 'incobrable',
 };
 
 export const ESTADO_CLIENTE: Record<string, 'activo' | 'pausado' | 'finalizado' | 'perdido'> = {

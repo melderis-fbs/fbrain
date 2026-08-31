@@ -5,6 +5,7 @@ import { getWorkspace } from '@/server/workspace';
 import { BLOQUE_COMO_LLENAR, BLOQUE_LABEL } from '@/domain/expediente';
 import { calcularCuentaInversa, TASAS_ROJO, tasasDe } from '@/domain/cuenta-inversa';
 import { BLOQUEO_DESCRIPCION, ESLABON_LABEL } from '@/domain/fases';
+import { ESTADO_DEUDA_LABEL } from '@/domain/types';
 import {
   Avatar, BarraExpectativa, Card, Chip, Empty, IndiceRing, SemaforoBadge,
   SectionTitle, SinDato, Stat,
@@ -404,6 +405,45 @@ export default async function ExpedientePage({ params }: { params: Promise<{ id:
 
           <Card>
             <SectionTitle>Pagos y garantía</SectionTitle>
+
+            {/*
+              Lo comercial arriba de las cuotas: qué se contrató y cómo lo ve
+              finanzas. El estado de deuda puede no coincidir con la aritmética
+              de vencimientos —se puede tener una cuota vencida y estar «en
+              trámite»— y por eso se muestran los dos, no uno derivado del otro.
+            */}
+            {(c.montoTotal !== undefined || c.closer || c.estadoDeuda) && (
+              <dl className="mb-3 grid grid-cols-2 gap-x-4 gap-y-2 border-b border-line pb-3 text-[12px]">
+                {c.montoTotal !== undefined && (
+                  <div>
+                    <dt className="text-ink-3">Contratado</dt>
+                    <dd className="tnum font-medium">
+                      {plata(c.montoTotal, ctx.registros.pagos[0]?.moneda)}
+                      {c.cantidadCuotas ? <span className="text-ink-3"> · {c.cantidadCuotas} cuotas</span> : null}
+                    </dd>
+                  </div>
+                )}
+                {c.estadoDeuda && (
+                  <div>
+                    <dt className="text-ink-3">Estado de deuda</dt>
+                    <dd><Chip tone={c.estadoDeuda === 'al_dia' ? 'good' : c.estadoDeuda === 'deudor' || c.estadoDeuda === 'en_tramite' ? 'warning' : 'critical'}>{ESTADO_DEUDA_LABEL[c.estadoDeuda]}</Chip></dd>
+                  </div>
+                )}
+                {c.closer && (
+                  <div>
+                    <dt className="text-ink-3">Cerró</dt>
+                    <dd className="font-medium">{c.closer}{c.setter && <span className="text-ink-3"> · agendó {c.setter}</span>}</dd>
+                  </div>
+                )}
+                {c.fuente && (
+                  <div>
+                    <dt className="text-ink-3">Fuente</dt>
+                    <dd className="font-medium">{c.fuente}</dd>
+                  </div>
+                )}
+              </dl>
+            )}
+
             <div className="space-y-2 text-[12.5px]">
               {ctx.registros.pagos.length === 0 && (
                 <Empty>Sin cuotas cargadas. Entran desde la planilla.</Empty>
@@ -437,6 +477,12 @@ export default async function ExpedientePage({ params }: { params: Promise<{ id:
                   </span>
                 </div>
               ))}
+              {c.notas && (
+                <div className="mt-3 border-t border-line pt-2">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-3">Notas</div>
+                  <p className="mt-1 whitespace-pre-wrap text-[12.5px] leading-relaxed text-ink-2">{c.notas}</p>
+                </div>
+              )}
               {c.tieneGarantia && (
                 <p className="mt-2 rounded-lg px-3 py-2 text-[12px] leading-relaxed" style={{ background: 'var(--warning-soft)', color: 'var(--warning-ink)' }}>
                   Garantía firmada: 90% de asistencia 1:1, 2 mentorías por semana, reporte semanal y

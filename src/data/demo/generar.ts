@@ -294,6 +294,12 @@ export function generarDataset(hoy: string): DatasetDemo {
       nivelVendido: arq === 'nivel_desalineado' ? 'el programa de arranque (M1)' : undefined,
       driveFolderId: `drive-${id}`,
       horasRealesSemana: perfil.bloques >= 4 ? [3, 5, 8, 10, 12][Math.floor(r() * 5)] : undefined,
+      // Lo comercial, que en la planilla real lo lleva finanzas. El monto y el
+      // estado de deuda se completan más abajo, cuando ya existen las cuotas:
+      // derivarlos es la única forma de que la lectura comercial y la de
+      // cobranza no se contradigan en pantalla.
+      closer: ['Vicky', 'Kevin', 'Braian'][Math.floor(r() * 3)],
+      setter: ['Lara', 'Kevin', 'automática'][Math.floor(r() * 3)],
     });
 
     // ----------------------------------------------------------- bloques
@@ -540,6 +546,25 @@ export function generarDataset(hoy: string): DatasetDemo {
         fechaPago: pasado && !impago ? venc : undefined,
         estado: !pasado ? 'pendiente' : impago ? 'vencido' : 'pagado',
       });
+    }
+
+    // Lo comercial se deriva de las cuotas recién generadas, no se sortea
+    // aparte: si el monto total no fuera la suma de lo pactado, la lista
+    // comercial y la de cobranza mostrarían números distintos del mismo
+    // cliente y no habría forma de saber cuál creer.
+    {
+      const suyos = d.pagos.filter((p) => p.clienteId === id);
+      const cli = d.clientes.find((c) => c.id === id)!;
+      cli.montoTotal = suyos.reduce((a, p) => a + p.monto, 0);
+      cli.cantidadCuotas = cuotas;
+      const vencidas = suyos.filter((p) => p.estado === 'vencido');
+      cli.estadoDeuda = !vencidas.length
+        ? 'al_dia'
+        : arq === 'baja_sin_cerrar'
+          ? 'moroso'
+          : arq === 'prorroga_vencida'
+            ? 'en_tramite'
+            : 'deudor';
     }
 
     // ----------------------------------------------------------- prórrogas

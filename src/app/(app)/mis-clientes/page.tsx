@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getUsuario, veTodo } from '@/server/auth';
 import { getWorkspace, type VistaCliente } from '@/server/workspace';
 import { Avatar, Card, Chip, Empty, SemaforoCelda } from '@/components/ui';
+import { ListaComercial } from '@/components/ListaComercial';
 import { colorIndice } from '@/lib/ui';
 import { formatShort } from '@/lib/date';
 
@@ -19,10 +20,26 @@ const FILTROS: { key: Filtro; label: string; test: (v: VistaCliente) => boolean 
   { key: 'ciegos', label: 'Expediente incompleto', test: (v) => v.ctx.bloquesCargados < 4 },
 ];
 
+function Vista({ href, activo, children }: { href: string; activo: boolean; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="rounded-md border px-2.5 py-1 font-medium"
+      style={{
+        borderColor: activo ? 'var(--accent)' : 'var(--line)',
+        background: activo ? 'var(--accent-soft)' : 'transparent',
+        color: activo ? 'var(--accent-ink)' : 'var(--ink-2)',
+      }}
+    >
+      {children}
+    </Link>
+  );
+}
+
 export default async function MisClientesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ f?: string }>;
+  searchParams: Promise<{ f?: string; v?: string }>;
 }) {
   const usuario = await getUsuario();
   if (!usuario) redirect('/login');
@@ -30,6 +47,7 @@ export default async function MisClientesPage({
   const sp = await searchParams;
   const filtroKey = (sp.f ?? 'todos') as Filtro;
   const filtro = FILTROS.find((f) => f.key === filtroKey) ?? FILTROS[0];
+  const comercial = sp.v === 'comercial';
 
   const base = ws.vistas
     .filter((v) => veTodo(usuario.rol) || v.ctx.cliente.consultoraId === usuario.id)
@@ -44,9 +62,17 @@ export default async function MisClientesPage({
           {veTodo(usuario.rol) ? 'Todos los clientes' : 'Mis clientes'}
         </h1>
         <p className="mt-1.5 text-[13px] text-ink-2">
-          Ordenados por urgencia, no alfabéticamente. Arriba está el que más te necesita hoy.
+          {comercial
+            ? 'Por mes de ingreso, como la planilla. Con el semáforo y el índice al lado, que es lo que la planilla no puede decir.'
+            : 'Ordenados por urgencia, no alfabéticamente. Arriba está el que más te necesita hoy.'}
         </p>
       </header>
+
+      <div className="mb-3 flex flex-wrap items-center gap-1.5 text-[12px]">
+        <span className="text-ink-3">Ver:</span>
+        <Vista href={`/mis-clientes?f=${filtro.key}`} activo={!comercial}>Seguimiento</Vista>
+        <Vista href={`/mis-clientes?f=${filtro.key}&v=comercial`} activo={comercial}>Comercial</Vista>
+      </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
         {FILTROS.map((f) => {
@@ -55,7 +81,7 @@ export default async function MisClientesPage({
           return (
             <Link
               key={f.key}
-              href={`/mis-clientes?f=${f.key}`}
+              href={comercial ? `/mis-clientes?f=${f.key}&v=comercial` : `/mis-clientes?f=${f.key}`}
               className="rounded-lg border px-3 py-1.5 text-[12px]"
               style={{
                 borderColor: activo ? 'var(--accent)' : 'var(--line)',
@@ -70,7 +96,9 @@ export default async function MisClientesPage({
         })}
       </div>
 
-      {filas.length ? (
+      {filas.length && comercial ? (
+        <ListaComercial vistas={filas} verConsultora={veTodo(usuario.rol)} />
+      ) : filas.length ? (
         <Card pad={false}>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1100px] text-[13px]">
