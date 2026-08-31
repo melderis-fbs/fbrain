@@ -2,10 +2,11 @@ import { redirect } from 'next/navigation';
 import { Planilla } from '@/components/Planilla';
 import { getUsuario, veTodo } from '@/server/auth';
 import { hayPlanilla } from '@/server/planilla';
+import { hayNotion } from '@/server/notion';
 import { CLIENTES, CUOTAS, SOLAPAS } from '@/server/planilla-mapeo';
-import { sincronizarAhora } from './actions';
+import { sincronizarAhora, sincronizarNotionAhora } from './actions';
 
-export const metadata = { title: 'Planilla · Founders Brain' };
+export const metadata = { title: 'Las fuentes · Founders Brain' };
 
 export default async function PlanillaPage() {
   const usuario = await getUsuario();
@@ -14,12 +15,11 @@ export default async function PlanillaPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="text-[22px] font-semibold tracking-tight">La planilla</h1>
+      <h1 className="text-[22px] font-semibold tracking-tight">Las fuentes</h1>
       <p className="mt-1 text-[13px] leading-relaxed text-ink-2">
-        La planilla de finanzas en Drive, leída desde acá. Nadie carga dos veces: lo que ya vive
-        en <em>Control de ingresos</em> entra solo. Hoy se lee una sola solapa,{' '}
-        <code>{SOLAPAS.clientes}</code>, que es donde están los clientes, sus cuotas y su estado
-        de pago.
+        Founders lleva dos sistemas en paralelo y cada uno es bueno en algo distinto. La app lee
+        los dos y ninguno tiene que migrar a ningún lado: la <em>planilla de finanzas</em> sabe de
+        plata y <em>Auditoría Clientes</em> en Notion sabe del programa. Nadie carga dos veces.
       </p>
       <p className="mt-2 text-[13px] leading-relaxed text-ink-2">
         Las <strong>métricas semanales no están acá</strong>: viven en la base del CRM y se cargan
@@ -28,9 +28,39 @@ export default async function PlanillaPage() {
         importación diaria pisaría sin avisar.
       </p>
 
-      <div className="mt-4">
-        <Planilla configurada={hayPlanilla()} sincronizar={sincronizarAhora} />
-      </div>
+      <section className="mt-5 rounded-xl border border-line bg-surface p-4">
+        <h2 className="text-[14px] font-semibold">1 · La planilla de finanzas</h2>
+        <p className="mt-1 text-[12.5px] leading-relaxed text-ink-2">
+          De acá salen las <strong>cuotas</strong>: cuántas, de cuánto, cuándo vencen y cuáles
+          están pagas. También el closer y la fuente de captación.
+        </p>
+        <div className="mt-3">
+          <Planilla configurada={hayPlanilla()} sincronizar={sincronizarAhora} />
+        </div>
+      </section>
+
+      <section className="mt-4 rounded-xl border border-line bg-surface p-4">
+        <h2 className="text-[14px] font-semibold">2 · Auditoría Clientes, en Notion</h2>
+        <p className="mt-1 text-[12.5px] leading-relaxed text-ink-2">
+          De acá sale <strong>quién atiende a quién</strong>, más el estado del cliente, la fecha
+          en que arrancó el programa, su duración y el link a su carpeta de Drive. Es la fuente que
+          decide la asignación: sin esto nadie ve su cartera.
+        </p>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-ink-2">
+          <strong>Correla después de la planilla.</strong> Las dos fuentes tienen el estado del
+          cliente y la fecha de alta, y en esos dos campos manda Notion, porque es donde el equipo
+          los mantiene al día. Al revés, la planilla los pisaría con lo que tenga.
+        </p>
+        <div className="mt-3">
+          <Planilla
+            configurada={hayNotion()}
+            sincronizar={sincronizarNotionAhora}
+            etiqueta="Sincronizar Notion"
+            etiquetaCorriendo="Leyendo Notion…"
+            faltante="NOTION_TOKEN / NOTION_DB_CLIENTES"
+          />
+        </div>
+      </section>
 
       <section className="mt-6 rounded-xl border border-line bg-surface p-4">
         <h2 className="text-[14px] font-semibold">Cómo se conecta</h2>

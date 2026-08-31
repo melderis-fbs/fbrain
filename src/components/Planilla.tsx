@@ -12,9 +12,15 @@ import type { Reporte } from '@/server/planilla';
 export function Planilla({
   configurada,
   sincronizar,
+  etiqueta = 'Sincronizar ahora',
+  etiquetaCorriendo = 'Leyendo la planilla…',
+  faltante = 'SHEETS_PLANILLA_ID',
 }: {
   configurada: boolean;
   sincronizar: () => Promise<Reporte>;
+  etiqueta?: string;
+  etiquetaCorriendo?: string;
+  faltante?: string;
 }) {
   const [reporte, setReporte] = useState<Reporte | null>(null);
   const [corriendo, setCorriendo] = useState(false);
@@ -44,11 +50,11 @@ export function Planilla({
           className="rounded-lg px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-40"
           style={{ background: 'var(--accent)' }}
         >
-          {corriendo ? 'Leyendo la planilla…' : 'Sincronizar ahora'}
+          {corriendo ? etiquetaCorriendo : etiqueta}
         </button>
         {!configurada && (
           <span className="text-[12px] text-ink-3">
-            Falta <code>SHEETS_PLANILLA_ID</code> en el entorno.
+            Falta <code>{faltante}</code> en el entorno.
           </span>
         )}
       </div>

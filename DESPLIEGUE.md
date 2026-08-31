@@ -116,7 +116,9 @@ En **Settings → Environment Variables**. Los valores de Supabase están en
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → API → Project URL | La app corre en modo demostración |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → API → anon public | Idem |
 | `ANTHROPIC_API_KEY` | console.anthropic.com | Los motores quedan "sin conectar"; el resto anda |
-| `SHEETS_PLANILLA_ID` | El ID de tu planilla de Drive | No se puede sincronizar desde `/planilla` |
+| `SHEETS_PLANILLA_ID` | El ID de tu planilla de Drive | No entran las cuotas |
+| `NOTION_TOKEN` | notion.so/profile/integrations → New integration | No entra la asignación: nadie ve su cartera |
+| `NOTION_DB_CLIENTES` | El ID de «Auditoría Clientes» en su URL | Idem |
 
 **`ANTHROPIC_API_KEY` nunca lleva `NEXT_PUBLIC_`.** Ese prefijo la mandaría al
 browser de cualquiera que abra la app.
@@ -139,6 +141,14 @@ Los usuarios se crean a mano desde el panel.
 ## 3 · Cargar los datos
 
 En este orden, porque cada paso depende del anterior:
+
+0. **El equipo, con los nombres de Notion.** Los de `supabase/equipo.sql` ya
+   son los reales —Coti, Kathering, Johann, Romina, Natalia, Victoria y
+   Jhosanna, más Javier y Angie como inactivos—. **Los nombres tienen que
+   coincidir exactamente con la columna `Consultor` de Notion**, que es un
+   select con esos valores: si acá dice «Kathe» y allá «Kathering», la
+   importación reporta la fila como no asignable en vez de adivinar.
+   Cambiá los emails por los reales antes de correrlo.
 
 1. **Clientes y cuotas** desde la planilla. Compartí *Control de ingresos |
    FOUNDERS 2026* como *cualquiera con el enlace puede ver*, poné el ID en
@@ -167,6 +177,19 @@ En este orden, porque cada paso depende del anterior:
 
    El reporte lista lo que quedó afuera con número de fila y motivo: eso es lo
    que hay que arreglar en la planilla, no en la app.
+
+1bis. **La asignación, desde Notion.** En la misma pantalla, el botón
+   **Sincronizar Notion**, y **después** del de la planilla. De «Auditoría
+   Clientes» salen el consultor de cada cliente, su estado, la fecha en que
+   arrancó el programa, su duración y el link a su carpeta de Drive.
+
+   Las dos fuentes comparten el estado y la fecha de alta, y en esos dos campos
+   manda Notion, porque es donde el equipo los mantiene al día. Por eso el
+   orden: al revés, la planilla los pisaría.
+
+   Antes de correrlo hay que darle acceso a la integración: en Notion, abrir
+   «Auditoría Clientes» → ••• → **Conexiones** → agregar la integración. Sin
+   ese paso la API responde 404 aunque el token esté bien.
 
 2. **Objetivos comerciales** —meta y ticket de cada cliente. Se cargan desde la
    ficha o desde la planilla. **Sin esto no hay KPI semanal**: la cuenta inversa

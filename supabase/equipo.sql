@@ -27,14 +27,28 @@
 --  'admin'      → ve todo, más Cobranza, Consultoras y Planilla
 --  'consultora' → ve sólo sus propios clientes
 
-insert into consultoras (nombre, email, rol, cupo_maximo) values
-  ('Vicky',  'vicky@foundersbs.com',  'admin',      0),
-  ('Jay',    'jay@foundersbs.com',    'consultora', 12),
-  ('Nati',   'nati@foundersbs.com',   'consultora', 12),
-  ('Johann', 'johann@foundersbs.com', 'consultora', 12),
-  ('Vic P',  'vicp@foundersbs.com',   'consultora', 12),
-  ('Kathe',  'kathe@foundersbs.com',  'consultora', 12),
-  ('Romi',   'romi@foundersbs.com',   'consultora', 12);
+--  LOS NOMBRES TIENEN QUE COINCIDIR CON LOS DE NOTION.
+--  La asignación de cada cliente sale de la columna «Consultor» de
+--  «Auditoría Clientes», que es un select con estos valores exactos. Si acá
+--  escribís «Kathe» y en Notion dice «Kathering», la importación va a
+--  reportar la fila como no asignable en vez de adivinar.
+
+insert into consultoras (nombre, email, rol, cupo_maximo, activa) values
+  ('Vicky',     'vicky@foundersbs.com',     'admin',      0,  true),
+  ('Coti',      'coti@foundersbs.com',      'consultora', 12, true),
+  ('Kathering', 'kathering@foundersbs.com', 'consultora', 12, true),
+  ('Johann',    'johann@foundersbs.com',    'consultora', 12, true),
+  ('Romina',    'romina@foundersbs.com',    'consultora', 12, true),
+  ('Natalia',   'natalia@foundersbs.com',   'consultora', 12, true),
+  ('Victoria',  'victoria@foundersbs.com',  'consultora', 12, true),
+  ('Jhosanna',  'jhosanna@foundersbs.com',  'consultora', 12, true),
+
+  -- Ya no están en Founders, pero sus nombres siguen apareciendo en filas
+  -- viejas de Notion. Entran como inactivos para que esos clientes se puedan
+  -- importar y se vea que quedaron sin dueño, en vez de que la fila se saltee
+  -- y el cliente no exista. No se les crea usuario: no pueden entrar.
+  ('Javier',    'javier@foundersbs.com',    'consultora', 0,  false),
+  ('Angie',     'angie@foundersbs.com',     'consultora', 0,  false);
 
 
 -- =====================================================================
@@ -46,6 +60,10 @@ insert into consultoras (nombre, email, rol, cupo_maximo) values
 --
 --  Sin esto la app abre COMPLETAMENTE VACÍA y sin ningún mensaje de error:
 --  la base no le devuelve nada a nadie porque no sabe quién es quién.
+--
+--  A Javier y a Angie NO les crees usuario: están en la tabla sólo para que
+--  sus clientes viejos se puedan importar. La verificación de abajo los va a
+--  listar, y en su caso está bien.
 
 update consultoras c
 set auth_user_id = u.id
@@ -57,4 +75,4 @@ where u.email = c.email and c.auth_user_id is null;
 -- Si devuelve alguna fila, esa persona no va a ver nada, y casi siempre es
 -- que el email de la parte 1 y el del usuario no coinciden exactamente.
 
-select nombre, email from consultoras where auth_user_id is null;
+select nombre, email from consultoras where auth_user_id is null and activa;
