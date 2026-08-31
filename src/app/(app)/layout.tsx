@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
 import Link from 'next/link';
-import { COOKIE_SESION, ROL_LABEL, getUsuario, veTodo } from '@/server/auth';
+import { ROL_LABEL, getUsuario, veTodo } from '@/server/auth';
 import { getWorkspace } from '@/server/workspace';
 import { Nav, type NavItem } from '@/components/Nav';
+import { salir } from '@/app/login/actions';
 import { Avatar } from '@/components/ui';
 import { formatDateLong } from '@/lib/date';
 
@@ -54,13 +54,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       ],
     },
   ];
-
-  async function salir() {
-    'use server';
-    const store = await cookies();
-    store.delete(COOKIE_SESION);
-    redirect('/login');
-  }
 
   return (
     <div className="flex min-h-screen">

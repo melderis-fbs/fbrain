@@ -1,23 +1,20 @@
-import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
 import { getRepo } from '@/data';
-import { COOKIE_SESION, ROL_LABEL, inicioDe } from '@/server/auth';
+import { haySupabase } from '@/data/supabase/client';
+import { ROL_LABEL } from '@/server/auth';
 import { hoyIso } from '@/server/workspace';
 import { Avatar } from '@/components/ui';
+import { LoginForm } from '@/components/LoginForm';
+import { entrarComoDemo } from './actions';
+
+/**
+ * Dos caminos según cómo esté configurada la app, y la pantalla lo dice:
+ * con Supabase, email y contraseña; sin Supabase, se elige un rol de la lista
+ * para poder recorrer Brain sin levantar una base.
+ */
+export const dynamic = 'force-dynamic';
 
 export default async function LoginPage() {
-  const repo = getRepo();
-  const data = await repo.cargarTodo(hoyIso());
-
-  async function entrar(formData: FormData) {
-    'use server';
-    const id = String(formData.get('id') ?? '');
-    const store = await cookies();
-    store.set(COOKIE_SESION, id, { path: '/', httpOnly: true, sameSite: 'lax' });
-    const d = await getRepo().cargarTodo(hoyIso());
-    const p = d.equipo.find((x) => x.id === id);
-    redirect(p ? inicioDe(p.rol) : '/cartera');
-  }
+  const conectado = haySupabase();
 
   return (
     <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6 py-16">
@@ -38,33 +35,51 @@ export default async function LoginPage() {
         </p>
       </div>
 
-      <form action={entrar} className="space-y-2">
-        {data.equipo.map((p) => (
-          <button
-            key={p.id}
-            name="id"
-            value={p.id}
-            type="submit"
-            className="flex w-full items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-left transition hover:border-accent"
-          >
-            <Avatar persona={p} size={34} />
-            <span className="min-w-0 flex-1">
-              <span className="block text-[14px] font-medium">{p.nombre}</span>
-              <span className="block text-[12px] text-ink-3">
-                {ROL_LABEL[p.rol]}
-                {p.rol === 'consultora' ? ` · cupo ${p.cupoMaximo}` : ''}
-              </span>
-            </span>
-            <span className="text-[12px] text-ink-3">→</span>
-          </button>
-        ))}
-      </form>
+      {conectado ? <LoginForm /> : <SelectorDemo />}
 
       <p className="mt-8 text-[12px] leading-relaxed text-ink-3">
-        Modo demostración: elegís con qué rol entrar. En producción es Supabase Auth, y los permisos
-        los aplica Postgres con RLS — cada consultora sólo ve sus clientes porque la base no le
-        devuelve otra cosa.
+        {conectado ? (
+          <>
+            La identidad la resuelve Supabase Auth y los permisos los aplica Postgres con RLS: cada
+            consultora sólo ve sus clientes porque la base no le devuelve otra cosa.
+          </>
+        ) : (
+          <>
+            Modo demostración: elegís con qué rol entrar, sobre una cartera ficticia. Con
+            <code className="mx-1">NEXT_PUBLIC_SUPABASE_URL</code> y
+            <code className="mx-1">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> cargadas, esta pantalla pasa
+            sola a pedir email y contraseña.
+          </>
+        )}
       </p>
     </main>
+  );
+}
+
+async function SelectorDemo() {
+  const data = await getRepo().cargarTodo(hoyIso());
+
+  return (
+    <form action={entrarComoDemo} className="space-y-2">
+      {data.equipo.map((p) => (
+        <button
+          key={p.id}
+          name="id"
+          value={p.id}
+          type="submit"
+          className="flex w-full items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 text-left transition hover:border-accent"
+        >
+          <Avatar persona={p} size={34} />
+          <span className="min-w-0 flex-1">
+            <span className="block text-[14px] font-medium">{p.nombre}</span>
+            <span className="block text-[12px] text-ink-3">
+              {ROL_LABEL[p.rol]}
+              {p.rol === 'consultora' ? ` · cupo ${p.cupoMaximo}` : ''}
+            </span>
+          </span>
+          <span className="text-[12px] text-ink-3">→</span>
+        </button>
+      ))}
+    </form>
   );
 }
