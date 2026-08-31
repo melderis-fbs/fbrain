@@ -70,6 +70,10 @@ export function Planilla({
                 </span>
               </div>
 
+              {s.nota && (
+                <p className="mt-2 text-[12px] text-ink-3">{s.nota}</p>
+              )}
+
               {s.error && (
                 <p className="mt-2 rounded-lg border px-3 py-2 text-[12px]" style={{ borderColor: 'var(--critical)', background: 'var(--critical-soft)', color: 'var(--critical-ink)' }}>
                   {s.error}
@@ -95,7 +99,7 @@ export function Planilla({
                 </div>
               )}
 
-              {!s.error && s.salteadas.length === 0 && s.leidas > 0 && (
+              {!s.error && !s.nota && s.salteadas.length === 0 && s.leidas > 0 && (
                 <p className="mt-1 text-[12px] text-ink-3">Sin filas salteadas.</p>
               )}
             </section>

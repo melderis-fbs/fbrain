@@ -140,9 +140,31 @@ Los usuarios se crean a mano desde el panel.
 
 En este orden, porque cada paso depende del anterior:
 
-1. **Clientes, cuotas y asistencias** desde la planilla. Compartila como
-   *cualquiera con el enlace puede ver*, poné el ID en `SHEETS_PLANILLA_ID` y
-   entrá a `/planilla` como Vicky → **Sincronizar ahora**.
+1. **Clientes y cuotas** desde la planilla. Compartí *Control de ingresos |
+   FOUNDERS 2026* como *cualquiera con el enlace puede ver*, poné el ID en
+   `SHEETS_PLANILLA_ID` y entrá a `/planilla` como Vicky → **Sincronizar ahora**.
+
+   Se lee una sola solapa, **`Seguimiento clientes`** (160 filas, 39 columnas).
+   De ahí salen el cliente, su fecha de alta —de la fecha del primer pago,
+   porque la columna `Fecha alta` está vacía en las 160 filas—, su estado
+   (`Estatus`) y sus hasta cuatro cuotas con vencimiento y estado de pago.
+
+   **Antes de sincronizar hay que llenar la columna `Consultor/a`.** Hoy está
+   vacía en las 160 filas, y es la que asigna cada cliente a su consultora. Sin
+   eso los clientes entran sin asignar: nadie los ve en `/mis-clientes` y el
+   modelo de "cada consultora su espacio" no arranca. Los nombres tienen que
+   coincidir con los de la tabla `consultoras` —*Jay*, *Nati*, *Johann*,
+   *Vic P*, *Kathe*, *Romi*—; si no coincide, el reporte lo dice con el número
+   de fila.
+
+   También hay **cinco nombres repetidos** en la solapa. El cliente se
+   identifica por nombre, así que la segunda fila de cada par se saltea y se
+   informa: hay que distinguirlos en la planilla.
+
+   Lo que **no** entra, porque la planilla no lo tiene: asistencias a mentorías
+   (no hay solapa), y las columnas de estrategia y autoridad del expediente.
+   Eso se carga desde la ficha de cada cliente.
+
    El reporte lista lo que quedó afuera con número de fila y motivo: eso es lo
    que hay que arreglar en la planilla, no en la app.
 
@@ -204,6 +226,11 @@ alertas falsas y el equipo deja de leer la bandeja.
 
 - **La sincronización de la planilla la dispara una persona**, desde
   `/planilla`. Todavía no corre sola. Es el próximo paso natural.
+
+- **Cuatro columnas de la planilla se leen pero no se guardan**: `Notas`,
+  `Monto total`, `Cuotas` y `Estado deuda`. Las dos del medio se reconstruyen
+  de las cuotas, así que no se pierde nada; las otras dos sí, hasta que existan
+  los campos. Está anotado en `src/server/planilla-mapeo.ts`.
 
 - **Drive y Slack no están conectados.** Las transcripciones entran subidas a
   mano en `/clientes/[id]/documentos`; las alertas no se enrutan a Slack.

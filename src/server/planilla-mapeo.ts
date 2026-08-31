@@ -20,10 +20,27 @@
  * justamente la que una importación diaria pisaría sin avisar.
  */
 export const SOLAPAS = {
-  clientes: process.env.SHEETS_SOLAPA_CLIENTES || 'Clientes',
-  pagos: process.env.SHEETS_SOLAPA_PAGOS || 'Pagos',
-  asistencias: process.env.SHEETS_SOLAPA_ASISTENCIAS || 'Asistencias',
+  clientes: process.env.SHEETS_SOLAPA_CLIENTES ?? 'Seguimiento clientes',
+  pagos: process.env.SHEETS_SOLAPA_PAGOS ?? '',
+  asistencias: process.env.SHEETS_SOLAPA_ASISTENCIAS ?? '',
 } as const;
+
+/**
+ * Las dos últimas van vacías a propósito. La planilla de Founders hoy no tiene
+ * una solapa de pagos en formato largo —las cuotas están en columnas dentro de
+ * «Seguimiento clientes»— ni una de asistencias. Una solapa vacía se saltea con
+ * un renglón que lo dice, en vez de reportar un error que no lo es. El día que
+ * existan, alcanza con nombrarlas en `SHEETS_SOLAPA_PAGOS` y
+ * `SHEETS_SOLAPA_ASISTENCIAS`.
+ */
+
+/**
+ * La planilla no tiene columna de moneda y sus importes están en dólares: un
+ * «Monto total» de 5.000 con cuotas de 2.000, 1.500 y 1.500. El método de pago
+ * dice «Transferencia ARS» o «Zelle», pero el importe ya viene convertido. Si
+ * algún día se cargan importes en pesos, esto se cambia sin tocar código.
+ */
+export const MONEDA_POR_DEFECTO = process.env.SHEETS_MONEDA || 'USD';
 
 export type Mapeo = Record<string, string[]>;
 
@@ -34,22 +51,30 @@ export const CLIENTES: Mapeo = {
   telefono: ['telefono', 'tel', 'celular', 'whatsapp'],
   fuente: ['fuente', 'fuente de captacion', 'origen'],
   programa: ['programa', 'producto'],
+  moneda: ['moneda', 'divisa'],
+
+  /**
+   * Los cinco de acá abajo se leen de la planilla pero **todavía no se
+   * guardan**: `Cliente` no tiene dónde ponerlos. El monto total y la cantidad
+   * de cuotas se reconstruyen de las filas de `pagos`, así que no se pierden;
+   * las notas y el estado de deuda sí se pierden hasta que existan las
+   * columnas. Está acá y no borrado para que se vea qué falta, y porque
+   * agregarlo es agregar el campo al tipo, al repositorio y una migración.
+   */
   montoTotal: ['monto total', 'total', 'valor total'],
   cantidadCuotas: ['cuotas', 'cantidad de cuotas', 'nro cuotas'],
-  moneda: ['moneda', 'divisa'],
-  estatusFinanciero: ['estatus', 'estado deuda', 'estado de deuda'],
+  estatusFinanciero: ['estado deuda', 'estado de deuda'],
   reembolso: ['reembolso'],
-  terminado: ['terminado', 'completado'],
   notas: ['notas', 'observaciones'],
 
   // --- expediente ---
-  fechaAlta: ['fecha alta', 'fecha de alta', 'fecha de ingreso', 'fecha de ingreso 1er pago', 'ingreso'],
+  fechaAlta: ['fecha alta', 'fecha de alta', 'fecha de ingreso', 'fecha de ingreso 1er pago'],
   fechaFinPrevista: ['fecha fin prevista', 'fin previsto', 'fecha de fin'],
   planPago: ['plan pago', 'plan de pago'],
   tieneGarantia: ['garantia', 'tiene garantia'],
   horasRealesSemana: ['horas reales semana', 'horas reales', 'horas por semana'],
-  estado: ['estado cliente', 'estado'],
-  consultora: ['consultora', 'coach', 'consultor', 'consultora asignada'],
+  estado: ['estado cliente', 'estatus', 'estado'],
+  consultora: ['consultor/a', 'consultora', 'coach', 'consultor', 'consultora asignada'],
   diasGraciaPago: ['dias gracia pago', 'dias de gracia'],
   nivelVendido: ['nivel vendido', 'que se le vendio'],
 
@@ -137,6 +162,13 @@ export const ASISTENCIAS: Mapeo = {
 
 /** Cómo se leen los estados de pago que escribe finanzas. */
 export const ESTADO_PAGO: Record<string, 'pagado' | 'pendiente' | 'vencido' | 'incobrable'> = {
+  // La planilla de finanzas marca cada cuota con una casilla y el export la
+  // escribe TRUE/FALSE. TRUE sí es "pagado"; FALSE es sólo "todavía no", y a
+  // propósito NO está en esta tabla: si estuviera, una cuota impaga y vencida
+  // entraría como "pendiente" y la cobranza no la vería. Al no encontrarla
+  // acá, el importador cae en la inferencia por fecha —vencida si el
+  // vencimiento ya pasó— que es justamente la que dispara las alertas.
+  true: 'pagado',
   pagado: 'pagado',
   pago: 'pagado',
   ok: 'pagado',
@@ -147,6 +179,9 @@ export const ESTADO_PAGO: Record<string, 'pagado' | 'pendiente' | 'vencido' | 'i
   vencido: 'vencido',
   atrasado: 'vencido',
   deuda: 'vencido',
+  deudor: 'vencido',
+  moroso: 'vencido',
+  'en tramite': 'pendiente',
   incobrable: 'incobrable',
   perdido: 'incobrable',
   reembolsado: 'incobrable',

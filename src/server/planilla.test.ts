@@ -26,6 +26,12 @@ const HOY = '2026-05-20';
 beforeEach(() => {
   vi.stubEnv('SHEETS_PLANILLA_ID', 'planilla-de-prueba');
   vi.stubEnv('NEXT_PUBLIC_MODO_DATOS', 'demo');
+  // Los defaults apuntan a la planilla real de Founders. Estas pruebas son las
+  // de la plantilla genérica del paquete, así que nombran sus tres solapas.
+  vi.stubEnv('SHEETS_SOLAPA_CLIENTES', 'Clientes');
+  vi.stubEnv('SHEETS_SOLAPA_PAGOS', 'Pagos');
+  vi.stubEnv('SHEETS_SOLAPA_ASISTENCIAS', 'Asistencias');
+  vi.stubEnv('SHEETS_MONEDA', 'ARS');
 });
 
 afterEach(() => {
@@ -134,5 +140,120 @@ describe('sincronizar', () => {
     const { sincronizar } = await import('./planilla');
     const r = await sincronizar(HOY);
     expect(r.solapas[0].error).toContain('SHEETS_PLANILLA_ID');
+  });
+});
+
+/**
+ * LA PLANILLA REAL DE FOUNDERS.
+ *
+ * «Control de ingresos | FOUNDERS 2026» no tiene la forma de la plantilla del
+ * paquete: es una planilla de finanzas con 18 solapas, los estados de cuota son
+ * casillas TRUE/FALSE, el encabezado de la consultora es «Consultor/a», el
+ * estado del cliente se llama «Estatus» y la deuda «Estado deuda», y no hay
+ * solapa de pagos ni de asistencias.
+ *
+ * El fixture reproduce ese encabezado exacto —las 39 columnas, en su orden— con
+ * filas inventadas: los clientes de Founders son personas reales y sus nombres,
+ * mails y teléfonos no van a un repositorio.
+ */
+describe('sincronizar · la planilla real de Founders', () => {
+  const SEGUIMIENTO = PLANTILLA('Seguimiento clientes');
+
+  function mockearFounders() {
+    vi.stubEnv('SHEETS_SOLAPA_CLIENTES', 'Seguimiento clientes');
+    vi.stubEnv('SHEETS_SOLAPA_PAGOS', '');
+    vi.stubEnv('SHEETS_SOLAPA_ASISTENCIAS', '');
+    vi.stubEnv('SHEETS_MONEDA', 'USD');
+    mockearDrive({ 'Seguimiento clientes': SEGUIMIENTO });
+  }
+
+  it('lee el encabezado real: «Consultor/a», «Estatus» y las cuotas TRUE/FALSE', async () => {
+    mockearFounders();
+    const { sincronizar } = await import('./planilla');
+    const { getRepo } = await import('@/data');
+    await sincronizar(HOY);
+
+    const d = await getRepo().cargarTodo(HOY);
+    const ada = d.clientes.find((c) => c.nombre === 'Ada Lovelace');
+    expect(ada).toBeDefined();
+
+    // «Consultor/a» normaliza a "consultor a", que no matcheaba ningún alias.
+    const kathe = d.equipo.find((p) => p.nombre === 'Kathe');
+    expect(ada!.consultoraId).toBe(kathe!.id);
+
+    // «Fecha alta» está vacía en las 160 filas: la fecha real es la del 1er pago.
+    expect(ada!.fechaAlta).toBe('2026-03-04');
+
+    const cuotas = d.pagos
+      .filter((p) => p.clienteId === ada!.id)
+      .sort((a, b) => a.numeroCuota - b.numeroCuota);
+    expect(cuotas.map((c) => c.estado)).toEqual(['pagado', 'pagado', 'vencido']);
+    expect(cuotas.map((c) => c.moneda)).toEqual(['USD', 'USD', 'USD']);
+  });
+
+  it('FALSE en una cuota ya vencida es «vencido», no «pendiente»', async () => {
+    mockearFounders();
+    const { sincronizar } = await import('./planilla');
+    const { getRepo } = await import('@/data');
+    await sincronizar(HOY);
+
+    const d = await getRepo().cargarTodo(HOY);
+    const alan = d.clientes.find((c) => c.nombre === 'Alan Turing')!;
+    const cuotas = d.pagos
+      .filter((p) => p.clienteId === alan.id)
+      .sort((a, b) => a.numeroCuota - b.numeroCuota);
+
+    // La 1 está en TRUE. La 2 está en FALSE y vence el 05/06, después de HOY:
+    // todavía no está vencida. Si FALSE se tradujera a un estado fijo, las dos
+    // caerían en el mismo y la cobranza no podría distinguirlas.
+    expect(cuotas.map((c) => c.estado)).toEqual(['pagado', 'pendiente']);
+  });
+
+  it('«Estatus: Baja» da de baja al cliente', async () => {
+    mockearFounders();
+    const { sincronizar } = await import('./planilla');
+    const { getRepo } = await import('@/data');
+    await sincronizar(HOY);
+
+    const d = await getRepo().cargarTodo(HOY);
+    expect(d.clientes.find((c) => c.nombre === 'Grace Hopper')!.estado).toBe('perdido');
+    expect(d.clientes.find((c) => c.nombre === 'Ada Lovelace')!.estado).toBe('activo');
+  });
+
+  it('con dos filas del mismo nombre aplica la primera e informa la segunda', async () => {
+    mockearFounders();
+    const { sincronizar } = await import('./planilla');
+    const r = await sincronizar(HOY);
+    const s = r.solapas.find((x) => x.solapa === 'Seguimiento clientes')!;
+
+    expect(s.leidas).toBe(5);
+    expect(s.aplicadas).toBe(3);
+
+    const dup = s.salteadas.find((x) => x.fila === 4)!;
+    expect(dup.motivo).toContain('ya apareció más arriba');
+    expect(s.salteadas.some((x) => x.fila === 5 && /sin nombre/i.test(x.motivo))).toBe(true);
+  });
+
+  it('una consultora que no está en el equipo se informa, y el cliente entra sin asignar', async () => {
+    mockearFounders();
+    const { sincronizar } = await import('./planilla');
+    const { getRepo } = await import('@/data');
+    const r = await sincronizar(HOY);
+
+    const s = r.solapas.find((x) => x.solapa === 'Seguimiento clientes')!;
+    expect(s.salteadas.some((x) => x.motivo.includes('Quien No Existe'))).toBe(true);
+
+    const d = await getRepo().cargarTodo(HOY);
+    expect(d.clientes.find((c) => c.nombre === 'Alan Turing')!.consultoraId).toBeUndefined();
+  });
+
+  it('sin solapa de pagos ni de asistencias lo dice, y no lo reporta como error', async () => {
+    mockearFounders();
+    const { sincronizar } = await import('./planilla');
+    const r = await sincronizar(HOY);
+
+    const faltantes = r.solapas.filter((s) => s.nota);
+    expect(faltantes).toHaveLength(2);
+    for (const s of faltantes) expect(s.error).toBeUndefined();
   });
 });

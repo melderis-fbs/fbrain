@@ -8,7 +8,7 @@ import type {
 } from '@/domain/types';
 import {
   ASISTENCIAS, CLIENTES, CUOTAS, ESTADO_CLIENTE, ESTADO_PAGO, MENTORIAS,
-  PAGOS, SOLAPAS, type Mapeo,
+  MONEDA_POR_DEFECTO, PAGOS, SOLAPAS, type Mapeo,
 } from './planilla-mapeo';
 
 /**
@@ -84,8 +84,22 @@ export type ReporteSolapa = {
   aplicadas: number;
   salteadas: { fila: number; motivo: string }[];
   error?: string;
+  /** Aclaración que no es un fallo: la solapa no está configurada. */
+  nota?: string;
 };
 export type Reporte = { at: string; solapas: ReporteSolapa[] };
+
+/** Una solapa sin nombre configurado no es un error: es una que no existe. */
+function solapaAusente(solapa: string, que: string): ReporteSolapa {
+  return {
+    solapa: `(sin solapa de ${que})`,
+    leidas: 0,
+    aplicadas: 0,
+    salteadas: [],
+    error: undefined,
+    nota: `La planilla no tiene una solapa de ${que}. Si algún día la tenés, nombrala en la variable de entorno correspondiente.`,
+  };
+}
 
 async function bajar(solapa: string): Promise<Fila[]> {
   const res = await fetch(urlSolapa(solapa), { cache: 'no-store' });
@@ -124,9 +138,27 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
   try {
     const filas = await bajar(SOLAPAS.clientes);
     rc.leidas = filas.length;
+
+    /**
+     * El cliente se identifica por nombre, así que dos filas con el mismo
+     * nombre son ambiguas: no hay forma de saber si son la misma persona
+     * cargada dos veces o dos personas homónimas. Aplicar las dos haría que la
+     * segunda pise a la primera en silencio. Se aplica la primera y se informa
+     * la segunda con el número de fila, que es lo que hay que desambiguar en la
+     * planilla.
+     */
+    const vistos = new Set<string>();
+
     for (const [i, f] of filas.entries()) {
       const nombre = leer(f, CLIENTES, 'nombre');
       if (!nombre) { rc.salteadas.push({ fila: i + 2, motivo: 'Sin nombre de cliente.' }); continue; }
+
+      const clave = normalizar(nombre);
+      if (vistos.has(clave)) {
+        rc.salteadas.push({ fila: i + 2, motivo: `«${nombre}» ya apareció más arriba en esta misma solapa. Se aplicó la primera fila; ésta se salteó. Distinguilos en la planilla (apellido completo, o un sufijo).` });
+        continue;
+      }
+      vistos.add(clave);
 
       const previo = porNombre.get(normalizar(nombre));
       const id = previo?.id ?? nuevoId();
@@ -162,7 +194,7 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
       await repo.guardarCliente(cliente);
       porNombre.set(normalizar(nombre), cliente);
 
-      const moneda = opcional(leer(f, CLIENTES, 'moneda')) ?? 'ARS';
+      const moneda = opcional(leer(f, CLIENTES, 'moneda')) ?? MONEDA_POR_DEFECTO;
 
       // --- negocio
       const negocio: Negocio = {
@@ -257,7 +289,13 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
         const monto = numero(campo(f, def.monto));
         const venc = fecha(campo(f, def.fecha));
         const estadoCrudo = normalizar(campo(f, def.estado));
-        if (monto === null && !venc && !estadoCrudo) continue;
+        /**
+         * Sin importe y sin fecha no hay cuota, aunque la casilla de estado
+         * diga algo. La planilla tiene columnas para cuatro cuotas y las marca
+         * todas —las que no existen quedan en FALSE—, así que mirar el estado
+         * acá le inventaría a cada cliente de una cuota tres cuotas de cero.
+         */
+        if (monto === null && !venc) continue;
 
         const estado = ESTADO_PAGO[estadoCrudo] ?? (venc && venc < hoy ? 'vencido' : 'pendiente');
         const pago: Pago = {
@@ -281,6 +319,9 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
   solapas.push(rc);
 
   // --------------------------------------------------------------- 2 · pagos
+  if (!SOLAPAS.pagos) {
+    solapas.push(solapaAusente(SOLAPAS.pagos, 'pagos'));
+  } else {
   const rp: ReporteSolapa = { solapa: SOLAPAS.pagos, leidas: 0, aplicadas: 0, salteadas: [] };
   try {
     const filas = await bajar(SOLAPAS.pagos);
@@ -299,7 +340,7 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
         clienteId: c.id,
         numeroCuota: cuota,
         monto: numero(leer(f, PAGOS, 'monto')) ?? 0,
-        moneda: opcional(leer(f, PAGOS, 'moneda')) ?? 'ARS',
+        moneda: opcional(leer(f, PAGOS, 'moneda')) ?? MONEDA_POR_DEFECTO,
         fechaVencimiento: venc,
         fechaPago: pagado,
         estado: ESTADO_PAGO[normalizar(leer(f, PAGOS, 'estado'))] ?? (pagado ? 'pagado' : venc < hoy ? 'vencido' : 'pendiente'),
@@ -311,8 +352,12 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
     rp.error = e instanceof Error ? e.message : 'Error desconocido.';
   }
   solapas.push(rp);
+  }
 
   // --------------------------------------------------------- 3 · asistencias
+  if (!SOLAPAS.asistencias) {
+    solapas.push(solapaAusente(SOLAPAS.asistencias, 'asistencias'));
+  } else {
   const ra: ReporteSolapa = { solapa: SOLAPAS.asistencias, leidas: 0, aplicadas: 0, salteadas: [] };
   try {
     const filas = await bajar(SOLAPAS.asistencias);
@@ -342,6 +387,7 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
     ra.error = e instanceof Error ? e.message : 'Error desconocido.';
   }
   solapas.push(ra);
+  }
 
   return { at: hoy, solapas };
 }

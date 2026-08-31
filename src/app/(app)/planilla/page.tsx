@@ -16,8 +16,10 @@ export default async function PlanillaPage() {
     <div className="mx-auto max-w-3xl">
       <h1 className="text-[22px] font-semibold tracking-tight">La planilla</h1>
       <p className="mt-1 text-[13px] leading-relaxed text-ink-2">
-        Una sola planilla en Drive con tres solapas, y la app la lee. Nadie carga dos veces: lo
-        que ya vive en la planilla de finanzas entra desde acá.
+        La planilla de finanzas en Drive, leída desde acá. Nadie carga dos veces: lo que ya vive
+        en <em>Control de ingresos</em> entra solo. Hoy se lee una sola solapa,{' '}
+        <code>{SOLAPAS.clientes}</code>, que es donde están los clientes, sus cuotas y su estado
+        de pago.
       </p>
       <p className="mt-2 text-[13px] leading-relaxed text-ink-2">
         Las <strong>métricas semanales no están acá</strong>: viven en la base del CRM y se cargan
@@ -43,12 +45,28 @@ export default async function PlanillaPage() {
             <code>/edit</code>— y ponerlo en <code>SHEETS_PLANILLA_ID</code>.
           </li>
           <li>
-            <strong>3.</strong> Nombrar las solapas <code>{SOLAPAS.clientes}</code>,{' '}
-            <code>{SOLAPAS.pagos}</code> y <code>{SOLAPAS.asistencias}</code>. Los nombres se
-            pueden cambiar por entorno.
+            <strong>3.</strong> La solapa de clientes es <code>{SOLAPAS.clientes}</code>. Si algún
+            día se le cambia el nombre, se ajusta en <code>SHEETS_SOLAPA_CLIENTES</code> sin tocar
+            código.
           </li>
           <li>
-            <strong>4.</strong> Los encabezados se comparan sin acentos ni mayúsculas, y cada campo
+            <strong>4.</strong> Las solapas de pagos y de asistencias{' '}
+            {SOLAPAS.pagos || SOLAPAS.asistencias ? (
+              <>
+                son <code>{SOLAPAS.pagos || '—'}</code> y{' '}
+                <code>{SOLAPAS.asistencias || '—'}</code>.
+              </>
+            ) : (
+              <>
+                no existen todavía y por eso se saltean. Las cuotas igual entran: están en columnas
+                dentro de la solapa de clientes. Las asistencias a mentorías, en cambio, no están
+                en ninguna parte de la planilla — hasta que exista esa solapa, la regla de
+                ausencias no tiene con qué correr.
+              </>
+            )}
+          </li>
+          <li>
+            <strong>5.</strong> Los encabezados se comparan sin acentos ni mayúsculas, y cada campo
             acepta varios nombres. Los alias viven en <code>src/server/planilla-mapeo.ts</code>:
             cambiar una columna en Drive no requiere tocar ningún otro archivo.
           </li>
