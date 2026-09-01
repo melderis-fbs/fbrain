@@ -94,9 +94,10 @@ export function FichaForm({
   conectado: boolean;
   /** Los documentos ya cargados del cliente, para no tener que pegarlos otra vez. */
   guardados: { titulo: string; fecha: string; contenido: string }[];
-  accion: (clienteId: string, fd: FormData) => Promise<void>;
+  accion: (clienteId: string, fd: FormData) => Promise<{ error: string } | void>;
 }) {
   const [campos, setCampos] = useState<Campos>(inicial);
+  const [errorGuardar, setErrorGuardar] = useState<string | null>(null);
   const [documento, setDocumento] = useState('');
   const [extrayendo, setExtrayendo] = useState(false);
   const [fuentes, setFuentes] = useState<Fuente[]>([]);
@@ -170,7 +171,24 @@ export function FichaForm({
   }
 
   return (
-    <form action={(fd) => accion(clienteId, fd)} className="space-y-4">
+    <form
+      action={async (fd) => {
+        setErrorGuardar(null);
+        const r = await accion(clienteId, fd);
+        // Si guardó, la acción redirige y esto no llega a ejecutarse.
+        if (r?.error) setErrorGuardar(r.error);
+      }}
+      className="space-y-4"
+    >
+      {errorGuardar && (
+        <p
+          className="rounded-lg border px-3 py-2 text-[12.5px] leading-relaxed"
+          style={{ borderColor: 'var(--critical)', background: 'var(--critical-soft)', color: 'var(--critical-ink)' }}
+        >
+          <strong>No se guardó.</strong> {errorGuardar}
+        </p>
+      )}
+
       {/* ------------------------------------------------ documentos */}
       <section className="rounded-xl border border-line bg-surface p-4">
         <h2 className="text-[14px] font-semibold">Arrancar desde lo que ya tenés</h2>

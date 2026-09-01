@@ -37,7 +37,31 @@ const lista = (v: FormDataEntryValue | null): string[] =>
  * meta sin dejar la versión anterior borra contra qué se venía midiendo, y el
  * drift entre versiones es justamente lo que mira el test de coherencia.
  */
-export async function guardarFicha(clienteId: string, formData: FormData) {
+/**
+ * Guardar la ficha.
+ *
+ * Envuelve todas las escrituras: si la base rechaza una, el error vuelve a la
+ * pantalla en vez de tumbar el render. Antes esto era un 500 con un número de
+ * digest, que obliga a ir a buscar el log del servidor para enterarse de que
+ * faltaba una columna — y mientras tanto el trabajo cargado en el formulario
+ * se pierde. Ahora el formulario sigue ahí, con lo escrito, y arriba dice qué
+ * pasó.
+ *
+ * El `redirect` de Next funciona lanzando una excepción, así que se deja
+ * pasar: no es un fallo.
+ */
+export async function guardarFicha(clienteId: string, formData: FormData): Promise<{ error: string } | void> {
+  try {
+    return await guardarFichaInterno(clienteId, formData);
+  } catch (e) {
+    if (e && typeof e === 'object' && 'digest' in e && String((e as { digest?: unknown }).digest).startsWith('NEXT_')) {
+      throw e;
+    }
+    return { error: e instanceof Error ? e.message : 'No se pudo guardar la ficha.' };
+  }
+}
+
+async function guardarFichaInterno(clienteId: string, formData: FormData) {
   const usuario = await getUsuario();
   if (!usuario) redirect('/login');
 
@@ -88,12 +112,17 @@ export async function guardarFicha(clienteId: string, formData: FormData) {
    * semanas después el cliente se va. Ahora deja su fila, que es lo que la
    * línea de tiempo y la revisión del caso ya sabían leer.
    */
-  if (cliente.consultoraId !== previo.consultoraId) {
+  //
+  // Sólo cuando hay un destino de verdad. Dejar a un cliente sin asignar no
+  // es un traspaso —no hay a quién traspasarlo— y escribir la fila igual
+  // metía una cadena vacía en una columna uuid, que la base rechaza y hasta
+  // hace poco se tragaba en silencio.
+  if (cliente.consultoraId && cliente.consultoraId !== previo.consultoraId) {
     await getRepo().guardarTraspaso({
       id: nuevoId(),
       clienteId,
       consultoraOrigenId: previo.consultoraId,
-      consultoraDestinoId: cliente.consultoraId ?? '',
+      consultoraDestinoId: cliente.consultoraId,
       fecha: hoy,
       motivo: txt(formData.get('motivoTraspaso')),
     });

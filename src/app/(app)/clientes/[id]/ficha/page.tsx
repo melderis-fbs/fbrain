@@ -81,6 +81,21 @@ export default async function FichaPage({ params }: { params: Promise<{ id: stri
     objetivoMoneda: s(objetivo?.moneda) || 'ARS',
   };
 
+  /**
+   * El selector de consultora tiene que incluir a la que el cliente ya tiene,
+   * aunque no esté en la lista de consultoras activas —porque se dio de baja,
+   * o porque es administración—. Si no está, el navegador selecciona la
+   * primera opción, que es «sin asignar», y guardar la ficha para corregir
+   * cualquier otro campo le saca el cliente a quien lo atiende.
+   */
+  const asignada = cliente.consultoraId
+    ? ws.equipo.find((p) => p.id === cliente.consultoraId)
+    : undefined;
+  const equipoParaElSelector =
+    asignada && !ws.consultoras.some((c) => c.id === asignada.id)
+      ? [...ws.consultoras, asignada]
+      : ws.consultoras;
+
   const faltantes = Object.entries(bloques)
     .filter(([, ok]) => !ok)
     .map(([k]) => k);
@@ -103,7 +118,7 @@ export default async function FichaPage({ params }: { params: Promise<{ id: stri
       <FichaForm
         clienteId={id}
         inicial={inicial}
-        equipo={ws.consultoras.map((c) => ({ id: c.id, nombre: c.nombre }))}
+        equipo={equipoParaElSelector.map((c) => ({ id: c.id, nombre: c.nombre }))}
         esAdmin={veTodo(usuario.rol)}
         conectado={hayModelo()}
         guardados={v.ctx.registros.documentos.map((d) => ({
