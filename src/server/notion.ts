@@ -205,6 +205,21 @@ export async function sincronizarNotion(hoy: string): Promise<Reporte> {
   const dataset = await repo.cargarTodo(hoy);
   const porNombre = new Map(dataset.clientes.map((c) => [normalizar(c.nombre), c]));
   const consultoraPorNombre = new Map(dataset.equipo.map((c) => [normalizar(c.nombre), c]));
+  const nombreDeConsultora = new Map(dataset.equipo.map((c) => [c.id, c.nombre]));
+
+  /**
+   * El último traspaso de cada cliente. Es lo que permite distinguir una
+   * asignación que la app heredó de Notion —y que Notion puede actualizar
+   * libremente— de una que alguien cambió a mano acá, que no se puede pisar
+   * sin deshacerle el trabajo a quien la hizo.
+   */
+  const ultimoTraspaso = new Map<string, { destino: string; fecha: string }>();
+  for (const t of dataset.traspasos) {
+    const previo = ultimoTraspaso.get(t.clienteId);
+    if (!previo || t.fecha >= previo.fecha) {
+      ultimoTraspaso.set(t.clienteId, { destino: t.consultoraDestinoId, fecha: t.fecha });
+    }
+  }
 
   try {
     const filas = await bajarTodo();
@@ -250,6 +265,26 @@ export async function sincronizarNotion(hoy: string): Promise<Reporte> {
         r.salteadas.push({ fila, motivo: `«${nombre}» sigue asignado a «${consultora.nombre}», que ya no está activo. Hay que reasignarlo.` });
       }
 
+      /**
+       * Un cambio de consultora hecho en la app le gana a Notion, y esto es
+       * deliberado: si no, la próxima sincronización le devolvería el cliente
+       * a la consultora anterior en silencio, y quien hizo el cambio se
+       * enteraría cuando alguien preguntara por qué sigue sin atenderlo.
+       *
+       * La divergencia no se esconde: se informa, para que alguien la corrija
+       * también en Notion. El día que lo haga, este renglón desaparece solo.
+       */
+      const traspaso = previo ? ultimoTraspaso.get(previo.id) : undefined;
+      const fijadaEnLaApp = Boolean(
+        traspaso && previo?.consultoraId === traspaso.destino && consultora && consultora.id !== traspaso.destino,
+      );
+      if (fijadaEnLaApp) {
+        r.salteadas.push({
+          fila,
+          motivo: `«${nombre}» está asignado en la app a «${nombreDeConsultora.get(traspaso!.destino) ?? 'alguien'}» desde el ${traspaso!.fecha}, y en Notion figura «${consultora!.nombre}». Mandó la app: el traspaso se hizo acá. Actualizá Notion para que dejen de diferir.`,
+        });
+      }
+
       const estadoCrudo = normalizar(leer(f, PROPS.estado));
       const estado = ESTADO_NOTION[estadoCrudo];
       if (estadoCrudo && !estado) {
@@ -270,7 +305,7 @@ export async function sincronizarNotion(hoy: string): Promise<Reporte> {
         programa: leer(f, PROPS.programa) || previo?.programa || 'Founders',
         fechaAlta: alta,
         fechaFinPrevista: Number.isFinite(meses) && meses > 0 ? sumarMeses(alta, meses) : previo?.fechaFinPrevista,
-        consultoraId: consultora?.id ?? previo?.consultoraId,
+        consultoraId: fijadaEnLaApp ? previo?.consultoraId : (consultora?.id ?? previo?.consultoraId),
         estado: estado ?? previo?.estado ?? 'activo',
         driveFolderId: carpeta ?? previo?.driveFolderId,
         notas: leer(f, PROPS.nota) || previo?.notas,

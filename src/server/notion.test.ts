@@ -171,6 +171,54 @@ describe('sincronizarNotion', () => {
     expect(ada.fechaAlta).toBe('2026-03-04');
   });
 
+  it('un cambio de coach hecho en la app le gana a Notion, y lo informa', async () => {
+    mockearNotion(pagina([cliente({ Consultor: select('Nati') })]));
+    const { sincronizarNotion } = await import('./notion');
+    const { getRepo } = await import('@/data');
+    const repo = getRepo();
+
+    const d0 = await repo.cargarTodo(HOY);
+    const kathe = d0.equipo.find((p) => p.nombre === 'Kathe')!;
+    const base = d0.clientes[0];
+
+    // El cliente existe y alguien lo reasignó a Kathe desde la app.
+    await repo.guardarCliente({ ...base, nombre: 'Ada Lovelace', consultoraId: kathe.id });
+    await repo.guardarTraspaso({
+      id: 'tr-prueba',
+      clienteId: base.id,
+      consultoraDestinoId: kathe.id,
+      fecha: '2026-08-20',
+      motivo: 'Sobrecarga de la anterior.',
+    });
+
+    const r = await sincronizarNotion(HOY);
+
+    // Notion dice Nati, pero el traspaso se hizo acá: manda la app.
+    const ada = (await repo.cargarTodo(HOY)).clientes.find((c) => c.nombre === 'Ada Lovelace')!;
+    expect(ada.consultoraId).toBe(kathe.id);
+
+    // Y la divergencia no se esconde.
+    const aviso = r.solapas[0].salteadas.find((x) => x.motivo.includes('Mandó la app'))!;
+    expect(aviso.motivo).toContain('Kathe');
+    expect(aviso.motivo).toContain('Nati');
+  });
+
+  it('sin traspaso en la app, Notion reasigna con libertad', async () => {
+    mockearNotion(pagina([cliente({ Consultor: select('Nati') })]));
+    const { sincronizarNotion } = await import('./notion');
+    const { getRepo } = await import('@/data');
+    const repo = getRepo();
+
+    const d0 = await repo.cargarTodo(HOY);
+    const kathe = d0.equipo.find((p) => p.nombre === 'Kathe')!;
+    const nati = d0.equipo.find((p) => p.nombre === 'Nati')!;
+    await repo.guardarCliente({ ...d0.clientes[0], nombre: 'Ada Lovelace', consultoraId: kathe.id });
+
+    await sincronizarNotion(HOY);
+    const ada = (await repo.cargarTodo(HOY)).clientes.find((c) => c.nombre === 'Ada Lovelace')!;
+    expect(ada.consultoraId).toBe(nati.id);
+  });
+
   it('explica cómo se arregla un 404, que es el error que todos cometen', async () => {
     vi.stubGlobal('fetch', async () => new Response('{}', { status: 404 }));
     const { sincronizarNotion } = await import('./notion');

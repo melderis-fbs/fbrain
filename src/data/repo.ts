@@ -64,6 +64,13 @@ export interface Repo {
   crearAlerta(a: Alerta): Promise<void>;
   guardarProrroga(p: Prorroga): Promise<void>;
   guardarBaja(b: Baja): Promise<void>;
+  /**
+   * El traspaso es el momento de mayor mortandad de la cartera, así que se
+   * registra explícitamente en vez de deducirlo de que el `consultora_id`
+   * cambió. Sin la fila no hay fecha, no hay motivo y no hay nada que mirar
+   * cuando tres semanas después el cliente se va.
+   */
+  guardarTraspaso(t: Traspaso): Promise<void>;
   guardarAtribucion(a: AtribucionManual): Promise<void>;
   guardarRevision(r: RevisionCaso): Promise<void>;
 }

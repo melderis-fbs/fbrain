@@ -172,6 +172,10 @@ export const supabaseRepo: Repo = {
     const sb = await clienteSupabase();
     await sb.from('bajas').upsert({ ...snake(b as never, M.baja), pasos: b.pasos });
   },
+  async guardarTraspaso(t) {
+    const sb = await clienteSupabase();
+    await sb.from('traspasos').upsert(snake(t as never, M.traspaso));
+  },
   /** Append-only: la corrección anterior queda, para poder discutir el criterio después. */
   async guardarAtribucion(a) {
     const sb = await clienteSupabase();

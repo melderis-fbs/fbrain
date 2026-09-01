@@ -197,6 +197,13 @@ export const demoRepo: Repo = {
     else d.prorrogas.unshift(p);
   },
 
+  async guardarTraspaso(t) {
+    const d = cache?.data;
+    if (!d) return;
+    const i = d.traspasos.findIndex((x) => x.id === t.id);
+    if (i >= 0) d.traspasos[i] = t;
+    else d.traspasos.unshift(t);
+  },
   async guardarBaja(b) {
     const d = cache?.data;
     if (!d) return;

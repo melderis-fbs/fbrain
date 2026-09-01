@@ -282,6 +282,18 @@ export function FichaForm({
           <Campo
             name="consultoraId" label="Consultora asignada" valor={campos} set={set} ancho="half"
             opciones={[{ v: '', l: '— sin asignar —' }, ...equipo.map((c) => ({ v: c.id, l: c.nombre }))]}
+            hint="Cambiarla deja registrado el traspaso con su fecha, y la asignación de la app pasa a mandar sobre la de Notion."
+          />
+        )}
+        {/*
+          El motivo sólo aparece cuando efectivamente hay un cambio. Pedirlo
+          siempre lo convierte en un campo que todos ignoran; pedirlo en el
+          momento del cambio es cuando alguien todavía se acuerda por qué.
+        */}
+        {esAdmin && campos.consultoraId !== inicial.consultoraId && (
+          <Campo
+            name="motivoTraspaso" label="Motivo del cambio de consultora" valor={campos} set={set} area={2}
+            hint="Queda en la línea de tiempo del cliente. Es lo que se lee cuando hay que entender una baja tres semanas después."
           />
         )}
         <Campo name="nivelVendido" label="Qué se le vendió" valor={campos} set={set} ancho="half" hint="Para poder contrastarlo con lo que trajo." />

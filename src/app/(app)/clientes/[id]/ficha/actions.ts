@@ -81,6 +81,24 @@ export async function guardarFicha(clienteId: string, formData: FormData) {
   if (veTodo(usuario.rol)) cliente.consultoraId = txt(formData.get('consultoraId'));
   await getRepo().guardarCliente(cliente);
 
+  /**
+   * Un cambio de consultora no es una edición más: es el momento de mayor
+   * mortandad de la cartera. Hasta ahora sólo se pisaba `consultoraId` y no
+   * quedaba rastro — ni fecha, ni motivo, ni nada que mirar cuando tres
+   * semanas después el cliente se va. Ahora deja su fila, que es lo que la
+   * línea de tiempo y la revisión del caso ya sabían leer.
+   */
+  if (cliente.consultoraId !== previo.consultoraId) {
+    await getRepo().guardarTraspaso({
+      id: nuevoId(),
+      clienteId,
+      consultoraOrigenId: previo.consultoraId,
+      consultoraDestinoId: cliente.consultoraId ?? '',
+      fecha: hoy,
+      motivo: txt(formData.get('motivoTraspaso')),
+    });
+  }
+
   // --------------------------------------------------------------- negocio
   const negocio: Negocio = {
     clienteId,
