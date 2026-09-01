@@ -48,6 +48,34 @@ const snake = (obj: Record<string, unknown>, mapa: Record<string, string>) => {
   return out;
 };
 
+/**
+ * Toda escritura pasa por acá.
+ *
+ * El cliente de Supabase NO tira una excepción cuando Postgres rechaza algo:
+ * devuelve `{ error }` y sigue. Sin esta verificación una política de RLS que
+ * falta hace que cada insert se descarte en silencio, y la importación informa
+ * «155 filas aplicadas» sobre una base que quedó vacía.
+ *
+ * Eso fue exactamente lo que pasó: `clientes` tenía política de select y de
+ * update pero ninguna de insert, así que ningún cliente nuevo entraba nunca, y
+ * la pantalla decía que todo había salido bien. Un error tragado cuesta más
+ * que el error.
+ */
+async function ok<T extends { error: { message: string; code?: string; hint?: string | null } | null }>(
+  consulta: PromiseLike<T>,
+): Promise<T> {
+  const res = await consulta;
+  if (res.error) {
+    const esRls = res.error.code === '42501' || /row-level security/i.test(res.error.message);
+    throw new Error(
+      esRls
+        ? `La base rechazó la escritura por permisos (RLS): ${res.error.message}. Falta una política que permita esta operación, o la sesión no está enlazada con ninguna consultora.`
+        : `La base rechazó la escritura: ${res.error.message}${res.error.hint ? ` — ${res.error.hint}` : ''}`,
+    );
+  }
+  return res;
+}
+
 export const supabaseRepo: Repo = {
   modo: 'supabase',
 
@@ -91,65 +119,65 @@ export const supabaseRepo: Repo = {
 
   async guardarCliente(c) {
     const sb = await clienteSupabase();
-    await sb.from('clientes').upsert(snake(c as never, M.cliente));
+    await ok(sb.from('clientes').upsert(snake(c as never, M.cliente)));
   },
   async guardarNegocio(n) {
     const sb = await clienteSupabase();
-    await sb.from('negocio').upsert(snake(n as never, M.negocio), { onConflict: 'cliente_id' });
+    await ok(sb.from('negocio').upsert(snake(n as never, M.negocio), { onConflict: 'cliente_id' }));
   },
   async guardarAutoridad(a) {
     const sb = await clienteSupabase();
-    await sb.from('autoridad').upsert(snake(a as never, M.autoridad), { onConflict: 'cliente_id' });
+    await ok(sb.from('autoridad').upsert(snake(a as never, M.autoridad), { onConflict: 'cliente_id' }));
   },
   /** Append-only: cambiar la meta no borra contra qué se venía midiendo. */
   async guardarObjetivo(o) {
     const sb = await clienteSupabase();
-    await sb.from('objetivos_comerciales').insert(snake(o as never, M.objetivo));
+    await ok(sb.from('objetivos_comerciales').insert(snake(o as never, M.objetivo)));
   },
   async guardarDocumento(d) {
     const sb = await clienteSupabase();
-    await sb.from('documentos_cliente').upsert(snake(d as never, M.documento));
+    await ok(sb.from('documentos_cliente').upsert(snake(d as never, M.documento)));
   },
   async borrarDocumento(id) {
     const sb = await clienteSupabase();
-    await sb.from('documentos_cliente').delete().eq('id', id);
+    await ok(sb.from('documentos_cliente').delete().eq('id', id));
   },
   async guardarPago(p) {
     const sb = await clienteSupabase();
-    await sb.from('pagos').upsert(snake(p as never, M.pago), { onConflict: 'cliente_id,numero_cuota' });
+    await ok(sb.from('pagos').upsert(snake(p as never, M.pago), { onConflict: 'cliente_id,numero_cuota' }));
   },
   async guardarAsistencia(a) {
     const sb = await clienteSupabase();
-    await sb.from('asistencias_mentoria').upsert(snake(a as never, M.asistencia), { onConflict: 'cliente_id,mentoria,fecha' });
+    await ok(sb.from('asistencias_mentoria').upsert(snake(a as never, M.asistencia), { onConflict: 'cliente_id,mentoria,fecha' }));
   },
   async guardarSesion(s) {
     const sb = await clienteSupabase();
-    await sb.from('sesiones').upsert(snake(s as never, M.sesion));
+    await ok(sb.from('sesiones').upsert(snake(s as never, M.sesion)));
   },
   async guardarMetrica(m) {
     const sb = await clienteSupabase();
-    await sb.from('metricas_semanales').upsert(snake(m as never, M.metrica), { onConflict: 'cliente_id,semana_iso' });
+    await ok(sb.from('metricas_semanales').upsert(snake(m as never, M.metrica), { onConflict: 'cliente_id,semana_iso' }));
   },
   async guardarCompromiso(c) {
     const sb = await clienteSupabase();
-    await sb.from('compromisos').upsert(snake(c as never, M.compromiso));
+    await ok(sb.from('compromisos').upsert(snake(c as never, M.compromiso)));
   },
   async guardarHito(h) {
     const sb = await clienteSupabase();
-    await sb.from('hitos_cliente').upsert(snake(h as never, M.hito), { onConflict: 'cliente_id,hito_key' });
+    await ok(sb.from('hitos_cliente').upsert(snake(h as never, M.hito), { onConflict: 'cliente_id,hito_key' }));
   },
   async guardarLectura(l) {
     const sb = await clienteSupabase();
-    await sb.from('lecturas_consultora').insert(snake(l as never, M.lectura));
+    await ok(sb.from('lecturas_consultora').insert(snake(l as never, M.lectura)));
   },
   async guardarEstrategia(e) {
     const sb = await clienteSupabase();
     // append-only: la base tiene reglas que bloquean UPDATE y DELETE
-    await sb.from('estrategia_versiones').insert(snake(e as never, M.estrategia));
+    await ok(sb.from('estrategia_versiones').insert(snake(e as never, M.estrategia)));
   },
   async guardarDiagnostico(d) {
     const sb = await clienteSupabase();
-    await sb.from('diagnosticos').insert(snake(d as never, M.diagnostico));
+    await ok(sb.from('diagnosticos').insert(snake(d as never, M.diagnostico)));
   },
   async cerrarAlerta({ alertaId, texto, cerradaPor }, hoy) {
     const sb = await clienteSupabase();
@@ -162,27 +190,27 @@ export const supabaseRepo: Repo = {
   },
   async crearAlerta(a) {
     const sb = await clienteSupabase();
-    await sb.from('alertas').insert(snake(a as never, M.alerta));
+    await ok(sb.from('alertas').insert(snake(a as never, M.alerta)));
   },
   async guardarProrroga(p) {
     const sb = await clienteSupabase();
-    await sb.from('prorrogas').upsert(snake(p as never, M.prorroga));
+    await ok(sb.from('prorrogas').upsert(snake(p as never, M.prorroga)));
   },
   async guardarBaja(b) {
     const sb = await clienteSupabase();
-    await sb.from('bajas').upsert({ ...snake(b as never, M.baja), pasos: b.pasos });
+    await ok(sb.from('bajas').upsert({ ...snake(b as never, M.baja), pasos: b.pasos }));
   },
   async guardarTraspaso(t) {
     const sb = await clienteSupabase();
-    await sb.from('traspasos').upsert(snake(t as never, M.traspaso));
+    await ok(sb.from('traspasos').upsert(snake(t as never, M.traspaso)));
   },
   /** Append-only: la corrección anterior queda, para poder discutir el criterio después. */
   async guardarAtribucion(a) {
     const sb = await clienteSupabase();
-    await sb.from('atribuciones').insert(snake(a as never, M.atribucion));
+    await ok(sb.from('atribuciones').insert(snake(a as never, M.atribucion)));
   },
   async guardarRevision(r) {
     const sb = await clienteSupabase();
-    await sb.from('revisiones_caso').insert(snake(r as never, M.revision));
+    await ok(sb.from('revisiones_caso').insert(snake(r as never, M.revision)));
   },
 };
