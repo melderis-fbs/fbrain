@@ -52,6 +52,11 @@ habilitar ninguna extensión a mano: crea las que usa.
 Si preferís correrlas una por una, están en `supabase/migrations/` numeradas en
 el orden en que hay que aplicarlas, y el catálogo de hitos en `supabase/seed.sql`.
 
+> **¿Ya habías instalado antes y quedó atrás?** No corras `instalar.sql` de
+> nuevo. Pegá `supabase/actualizar.sql`, que junta todo lo agregado después en
+> un solo bloque, es aditivo y se puede correr las veces que quieras. Termina
+> con una consulta que te dice si quedó completo.
+
 El editor de Supabase va a mostrar dos advertencias antes de correrlo —una
 operación "destructiva" y tablas creadas sin RLS—. Las dos son esperables: la
 primera es un `drop trigger if exists` que se recrea acto seguido, y la segunda
