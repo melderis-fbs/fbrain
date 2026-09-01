@@ -3,7 +3,7 @@ import { Planilla } from '@/components/Planilla';
 import { getUsuario, veTodo } from '@/server/auth';
 import { hayPlanilla } from '@/server/planilla';
 import { hayNotion } from '@/server/notion';
-import { CLIENTES, CUOTAS, SOLAPAS } from '@/server/planilla-mapeo';
+import { CLIENTES, CUOTAS, esDePlanilla, SOLAPAS } from '@/server/planilla-mapeo';
 import { sincronizarAhora, sincronizarNotionAhora } from './actions';
 
 export const metadata = { title: 'Las fuentes · Founders Brain' };
@@ -128,8 +128,10 @@ export default async function PlanillaPage() {
         <p className="mt-1 text-[13px] leading-relaxed text-ink-2">
           La planilla de finanzas tiene las cuotas en columnas —primer pago, segundo, tercero,
           cuarto— y la app las guarda como {CUOTAS.length} filas de pago por cliente, con su
-          vencimiento y su estado. Si preferís una fila por cuota, la solapa{' '}
-          <code>{SOLAPAS.pagos}</code> hace lo mismo en formato largo y gana sobre las columnas.
+          vencimiento y su estado.
+          {SOLAPAS.pagos
+            ? <> Si preferís una fila por cuota, la solapa <code>{SOLAPAS.pagos}</code> hace lo mismo en formato largo y gana sobre las columnas.</>
+            : <> El día que exista una solapa con una fila por cuota, se nombra en <code>SHEETS_SOLAPA_PAGOS</code> y gana sobre las columnas.</>}
         </p>
         <p className="mt-2 text-[12.5px] leading-relaxed text-ink-3">
           Cuando una cuota no trae estado, se deduce del vencimiento: vencida si ya pasó, pendiente
@@ -141,8 +143,36 @@ export default async function PlanillaPage() {
         <summary className="cursor-pointer text-[13px] font-semibold">
           Los encabezados que reconoce la solapa {SOLAPAS.clientes}
         </summary>
-        <ul className="mt-2 grid gap-1 text-[11.5px] text-ink-2 sm:grid-cols-2">
-          {Object.entries(CLIENTES).map(([campo, alias]) => (
+
+        <p className="mt-2 text-[12px] leading-relaxed text-ink-2">
+          Cada campo acepta varios nombres y se comparan sin acentos ni mayúsculas, así que{' '}
+          <code>Teléfono</code> y <code>telefono</code> son el mismo. Alcanza con que la planilla
+          tenga <strong>uno</strong> de los nombres de cada renglón.
+        </p>
+
+        <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-3">
+          De la planilla de finanzas
+        </p>
+        <ul className="mt-1 grid gap-1 text-[11.5px] text-ink-2 sm:grid-cols-2">
+          {Object.entries(CLIENTES).filter(([c]) => esDePlanilla(c)).map(([campo, alias]) => (
+            <li key={campo}>
+              <span className="font-medium">{campo}</span>{' '}
+              <span className="text-ink-3">← {alias.join(' · ')}</span>
+            </li>
+          ))}
+        </ul>
+
+        <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-3">
+          Del expediente · se cargan desde la ficha
+        </p>
+        <p className="mt-1 text-[12px] leading-relaxed text-ink-2">
+          Estos <strong>no hacen falta en la planilla</strong> y no pasa nada si no están: son el
+          negocio, la autoridad, la estrategia y el objetivo comercial de cada cliente, que los
+          carga la consultora en la ficha o los propone el extractor a partir de un documento.
+          Están listados por si alguna vez conviene traer alguno ya cargado.
+        </p>
+        <ul className="mt-1 grid gap-1 text-[11.5px] text-ink-2 sm:grid-cols-2">
+          {Object.entries(CLIENTES).filter(([c]) => !esDePlanilla(c)).map(([campo, alias]) => (
             <li key={campo}>
               <span className="font-medium">{campo}</span>{' '}
               <span className="text-ink-3">← {alias.join(' · ')}</span>

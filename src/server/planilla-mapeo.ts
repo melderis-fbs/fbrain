@@ -44,6 +44,27 @@ export const MONEDA_POR_DEFECTO = process.env.SHEETS_MONEDA || 'USD';
 
 export type Mapeo = Record<string, string[]>;
 
+/**
+ * Qué parte del expediente llena cada campo.
+ *
+ * Existe para una sola cosa: que la pantalla no muestre los 47 campos en una
+ * lista plana. Vista así, alguien que compara con su planilla de finanzas —que
+ * tiene quince— concluye razonablemente que no va a funcionar. Y no es que
+ * falten columnas: los otros treinta y dos son del expediente, se cargan desde
+ * la ficha, y agregarlos a la planilla sería trabajo al pedo.
+ */
+export const ORIGEN: Record<string, 'planilla' | 'ficha'> = {
+  // Lo que la planilla de finanzas efectivamente tiene.
+  nombre: 'planilla', email: 'planilla', telefono: 'planilla', fuente: 'planilla',
+  programa: 'planilla', montoTotal: 'planilla', cantidadCuotas: 'planilla',
+  estadoDeuda: 'planilla', closer: 'planilla', setter: 'planilla', notas: 'planilla',
+  fechaAlta: 'planilla', tieneGarantia: 'planilla', estado: 'planilla',
+  consultora: 'planilla',
+};
+
+/** Todo lo que no está arriba lo carga la consultora en la ficha. */
+export const esDePlanilla = (campo: string) => ORIGEN[campo] === 'planilla';
+
 /** Solapa 1 · lo de finanzas tal como está, más el expediente al final. */
 export const CLIENTES: Mapeo = {
   nombre: ['nombre', 'cliente', 'nombre y apellido'],
