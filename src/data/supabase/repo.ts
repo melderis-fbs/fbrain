@@ -76,6 +76,52 @@ async function ok<T extends { error: { message: string; code?: string; hint?: st
   return res;
 }
 
+/**
+ * Cuántas filas pide por vuelta. Supabase corta las respuestas en un techo
+ * configurable —1000 por defecto— y lo hace **sin avisar**: devuelve las
+ * primeras mil y un 200. Pedir de a menos que ese techo y seguir pidiendo
+ * hasta que venga una página incompleta es lo único que garantiza traer todo,
+ * sin depender de cómo esté configurado el proyecto.
+ */
+const PAGINA = 1000;
+
+/**
+ * Traer una tabla entera.
+ *
+ * Dos cosas que antes se hacían mal y las dos fallaban en silencio:
+ *
+ *  1. Se pedía la tabla de una y se tomaba lo que viniera. Con el techo de
+ *     filas de Supabase, la métrica semanal número 1001 simplemente no
+ *     existía para la app — y el número que mostraba la pantalla era menor
+ *     que el real sin que nada lo dijera.
+ *
+ *  2. El error se descartaba con `?? []`. Una tabla que no se puede leer
+ *     —una política de RLS que falta, un permiso mal puesto— se veía igual
+ *     que una tabla vacía: la app decía "no hay clientes" en vez de "no pude
+ *     leer los clientes", que son problemas distintos y se arreglan distinto.
+ */
+async function traerTodas(
+  sb: Awaited<ReturnType<typeof clienteSupabase>>,
+  tabla: string,
+): Promise<Record<string, unknown>[]> {
+  const filas: Record<string, unknown>[] = [];
+  for (let desde = 0; ; desde += PAGINA) {
+    const { data, error } = await sb.from(tabla).select('*').range(desde, desde + PAGINA - 1);
+    if (error) {
+      throw new Error(
+        `No se pudo leer «${tabla}»: ${error.message}. ` +
+          (error.code === '42501' || /row-level security/i.test(error.message)
+            ? 'Es un problema de permisos (RLS), no de datos.'
+            : ''),
+      );
+    }
+    const lote = (data ?? []) as Record<string, unknown>[];
+    filas.push(...lote);
+    // Una página incompleta es la última. Si vino llena puede haber más.
+    if (lote.length < PAGINA) return filas;
+  }
+}
+
 export const supabaseRepo: Repo = {
   modo: 'supabase',
 
@@ -88,9 +134,8 @@ export const supabaseRepo: Repo = {
       'alertas', 'traspasos', 'diagnosticos', 'documentos_cliente',
       'prorrogas', 'bajas', 'atribuciones', 'revisiones_caso',
     ];
-    const res = await Promise.all(tablas.map((t) => sb.from(t).select('*')));
     const [eq, cl, ne, au, es, ob, me, se, co, pa, as, hi, le, al, tr, di, dc, pr, ba, at, rv] =
-      res.map((r) => r.data ?? []);
+      await Promise.all(tablas.map((t) => traerTodas(sb, t)));
 
     return {
       equipo: eq.map((r) => camel(r, M.consultora)),
