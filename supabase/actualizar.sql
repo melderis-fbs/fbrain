@@ -32,6 +32,20 @@ alter table clientes
 
 
 -- ---------------------------------------------------------------------
+--  1bis · Que la base acepte lo que el tipo declara opcional
+-- ---------------------------------------------------------------------
+--  Un default sólo se aplica cuando la columna NO viene en el insert. La
+--  app las manda con valor null —porque el campo es opcional y está
+--  vacío— y ahí Postgres las rechaza. Los defaults se quedan para las
+--  filas que se cargan por SQL; lo que se levanta es la obligación.
+
+alter table clientes alter column dias_gracia_pago       drop not null;
+alter table clientes alter column nivel_desalineado      drop not null;
+alter table clientes alter column renovaciones           drop not null;
+alter table clientes alter column fecha_alta_provisional drop not null;
+
+
+-- ---------------------------------------------------------------------
 --  2 · Las políticas de INSERT que faltaban
 -- ---------------------------------------------------------------------
 --  `clientes` tenía política de SELECT y de UPDATE pero ninguna de
@@ -87,4 +101,9 @@ select
   (select count(*) from pg_policies
     where schemaname = 'public'
       and policyname in ('p_clientes_alta','p_alertas_alta','p_llamadas_alta')
-  ) as politicas_de_3;
+  ) as politicas_de_3,
+  (select count(*) from information_schema.columns
+    where table_name = 'clientes' and is_nullable = 'YES'
+      and column_name in ('dias_gracia_pago','nivel_desalineado',
+                          'renovaciones','fecha_alta_provisional')
+  ) as opcionales_de_4;
