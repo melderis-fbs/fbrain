@@ -66,6 +66,12 @@ export default async function ExpedientePage({ params }: { params: Promise<{ id:
                   <Avatar persona={v.consultora} size={16} /> {v.consultora?.nombre ?? 'sin consultora'}
                 </Chip>
                 {c.tieneGarantia && <Chip tone="warning">garantía firmada</Chip>}
+                {(c.renovaciones ?? 0) > 0 && (
+                  <Chip tone="good">
+                    renovó{(c.renovaciones ?? 0) > 1 ? ` ${c.renovaciones} veces` : ''}
+                    {c.ultimaRenovacion ? ` · ${formatDate(c.ultimaRenovacion)}` : ''}
+                  </Chip>
+                )}
                 <Chip tone={indice.confianza === 'alta' ? 'good' : 'warning'}>dato {indice.confianza}</Chip>
               </div>
             </div>

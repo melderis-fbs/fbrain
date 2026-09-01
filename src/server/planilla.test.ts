@@ -187,8 +187,10 @@ describe('sincronizar · la planilla real de Founders', () => {
     const cuotas = d.pagos
       .filter((p) => p.clienteId === ada!.id)
       .sort((a, b) => a.numeroCuota - b.numeroCuota);
-    expect(cuotas.map((c) => c.estado)).toEqual(['pagado', 'pagado', 'vencido']);
-    expect(cuotas.map((c) => c.moneda)).toEqual(['USD', 'USD', 'USD']);
+    // Las tres del primer contrato. La cuarta es del segundo, que en el
+    // fixture es una renovación y se prueba aparte.
+    expect(cuotas.slice(0, 3).map((c) => c.estado)).toEqual(['pagado', 'pagado', 'vencido']);
+    expect(cuotas.slice(0, 3).map((c) => c.moneda)).toEqual(['USD', 'USD', 'USD']);
   });
 
   it('FALSE en una cuota ya vencida es «vencido», no «pendiente»', async () => {
@@ -220,18 +222,54 @@ describe('sincronizar · la planilla real de Founders', () => {
     expect(d.clientes.find((c) => c.nombre === 'Ada Lovelace')!.estado).toBe('activo');
   });
 
-  it('con dos filas del mismo nombre aplica la primera e informa la segunda', async () => {
+  it('una segunda fila con el mismo nombre es una renovación: acumula, no se pierde', async () => {
     mockearFounders();
     const { sincronizar } = await import('./planilla');
+    const { getRepo } = await import('@/data');
     const r = await sincronizar(HOY);
     const s = r.solapas.find((x) => x.solapa === 'Seguimiento clientes')!;
 
     expect(s.leidas).toBe(5);
-    expect(s.aplicadas).toBe(3);
-
-    const dup = s.salteadas.find((x) => x.fila === 4)!;
-    expect(dup.motivo).toContain('ya apareció más arriba');
+    // Las cuatro con nombre entran; sólo la que no tiene nombre queda afuera.
+    expect(s.aplicadas).toBe(4);
     expect(s.salteadas.some((x) => x.fila === 5 && /sin nombre/i.test(x.motivo))).toBe(true);
+
+    const aviso = s.salteadas.find((x) => x.fila === 4)!;
+    expect(aviso.motivo).toContain('RENOVACIÓN');
+
+    const d = await getRepo().cargarTodo(HOY);
+    const ada = d.clientes.find((c) => c.nombre === 'Ada Lovelace')!;
+    expect(ada.renovaciones).toBe(1);
+    expect(ada.ultimaRenovacion).toBe('2026-04-10');
+    // El día 1 del programa sigue siendo el del primer contrato.
+    expect(ada.fechaAlta).toBe('2026-03-04');
+    // Lo contratado es la suma de los dos contratos.
+    expect(ada.montoTotal).toBe(10000);
+    expect(ada.cantidadCuotas).toBe(4);
+
+    // Y las cuotas del segundo contrato siguen numerando a las del primero.
+    const cuotas = d.pagos
+      .filter((p) => p.clienteId === ada.id)
+      .sort((a, b) => a.numeroCuota - b.numeroCuota);
+    expect(cuotas.map((c) => c.numeroCuota)).toEqual([1, 2, 3, 4]);
+    expect(cuotas[3].monto).toBe(5000);
+  });
+
+  it('sincronizar dos veces no duplica las cuotas', async () => {
+    mockearFounders();
+    const { sincronizar } = await import('./planilla');
+    const { getRepo } = await import('@/data');
+
+    await sincronizar(HOY);
+    const primera = (await getRepo().cargarTodo(HOY)).pagos.length;
+
+    mockearFounders();
+    await sincronizar(HOY);
+    const segunda = (await getRepo().cargarTodo(HOY)).pagos.length;
+
+    // Antes cada corrida creaba filas nuevas con id nuevo y la deuda de la
+    // cartera entera se duplicaba en silencio.
+    expect(segunda).toBe(primera);
   });
 
   it('una consultora que no está en el equipo se informa, y el cliente entra sin asignar', async () => {

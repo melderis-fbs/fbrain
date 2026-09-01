@@ -92,6 +92,7 @@ export function ListaComercial({ vistas, verConsultora, hoy }: { vistas: VistaCl
     <div className="space-y-4">
       {grupos.map(([clave, filas]) => {
         const conDeuda = filas.filter((v) => v.ctx.registros.pagos.some((p) => p.estado === 'vencido')).length;
+        const renovaron = filas.filter((v) => (v.ctx.cliente.renovaciones ?? 0) > 0).length;
         const pagosDelMes = filas.flatMap((v) => v.ctx.registros.pagos);
         const moneda = pagosDelMes[0]?.moneda;
         const cobrado = pagosDelMes.filter((p) => p.estado === 'pagado').reduce((a, p) => a + p.monto, 0);
@@ -105,6 +106,11 @@ export function ListaComercial({ vistas, verConsultora, hoy }: { vistas: VistaCl
                 <span className="ml-2 text-[12px] font-normal text-ink-3">
                   {filas.length} cliente{filas.length > 1 ? 's' : ''}
                 </span>
+                {renovaron > 0 && (
+                  <span className="ml-2 text-[12px] font-medium" style={{ color: 'var(--good-ink)' }}>
+                    {renovaron} renovaron
+                  </span>
+                )}
                 {conDeuda > 0 && (
                   <span className="ml-2 text-[12px] font-medium" style={{ color: 'var(--critical-ink)' }}>
                     {conDeuda} con cuota vencida
@@ -146,7 +152,15 @@ export function ListaComercial({ vistas, verConsultora, hoy }: { vistas: VistaCl
                           <Link href={`/clientes/${c.id}`} className="font-medium hover:underline">
                             {c.nombre}
                           </Link>
-                          <div className="text-[11px] text-ink-3">día {v.ctx.dia}{c.tieneGarantia && ' · garantía'}</div>
+                          <div className="text-[11px] text-ink-3">
+                            día {v.ctx.dia}{c.tieneGarantia && ' · garantía'}
+                            {/* Renovar es el único resultado del programa que se mide solo. */}
+                            {(c.renovaciones ?? 0) > 0 && (
+                              <span className="ml-1 font-medium" style={{ color: 'var(--good-ink)' }}>
+                                · renovó{(c.renovaciones ?? 0) > 1 ? ` ×${c.renovaciones}` : ''}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         {verConsultora && (
                           <td className="px-3 py-2">

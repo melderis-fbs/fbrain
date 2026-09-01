@@ -35,7 +35,19 @@ import type { Reporte, ReporteSolapa } from './planilla';
  */
 
 const API = 'https://api.notion.com/v1';
-const VERSION = '2022-06-28';
+
+/**
+ * Notion partió las bases en dos con la versión 2025-09-03: lo que antes era
+ * una base ahora es una base con una o más «data sources», y el endpoint para
+ * consultarla cambió. Cuál de los dos anda depende de cuándo se creó la base y
+ * de si el workspace ya migró, y desde afuera no hay forma de saberlo.
+ *
+ * Así que se prueban los dos, en orden, y el que conteste gana. Es una llamada
+ * de más una sola vez, contra un error que desde el mensaje de Notion es
+ * indistinguible de «el ID está mal».
+ */
+const VERSION_CLASICA = '2022-06-28';
+const VERSION_NUEVA = '2025-09-03';
 
 export function hayNotion(): boolean {
   return Boolean(process.env.NOTION_TOKEN && process.env.NOTION_DB_CLIENTES);
@@ -120,30 +132,63 @@ function leer(fila: Fila, alias: readonly string[]): string {
  * el cursor la mitad de la cartera no entraría nunca — en silencio, que es lo
  * peor que puede hacer una importación.
  */
+type Respuesta = { ok: boolean; status: number; cuerpo: string; json?: unknown };
+
+async function pedir(url: string, version: string, body?: unknown): Promise<Respuesta> {
+  const res = await fetch(url, {
+    method: body === undefined ? 'GET' : 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.NOTION_TOKEN}`,
+      'Notion-Version': version,
+      'Content-Type': 'application/json',
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    cache: 'no-store',
+  });
+  const cuerpo = await res.text().catch(() => '');
+  let json: unknown;
+  try { json = JSON.parse(cuerpo); } catch { /* Notion siempre manda JSON; si no, el texto alcanza. */ }
+  return { ok: res.ok, status: res.status, cuerpo, json };
+}
+
+/**
+ * Decide una sola vez con qué endpoint se va a consultar, probando el clásico
+ * y, si no anda, resolviendo la data source de la base para usar el nuevo.
+ */
+async function resolverConsulta(): Promise<{ url: string; version: string }> {
+  const id = process.env.NOTION_DB_CLIENTES;
+
+  const clasico = await pedir(`${API}/databases/${id}/query`, VERSION_CLASICA, { page_size: 1 });
+  if (clasico.ok) return { url: `${API}/databases/${id}/query`, version: VERSION_CLASICA };
+
+  // Un 401 es del token y no lo arregla cambiar de endpoint: cortar acá evita
+  // un segundo intento inútil y un mensaje de error peor.
+  if (clasico.status === 401) throw new Error(mensajeDeError(401, clasico.cuerpo));
+
+  // Puede ser una base del modelo nuevo. Se le pregunta por sus data sources.
+  const meta = await pedir(`${API}/databases/${id}`, VERSION_NUEVA);
+  const fuentes = (meta.json as { data_sources?: { id: string }[] } | undefined)?.data_sources;
+  if (meta.ok && fuentes?.length) {
+    return { url: `${API}/data_sources/${fuentes[0].id}/query`, version: VERSION_NUEVA };
+  }
+
+  // Puede ser que lo configurado ya sea el ID de una data source.
+  const directo = await pedir(`${API}/data_sources/${id}/query`, VERSION_NUEVA, { page_size: 1 });
+  if (directo.ok) return { url: `${API}/data_sources/${id}/query`, version: VERSION_NUEVA };
+
+  throw new Error(mensajeDeError(clasico.status, clasico.cuerpo));
+}
+
 async function bajarTodo(): Promise<Fila[]> {
-  const token = process.env.NOTION_TOKEN;
-  const db = process.env.NOTION_DB_CLIENTES;
+  const { url, version } = await resolverConsulta();
   const filas: Fila[] = [];
   let cursor: string | undefined;
 
   do {
-    const res = await fetch(`${API}/databases/${db}/query`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Notion-Version': VERSION,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(cursor ? { page_size: 100, start_cursor: cursor } : { page_size: 100 }),
-      cache: 'no-store',
-    });
+    const res = await pedir(url, version, cursor ? { page_size: 100, start_cursor: cursor } : { page_size: 100 });
+    if (!res.ok) throw new Error(mensajeDeError(res.status, res.cuerpo));
 
-    if (!res.ok) {
-      const cuerpo = await res.text().catch(() => '');
-      throw new Error(mensajeDeError(res.status, cuerpo));
-    }
-
-    const json = (await res.json()) as {
+    const json = (res.json ?? {}) as {
       results?: { properties?: Record<string, Prop>; url?: string }[];
       has_more?: boolean;
       next_cursor?: string | null;
@@ -161,13 +206,21 @@ async function bajarTodo(): Promise<Fila[]> {
   return filas;
 }
 
-/** Los dos errores que se cometen al conectar Notion, dichos como se arreglan. */
+/** Los errores que se cometen al conectar Notion, dichos como se arreglan. */
 function mensajeDeError(status: number, cuerpo: string): string {
   if (status === 401) {
     return 'Notion rechazó el token. Revisá `NOTION_TOKEN`: tiene que ser el "Internal Integration Secret" de la integración, y empieza con `ntn_` o `secret_`.';
   }
   if (status === 404) {
-    return 'Notion no encuentra la base. Casi siempre es que la integración no tiene acceso: abrí «Auditoría Clientes» en Notion → ••• → Conexiones → agregá la integración. Y verificá que `NOTION_DB_CLIENTES` sea el ID de la base.';
+    // Notion contesta lo mismo para «no existe» y para «existe pero vos no la
+    // ves», a propósito. Y lo segundo es lo que pasa el 90% de las veces, así
+    // que va primero: mandar a revisar el ID hace perder media hora buscando
+    // un problema que no está ahí.
+    return (
+      'Notion dice que no encuentra la base, pero devuelve lo mismo cuando la base existe y la integración no tiene permiso de verla — que es lo que pasa casi siempre. ' +
+      'PRIMERO: abrí «Auditoría Clientes» en Notion → botón ••• arriba a la derecha → Conexiones (o Connections) → agregá tu integración. Hay que hacerlo desde la página de la base, no desde Settings. ' +
+      'Recién si eso ya está hecho, revisá `NOTION_DB_CLIENTES`: son los 32 caracteres de la URL de la base, sin guiones y sin el `?v=...` del final.'
+    );
   }
   return `Notion devolvió ${status}. ${cuerpo.slice(0, 300)}`;
 }

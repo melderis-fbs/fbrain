@@ -40,10 +40,23 @@ function cliente(over: Record<string, unknown> = {}) {
   };
 }
 
+/**
+ * Responde por cursor y no por orden de llamada, que es como se comporta
+ * Notion. Importa: el importador hace una llamada de sondeo para descubrir con
+ * qué endpoint hablar, y un mock que devuelve las páginas en orden le
+ * entregaría la primera a ese sondeo y perdería una página de datos.
+ */
 function mockearNotion(...paginas: ReturnType<typeof pagina>[]) {
-  let i = 0;
-  vi.stubGlobal('fetch', async () => {
-    const p = paginas[Math.min(i++, paginas.length - 1)];
+  const porCursor = new Map<string, ReturnType<typeof pagina>>();
+  let clave: string | undefined = undefined;
+  for (const p of paginas) {
+    porCursor.set(clave ?? '', p);
+    clave = p.next_cursor ?? undefined;
+  }
+
+  vi.stubGlobal('fetch', async (_url: string, init?: { body?: string }) => {
+    const body = init?.body ? (JSON.parse(init.body) as { start_cursor?: string }) : {};
+    const p = porCursor.get(body.start_cursor ?? '') ?? paginas[0];
     return new Response(JSON.stringify(p), { status: 200, headers: { 'Content-Type': 'application/json' } });
   });
 }
@@ -219,11 +232,56 @@ describe('sincronizarNotion', () => {
     expect(ada.consultoraId).toBe(nati.id);
   });
 
-  it('explica cómo se arregla un 404, que es el error que todos cometen', async () => {
+  it('si la base es del modelo nuevo, resuelve su data source y consulta por ahí', async () => {
+    // Notion 2025-09-03 partió las bases en «data sources». Una base migrada
+    // rechaza el endpoint clásico con un 404 que, leído de afuera, es idéntico
+    // a «el ID está mal» — y mandaría a buscar el problema donde no está.
+    const llamadas: string[] = [];
+    vi.stubGlobal('fetch', async (url: string, init?: { body?: string }) => {
+      llamadas.push(url);
+      if (url.includes('/databases/') && url.endsWith('/query')) {
+        return new Response('{"object":"error","code":"object_not_found"}', { status: 404 });
+      }
+      if (url.includes('/databases/')) {
+        return new Response(JSON.stringify({ data_sources: [{ id: 'ds-98a5' }] }), { status: 200 });
+      }
+      const body = init?.body ? (JSON.parse(init.body) as { page_size?: number }) : {};
+      // El sondeo pide una fila; la lectura real pide cien.
+      return new Response(JSON.stringify(pagina(body.page_size === 1 ? [] : [cliente()])), { status: 200 });
+    });
+
+    const { sincronizarNotion } = await import('./notion');
+    const r = await sincronizarNotion(HOY);
+
+    expect(r.solapas[0].error).toBeUndefined();
+    expect(r.solapas[0].aplicadas).toBe(1);
+    expect(llamadas.some((u) => u.includes('/data_sources/ds-98a5/query'))).toBe(true);
+  });
+
+  it('un 401 no reintenta con el otro endpoint: el token no lo arregla el endpoint', async () => {
+    const llamadas: string[] = [];
+    vi.stubGlobal('fetch', async (url: string) => {
+      llamadas.push(url);
+      return new Response('{"code":"unauthorized"}', { status: 401 });
+    });
+
+    const { sincronizarNotion } = await import('./notion');
+    const r = await sincronizarNotion(HOY);
+
+    expect(r.solapas[0].error).toContain('token');
+    expect(llamadas).toHaveLength(1);
+  });
+
+  it('el 404 manda primero a Conexiones, que es lo que falla casi siempre', async () => {
     vi.stubGlobal('fetch', async () => new Response('{}', { status: 404 }));
     const { sincronizarNotion } = await import('./notion');
     const r = await sincronizarNotion(HOY);
-    expect(r.solapas[0].error).toContain('Conexiones');
+
+    const e = r.solapas[0].error!;
+    expect(e).toContain('Conexiones');
+    // El ID se menciona después, no antes: mandar a revisarlo primero hace
+    // perder media hora buscando un problema que no está ahí.
+    expect(e.indexOf('Conexiones')).toBeLessThan(e.indexOf('NOTION_DB_CLIENTES'));
   });
 
   it('sin token no intenta nada y lo dice', async () => {

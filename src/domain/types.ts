@@ -95,6 +95,19 @@ export interface Cliente {
   estadoDeuda?: EstadoDeuda;
   /** Notas libres. Van al expediente como lo que son: algo que alguien anotó. */
   notas?: string;
+
+  /**
+   * Cuántas veces volvió a contratar. En la planilla eso es una fila más con
+   * el mismo nombre, y es el único resultado del programa que se mide solo:
+   * nadie renueva un programa que no le sirvió.
+   */
+  renovaciones?: number;
+  /**
+   * Fecha del primer pago del último contrato. No reemplaza a `fechaAlta`: el
+   * día 1 del programa se cuenta desde que empezó con Founders, no desde la
+   * última factura.
+   */
+  ultimaRenovacion?: string;
 }
 
 /**

@@ -158,6 +158,15 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
   const repo = getRepo();
   const dataset = await repo.cargarTodo(hoy);
   const porNombre = new Map(dataset.clientes.map((c) => [normalizar(c.nombre), c]));
+
+  /**
+   * Las cuotas que ya existen, por cliente y número. Sin esto cada
+   * sincronización creaba filas nuevas con id nuevo —`guardarPago` inserta por
+   * id— y la segunda corrida duplicaba la deuda entera de la cartera. Reusando
+   * el id, volver a sincronizar corrige en vez de acumular.
+   */
+  const pagoExistente = new Map<string, string>();
+  for (const p of dataset.pagos) pagoExistente.set(`${p.clienteId}#${p.numeroCuota}`, p.id);
   const consultoraPorNombre = new Map(dataset.equipo.map((c) => [normalizar(c.nombre), c.id]));
 
   const solapas: ReporteSolapa[] = [];
@@ -170,30 +179,43 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
     verificarQueSeaLaSolapa(filas, SOLAPAS.clientes);
 
     /**
-     * El cliente se identifica por nombre, así que dos filas con el mismo
-     * nombre son ambiguas: no hay forma de saber si son la misma persona
-     * cargada dos veces o dos personas homónimas. Aplicar las dos haría que la
-     * segunda pise a la primera en silencio. Se aplica la primera y se informa
-     * la segunda con el número de fila, que es lo que hay que desambiguar en la
-     * planilla.
+     * Una segunda fila con el mismo nombre es una RENOVACIÓN: en la planilla de
+     * finanzas cada contrato es una fila, con su monto y sus cuotas. Antes se
+     * salteaba, y eso perdía justo las cuotas del contrato nuevo, que son las
+     * que están vivas.
+     *
+     * Se acumulan: mismo cliente, sus cuotas se suman a las que ya tenía y
+     * queda registrado que renovó. La fecha de alta no se toca — el día 1 del
+     * programa es el del primer contrato.
+     *
+     * El riesgo asumido es el homónimo: dos personas distintas con el mismo
+     * nombre se fusionarían. Por eso cada renovación se informa con su número
+     * de fila, para que alguien la mire una vez.
      */
     const vistos = new Set<string>();
+    /** Cuántas cuotas lleva cada cliente en esta corrida, para numerar las que siguen. */
+    const cuotasDe = new Map<string, number>();
 
     for (const [i, f] of filas.entries()) {
       const nombre = leer(f, CLIENTES, 'nombre');
       if (!nombre) { rc.salteadas.push({ fila: i + 2, motivo: 'Sin nombre de cliente.' }); continue; }
 
       const clave = normalizar(nombre);
-      if (vistos.has(clave)) {
-        rc.salteadas.push({ fila: i + 2, motivo: `«${nombre}» ya apareció más arriba en esta misma solapa. Se aplicó la primera fila; ésta se salteó. Distinguilos en la planilla (apellido completo, o un sufijo).` });
-        continue;
-      }
+      const esRenovacion = vistos.has(clave);
       vistos.add(clave);
 
-      const previo = porNombre.get(normalizar(nombre));
+      const previo = porNombre.get(clave);
       const id = previo?.id ?? nuevoId();
-      const alta = fecha(leer(f, CLIENTES, 'fechaAlta')) ?? previo?.fechaAlta;
+      const altaFila = fecha(leer(f, CLIENTES, 'fechaAlta'));
+      const alta = esRenovacion ? (previo?.fechaAlta ?? altaFila) : (altaFila ?? previo?.fechaAlta);
       if (!alta) { rc.salteadas.push({ fila: i + 2, motivo: `«${nombre}» no tiene fecha de alta y es cliente nuevo.` }); continue; }
+
+      if (esRenovacion) {
+        rc.salteadas.push({
+          fila: i + 2,
+          motivo: `«${nombre}» aparece por segunda vez: se tomó como RENOVACIÓN. Sus cuotas se sumaron a las del contrato anterior y la fecha de alta quedó en la del primero (${alta}). Si en realidad son dos personas distintas con el mismo nombre, hay que distinguirlas en la planilla.`,
+        });
+      }
 
       const deudaCruda = leer(f, CLIENTES, 'estadoDeuda');
       const deuda = deudaCruda ? ESTADO_DEUDA[normalizar(deudaCruda)] : undefined;
@@ -229,12 +251,21 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
 
         closer: opcional(leer(f, CLIENTES, 'closer')) ?? previo?.closer,
         setter: opcional(leer(f, CLIENTES, 'setter')) ?? previo?.setter,
-        montoTotal: numero(leer(f, CLIENTES, 'montoTotal')) ?? previo?.montoTotal,
-        cantidadCuotas: numero(leer(f, CLIENTES, 'cantidadCuotas')) ?? previo?.cantidadCuotas,
         // Vacío es "al día", que es el caso de casi toda la cartera: nadie
         // escribe el estado normal. Un valor que no reconocemos no se inventa.
         estadoDeuda: deuda ?? previo?.estadoDeuda ?? 'al_dia',
         notas: opcional(leer(f, CLIENTES, 'notas')) ?? previo?.notas,
+
+        // En una renovación los importes se acumulan: lo contratado es la suma
+        // de los contratos, igual que las cuotas de abajo.
+        montoTotal: esRenovacion
+          ? (previo?.montoTotal ?? 0) + (numero(leer(f, CLIENTES, 'montoTotal')) ?? 0)
+          : numero(leer(f, CLIENTES, 'montoTotal')) ?? previo?.montoTotal,
+        cantidadCuotas: esRenovacion
+          ? (previo?.cantidadCuotas ?? 0) + (numero(leer(f, CLIENTES, 'cantidadCuotas')) ?? 0)
+          : numero(leer(f, CLIENTES, 'cantidadCuotas')) ?? previo?.cantidadCuotas,
+        renovaciones: esRenovacion ? (previo?.renovaciones ?? 0) + 1 : previo?.renovaciones ?? 0,
+        ultimaRenovacion: esRenovacion ? (altaFila ?? previo?.ultimaRenovacion) : previo?.ultimaRenovacion,
       };
       await repo.guardarCliente(cliente);
       porNombre.set(normalizar(nombre), cliente);
@@ -329,7 +360,16 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
         await repo.guardarObjetivo(objetivo);
       }
 
-      // --- las cuatro cuotas de finanzas, en formato ancho
+      /**
+       * Las cuatro cuotas de finanzas, en formato ancho.
+       *
+       * En una renovación se numeran a continuación de las del contrato
+       * anterior: si el primero tuvo tres, las del segundo son la 4, 5 y 6.
+       * Así conviven las dos deudas sin pisarse y el orden sigue siendo el
+       * cronológico.
+       */
+      const desde = cuotasDe.get(id) ?? 0;
+      let cuotasDeLaFila = 0;
       for (const [n, def] of CUOTAS.entries()) {
         const monto = numero(campo(f, def.monto));
         const venc = fecha(campo(f, def.fecha));
@@ -343,10 +383,12 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
         if (monto === null && !venc) continue;
 
         const estado = ESTADO_PAGO[estadoCrudo] ?? (venc && venc < hoy ? 'vencido' : 'pendiente');
+        const numeroCuota = desde + n + 1;
+        cuotasDeLaFila = Math.max(cuotasDeLaFila, n + 1);
         const pago: Pago = {
-          id: nuevoId(),
+          id: pagoExistente.get(`${id}#${numeroCuota}`) ?? nuevoId(),
           clienteId: id,
-          numeroCuota: n + 1,
+          numeroCuota,
           monto: monto ?? 0,
           moneda,
           fechaVencimiento: venc ?? alta,
@@ -354,7 +396,9 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
           estado,
         };
         await repo.guardarPago(pago);
+        pagoExistente.set(`${id}#${numeroCuota}`, pago.id);
       }
+      cuotasDe.set(id, desde + cuotasDeLaFila);
 
       rc.aplicadas++;
     }
@@ -381,7 +425,7 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
 
       const pagado = fecha(leer(f, PAGOS, 'fechaPago'));
       const p: Pago = {
-        id: nuevoId(),
+        id: pagoExistente.get(`${c.id}#${cuota}`) ?? nuevoId(),
         clienteId: c.id,
         numeroCuota: cuota,
         monto: numero(leer(f, PAGOS, 'monto')) ?? 0,
