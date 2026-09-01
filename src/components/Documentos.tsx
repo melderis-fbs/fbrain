@@ -11,11 +11,14 @@ import { useRef, useState } from 'react';
  * leen, así que cargar acá es lo que hace que el motor hable del caso y no de
  * un negocio genérico.
  *
- * Se aceptan archivos de texto y se leen en el navegador: nada se sube a un
- * storage, el contenido viaja como texto y queda en la base con el resto del
- * expediente. Un PDF o un .docx hay que copiarlos y pegarlos — extraerlos
- * necesitaría librerías nativas que no corren en WebContainer, y prefiero
- * decirlo antes que fallar en silencio.
+ * Entran .txt, .md, .vtt, .srt, PDF y .docx, o el texto pegado a mano. Los de
+ * texto los lee el navegador; el PDF y el .docx viajan al servidor, que saca
+ * el texto y lo devuelve a la pantalla para que la consultora lo revise antes
+ * de guardarlo.
+ *
+ * En los dos casos **nada se sube a un storage**: lo único que queda guardado
+ * es el texto, junto al resto del expediente. El archivo original sigue
+ * viviendo donde ya estaba.
  */
 
 const TIPOS = [
@@ -29,8 +32,10 @@ const TIPOS = [
 
 export const TIPO_LABEL: Record<string, string> = Object.fromEntries(TIPOS.map((t) => [t.v, t.l]));
 
-/** Lo que se puede leer como texto en el navegador, sin librerías. */
-const EXTENSIONES = '.txt,.md,.csv,.vtt,.srt,.json,.log,text/plain';
+/** Los de texto los lee el navegador; el resto los extrae el servidor. */
+const PLANOS = ['.txt', '.md', '.csv', '.vtt', '.srt', '.json', '.log'];
+const EXTENSIONES = [...PLANOS, '.pdf', '.docx'].join(',');
+const esPlano = (n: string) => PLANOS.some((e) => n.toLowerCase().endsWith(e));
 
 type Doc = {
   id: string;
@@ -47,14 +52,18 @@ export function Documentos({
   hoy,
   subir,
   borrar,
+  extraer,
 }: {
   clienteId: string;
   documentos: Doc[];
   hoy: string;
   subir: (clienteId: string, fd: FormData) => Promise<{ ok: true; id: string } | { ok: false; error: string }>;
   borrar: (clienteId: string, id: string) => Promise<void>;
+  extraer: (clienteId: string, fd: FormData) => Promise<{ ok: true; texto: string; nota?: string } | { ok: false; error: string }>;
 }) {
   const [contenido, setContenido] = useState('');
+  const [leyendo, setLeyendo] = useState(false);
+  const [nota, setNota] = useState('');
   const [titulo, setTitulo] = useState('');
   const [tipo, setTipo] = useState('transcripcion');
   const [fecha, setFecha] = useState(hoy);
@@ -67,17 +76,38 @@ export function Documentos({
   async function leerArchivos(files: FileList | null) {
     if (!files?.length) return;
     setError(null);
+    setLeyendo(true);
     const partes: string[] = [];
-    for (const f of Array.from(files)) {
-      try {
-        partes.push(files.length > 1 ? `### ${f.name}\n\n${await f.text()}` : await f.text());
-      } catch {
-        setError(`No se pudo leer ${f.name}. Si es un PDF o un .docx, copiá el texto y pegalo acá.`);
-        return;
+    const notas: string[] = [];
+
+    try {
+      for (const f of Array.from(files)) {
+        let texto: string;
+
+        if (esPlano(f.name)) {
+          texto = await f.text();
+        } else {
+          // Un PDF o un .docx sólo se puede abrir en el servidor.
+          const fd = new FormData();
+          fd.set('archivo', f);
+          const r = await extraer(clienteId, fd);
+          if (!r.ok) { setError(r.error); return; }
+          texto = r.texto;
+          if (r.nota) notas.push(`${f.name}: ${r.nota}`);
+        }
+
+        partes.push(files.length > 1 ? `### ${f.name}\n\n${texto}` : texto);
       }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo leer el archivo.');
+      return;
+    } finally {
+      setLeyendo(false);
     }
+
     setContenido((prev) => (prev ? `${prev}\n\n${partes.join('\n\n')}` : partes.join('\n\n')));
     setArchivo(Array.from(files).map((f) => f.name).join(', '));
+    setNota(notas.join(' · '));
     if (!titulo) setTitulo(files[0].name.replace(/\.[^.]+$/, ''));
   }
 
@@ -111,8 +141,10 @@ export function Documentos({
       <section className="rounded-xl border border-line bg-surface p-4">
         <h2 className="text-[14px] font-semibold">Subir un documento</h2>
         <p className="mb-3 mt-0.5 text-[11.5px] leading-relaxed text-ink-3">
-          Archivos de texto (.txt, .md, .vtt, .srt) o pegado directo. Un PDF o un .docx hay que
-          copiarlo y pegarlo: extraerlos necesitaría librerías que no corren acá.
+          <strong>PDF, .docx</strong> o archivos de texto (.txt, .md, .vtt, .srt), o el texto
+          pegado directo. De los PDF y los .docx se extrae el texto y aparece acá abajo para que lo
+          revises antes de guardar. El archivo en sí no se sube a ningún lado: lo que queda es el
+          texto. Un PDF escaneado no tiene texto adentro y te lo va a decir.
         </p>
 
         <div className="grid gap-3 sm:grid-cols-3">
@@ -153,9 +185,17 @@ export function Documentos({
             multiple
             accept={EXTENSIONES}
             onChange={(e) => leerArchivos(e.target.files)}
+            disabled={leyendo}
             className="text-[12px] text-ink-2 file:mr-3 file:rounded-lg file:border file:border-line file:bg-surface file:px-3 file:py-1.5 file:text-[12px] file:font-medium hover:file:border-accent"
           />
         </div>
+
+        {leyendo && (
+          <p className="mt-2 text-[12px] text-ink-3">Extrayendo el texto del archivo…</p>
+        )}
+        {nota && !leyendo && (
+          <p className="mt-2 text-[12px] text-ink-3">{nota}</p>
+        )}
 
         <textarea
           rows={8}

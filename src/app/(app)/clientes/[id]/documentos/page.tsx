@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { Documentos } from '@/components/Documentos';
 import { getUsuario, veTodo } from '@/server/auth';
 import { getWorkspace } from '@/server/workspace';
-import { borrarDocumento, subirDocumento } from './actions';
+import { borrarDocumento, subirDocumento, extraerArchivo } from './actions';
 
 export const metadata = { title: 'Documentos · Founders Brain' };
 
@@ -37,6 +37,7 @@ export default async function DocumentosPage({ params }: { params: Promise<{ id:
         hoy={ws.hoy}
         subir={subirDocumento}
         borrar={borrarDocumento}
+        extraer={extraerArchivo}
       />
     </div>
   );

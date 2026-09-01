@@ -7,6 +7,7 @@ import { getRepo } from '@/data';
 import { getUsuario, veTodo } from '@/server/auth';
 import { getWorkspace, hoyIso } from '@/server/workspace';
 import type { DocumentoCliente, TipoDocumento } from '@/domain/types';
+import { extraerTextoDeArchivo, type Extraccion } from '@/server/extraer-archivo';
 
 async function permiso(clienteId: string) {
   const usuario = await getUsuario();
@@ -56,4 +57,22 @@ export async function borrarDocumento(clienteId: string, id: string) {
   await getRepo().borrarDocumento(id);
   revalidatePath(`/clientes/${clienteId}/documentos`);
   revalidatePath(`/clientes/${clienteId}`);
+}
+
+/**
+ * Sacar el texto de un archivo, del lado del servidor.
+ *
+ * Un .txt lo puede leer el navegador solo, pero un PDF o un .docx no: hacen
+ * falta librerías que sólo corren en Node. Así que el archivo viaja, se
+ * extrae acá y vuelve como texto a la pantalla — donde la consultora lo ve
+ * antes de guardarlo. Nada se sube a un storage: lo único que queda es el
+ * texto, junto al resto del expediente.
+ */
+export async function extraerArchivo(clienteId: string, fd: FormData): Promise<Extraccion> {
+  await permiso(clienteId);
+
+  const archivo = fd.get('archivo');
+  if (!(archivo instanceof File)) return { ok: false, error: 'No llegó ningún archivo.' };
+
+  return extraerTextoDeArchivo(archivo.name, await archivo.arrayBuffer());
 }
