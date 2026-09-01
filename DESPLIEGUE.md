@@ -275,5 +275,7 @@ alertas falsas y el equipo deja de leer la bandeja.
   pide que sean configurables porque van a cambiar cuando el equipo vea las
   primeras semanas de alertas reales. Cambiarlos hoy requiere un deploy.
 
-- **Un PDF o un .docx hay que copiarlo y pegarlo** en Documentos. La extracción
-  automática de esos formatos no está.
+- **Un PDF escaneado no tiene texto adentro.** Los PDF con texto y los .docx se
+  suben directo y la app les extrae el contenido; un escaneo es una imagen, y
+  hay que pasarlo por un OCR antes o copiar y pegar. La app lo dice cuando
+  pasa, en vez de guardar un documento vacío.
