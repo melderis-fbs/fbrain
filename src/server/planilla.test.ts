@@ -268,6 +268,26 @@ describe('sincronizar · la planilla real de Founders', () => {
     expect(d.clientes.find((c) => c.nombre === 'Alan Turing')!.estadoDeuda).toBe('deudor');
   });
 
+  it('si Google devuelve otra solapa lo dice, en vez de mandar a arreglar una planilla que está bien', async () => {
+    vi.stubEnv('SHEETS_SOLAPA_CLIENTES', 'Seguimiento clientes');
+    vi.stubEnv('SHEETS_SOLAPA_PAGOS', '');
+    vi.stubEnv('SHEETS_SOLAPA_ASISTENCIAS', '');
+    // Lo que devuelve Google cuando el nombre pedido no existe: la primera
+    // solapa del archivo, que acá es la de totales de finanzas.
+    mockearDrive({
+      'Seguimiento clientes': 'Por pagos,Venta PU,%PU,Total\nEnero,0,0%,48001\nFebrero,14000,20%,70500\n',
+    });
+    const { sincronizar } = await import('./planilla');
+    const r = await sincronizar(HOY);
+    const s = r.solapas[0];
+
+    // Ni una sola fila salteada por «sin nombre»: un error, y explicado.
+    expect(s.salteadas).toEqual([]);
+    expect(s.error).toContain('ninguna columna de nombre de cliente');
+    expect(s.error).toContain('por pagos');
+    expect(s.error).toContain('SHEETS_GID_CLIENTES');
+  });
+
   it('sin solapa de pagos ni de asistencias lo dice, y no lo reporta como error', async () => {
     mockearFounders();
     const { sincronizar } = await import('./planilla');

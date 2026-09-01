@@ -42,7 +42,12 @@ export function hayPlanilla(): boolean {
  */
 function urlSolapa(solapa: string): string {
   const id = process.env.SHEETS_PLANILLA_ID;
-  return `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(solapa)}`;
+  // El `gid` es el identificador estable de la solapa y no cambia si alguien
+  // la renombra. Es la forma robusta de apuntar a una: se usa si está
+  // configurado, y el nombre queda como camino por defecto.
+  const gid = process.env.SHEETS_GID_CLIENTES;
+  const donde = gid ? `gid=${encodeURIComponent(gid)}` : `sheet=${encodeURIComponent(solapa)}`;
+  return `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&${donde}`;
 }
 
 type Fila = Record<string, string>;
@@ -119,6 +124,30 @@ async function bajar(solapa: string): Promise<Fila[]> {
   return aFilas(parsearCsv(texto));
 }
 
+/**
+ * Google tiene un comportamiento cruel acá: si le pedís una solapa que no
+ * existe, **no devuelve un error, devuelve la primera solapa**. Sin esta
+ * verificación eso se ve como una importación que corrió bien y saltó las 26
+ * filas «sin nombre de cliente» — un reporte que manda a arreglar la planilla
+ * cuando la planilla está perfecta y lo que está mal es a cuál se apuntó.
+ *
+ * Si ninguna columna se parece a un nombre de cliente, no es la solapa.
+ */
+function verificarQueSeaLaSolapa(filas: Fila[], solapa: string): void {
+  if (!filas.length) return;
+  const columnas = Object.keys(filas[0]).filter(Boolean);
+  const alias = (CLIENTES.nombre ?? []).map(normalizar);
+  if (columnas.some((c) => alias.includes(c))) return;
+
+  throw new Error(
+    `La solapa que se leyó no tiene ninguna columna de nombre de cliente. Sus columnas son: ` +
+      `${columnas.slice(0, 8).join(', ')}${columnas.length > 8 ? '…' : ''}. ` +
+      `Casi seguro se está leyendo otra: si el nombre pedido no existe, Google devuelve la primera solapa sin avisar. ` +
+      `Se pidió «${solapa}» — revisá que exista con ese nombre exacto, o que la variable SHEETS_SOLAPA_CLIENTES no esté apuntando a otra. ` +
+      `También podés fijar la solapa por su gid con SHEETS_GID_CLIENTES, que no depende del nombre.`,
+  );
+}
+
 // ---------------------------------------------------------------- sincronía
 
 export async function sincronizar(hoy: string): Promise<Reporte> {
@@ -138,6 +167,7 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
   try {
     const filas = await bajar(SOLAPAS.clientes);
     rc.leidas = filas.length;
+    verificarQueSeaLaSolapa(filas, SOLAPAS.clientes);
 
     /**
      * El cliente se identifica por nombre, así que dos filas con el mismo
