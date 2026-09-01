@@ -197,6 +197,23 @@ describe('semáforo e índice son instrumentos distintos', () => {
     expect(calcularIndice(ctx).valor).toBeGreaterThanOrEqual(0);
   });
 
+  it('con la fecha de alta provisional, el reloj del programa no corre', () => {
+    // Un cliente importado sin fecha de inicio entra con una estimada. Medir
+    // los hitos contra esa fecha daría alertas que parecen un diagnóstico y no
+    // lo son; con setenta clientes así, el equipo deja de leer la bandeja.
+    const base = registros({
+      cliente: cliente({ fechaAlta: addDays(HOY, -100) }),
+      sesiones: sesiones(addDays(HOY, -14), 1),
+    });
+    expect(correrReglas(construirContexto(base, HOY)).length).toBeGreaterThan(0);
+
+    const provisional = registros({
+      cliente: cliente({ fechaAlta: addDays(HOY, -100), fechaAltaProvisional: true }),
+      sesiones: sesiones(addDays(HOY, -14), 1),
+    });
+    expect(correrReglas(construirContexto(provisional, HOY))).toEqual([]);
+  });
+
   it('manda la peor alerta abierta', () => {
     const ctx = construirContexto(
       registros({

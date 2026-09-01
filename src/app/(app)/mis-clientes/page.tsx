@@ -9,7 +9,7 @@ import { formatShort } from '@/lib/date';
 
 export const metadata = { title: 'Mis clientes · Founders Brain' };
 
-type Filtro = 'todos' | 'alertas' | 'sin_sesion' | 'sin_ventas' | 'dia60' | 'ciegos';
+type Filtro = 'todos' | 'alertas' | 'sin_sesion' | 'sin_ventas' | 'dia60' | 'ciegos' | 'sin_fecha';
 
 const FILTROS: { key: Filtro; label: string; test: (v: VistaCliente) => boolean }[] = [
   { key: 'todos', label: 'Todos', test: () => true },
@@ -18,6 +18,9 @@ const FILTROS: { key: Filtro; label: string; test: (v: VistaCliente) => boolean 
   { key: 'sin_ventas', label: 'Sin ventas', test: (v) => v.ctx.ventas === 0 },
   { key: 'dia60', label: 'Día 60+', test: (v) => v.ctx.dia >= 60 },
   { key: 'ciegos', label: 'Expediente incompleto', test: (v) => v.ctx.bloquesCargados < 4 },
+  // Los que entraron sin fecha de inicio. No se les mide nada hasta que
+  // alguien la carga, así que conviene poder juntarlos en una pantalla.
+  { key: 'sin_fecha', label: 'Sin fecha de inicio', test: (v) => Boolean(v.ctx.cliente.fechaAltaProvisional) },
 ];
 
 function Vista({ href, activo, children }: { href: string; activo: boolean; children: React.ReactNode }) {
@@ -135,7 +138,12 @@ export default async function MisClientesPage({
                           {c.cliente.nombre}
                         </Link>
                         <div className="text-[11px] text-ink-3">
-                          {c.cliente.programa} · día {c.dia}
+                          {c.cliente.programa} ·{' '}
+                          {c.cliente.fechaAltaProvisional ? (
+                            <span style={{ color: 'var(--warning-ink)' }}>sin fecha de inicio</span>
+                          ) : (
+                            <>día {c.dia}</>
+                          )}
                           {c.cliente.tieneGarantia && ' · garantía'}
                         </div>
                       </td>

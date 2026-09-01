@@ -49,6 +49,14 @@ export interface Cliente {
   telefono?: string;
   programa: string;
   fechaAlta: string;
+  /**
+   * La fecha de alta es una estimación y no un dato: el cliente vino de una
+   * fila sin fecha de inicio. Mientras esté en true el cliente existe y se
+   * puede trabajar, pero el reloj del programa no corre — no se le miden
+   * hitos ni se le emiten alertas, porque estarían medidas contra un número
+   * inventado. Se apaga sola cuando alguien carga la fecha real.
+   */
+  fechaAltaProvisional?: boolean;
   fechaFinPrevista?: string;
   planPago?: string;
   tieneGarantia: boolean;

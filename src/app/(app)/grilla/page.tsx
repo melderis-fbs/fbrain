@@ -73,6 +73,10 @@ export default async function GrillaPage({
 
   const base = ws.vistas
     .filter((v) => v.ctx.cliente.estado === 'activo')
+    // La grilla entera es una resta contra la fecha de alta. Un cliente cuya
+    // fecha es una estimación aparecería en una semana inventada, con hitos
+    // que nadie incumplió. Se listan aparte, en «Sin fecha de inicio».
+    .filter((v) => !v.ctx.cliente.fechaAltaProvisional)
     .filter((v) => veTodo(usuario.rol) || v.ctx.cliente.consultoraId === usuario.id);
 
   let filas = q.consultora ? base.filter((v) => v.ctx.cliente.consultoraId === q.consultora) : base;
@@ -96,6 +100,9 @@ export default async function GrillaPage({
 
   const cuenta = (e: EstadoDesvio) => base.filter((v) => v.desvio.estado === e).length;
   const deNosotros = base.filter((v) => ['nosotros', 'ambos'].includes(v.atribucion.responsable)).length;
+  const sinFecha = ws.vistas.filter(
+    (v) => v.ctx.cliente.estado === 'activo' && v.ctx.cliente.fechaAltaProvisional,
+  ).length;
 
   const link = (extra: Filtro) => {
     const p = new URLSearchParams();
@@ -125,6 +132,21 @@ export default async function GrillaPage({
         <Card><Stat label="Atrasados" value={cuenta('atrasado') + cuenta('grave')} tone={cuenta('grave') ? 'bad' : 'neutral'} sub={`${cuenta('grave')} con un gate vencido`} /></Card>
         <Card><Stat label="El atraso es nuestro" value={deNosotros} tone={deNosotros ? 'bad' : 'good'} sub="antes de reclamarle a nadie" /></Card>
       </div>
+
+      {sinFecha > 0 && (
+        <div className="mb-4">
+          <Link
+            href="/mis-clientes?f=sin_fecha"
+            className="block rounded-xl border px-4 py-3 text-[12.5px] leading-relaxed"
+            style={{ borderColor: 'var(--warning)', background: 'var(--warning-soft)', color: 'var(--warning-ink)' }}
+          >
+            <strong>{sinFecha} cliente{sinFecha > 1 ? 's' : ''} no aparecen acá porque no tienen fecha de inicio.</strong>{' '}
+            Toda esta pantalla es una resta contra esa fecha, así que aparecerían en una semana
+            inventada con hitos que nadie incumplió. Se los completa en Notion, en{' '}
+            <em>Fecha Inicio Programa</em>. Ver quiénes son →
+          </Link>
+        </div>
+      )}
 
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px]">
         <div className="flex flex-wrap items-center gap-1.5">

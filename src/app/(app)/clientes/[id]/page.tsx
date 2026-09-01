@@ -73,6 +73,9 @@ export default async function ExpedientePage({ params }: { params: Promise<{ id:
                   </Chip>
                 )}
                 <Chip tone={indice.confianza === 'alta' ? 'good' : 'warning'}>dato {indice.confianza}</Chip>
+                {c.fechaAltaProvisional && (
+                  <Chip tone="warning">sin fecha de inicio · no se le miden hitos</Chip>
+                )}
               </div>
             </div>
           </div>
@@ -80,7 +83,14 @@ export default async function ExpedientePage({ params }: { params: Promise<{ id:
           <dl className="grid flex-1 grid-cols-2 gap-x-5 gap-y-3 text-[12px] sm:grid-cols-4">
             <div>
               <dt className="text-ink-3">Alta</dt>
-              <dd className="font-medium">{formatDateLong(c.fechaAlta)}</dd>
+              <dd className="font-medium">
+                {formatDateLong(c.fechaAlta)}
+                {c.fechaAltaProvisional && (
+                  <span className="block text-[11px] font-normal" style={{ color: 'var(--warning-ink)' }}>
+                    estimada · falta la fecha real
+                  </span>
+                )}
+              </dd>
             </div>
             <div>
               <dt className="text-ink-3">Horas reales / semana</dt>

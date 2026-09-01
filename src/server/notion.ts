@@ -83,7 +83,7 @@ export const ESTADO_NOTION: Record<string, EstadoCliente> = {
 // ------------------------------------------------------------------ lectura
 
 type Prop = Record<string, unknown>;
-type Fila = { props: Record<string, Prop>; url?: string };
+type Fila = { props: Record<string, Prop>; url?: string; creada?: string };
 
 /**
  * Notion devuelve cada valor envuelto en su tipo. Esto lo desenvuelve a texto
@@ -189,7 +189,7 @@ async function bajarTodo(): Promise<Fila[]> {
     if (!res.ok) throw new Error(mensajeDeError(res.status, res.cuerpo));
 
     const json = (res.json ?? {}) as {
-      results?: { properties?: Record<string, Prop>; url?: string }[];
+      results?: { properties?: Record<string, Prop>; url?: string; created_time?: string }[];
       has_more?: boolean;
       next_cursor?: string | null;
     };
@@ -197,7 +197,7 @@ async function bajarTodo(): Promise<Fila[]> {
     for (const r of json.results ?? []) {
       const props: Record<string, Prop> = {};
       for (const [k, v] of Object.entries(r.properties ?? {})) props[normalizar(k)] = v;
-      filas.push({ props, url: r.url });
+      filas.push({ props, url: r.url, creada: r.created_time });
     }
 
     cursor = json.has_more ? (json.next_cursor ?? undefined) : undefined;
@@ -297,14 +297,34 @@ export async function sincronizarNotion(hoy: string): Promise<Reporte> {
 
       const previo = porNombre.get(clave);
 
-      // La fecha de inicio es la de la primera sesión de onboarding, y es la
-      // que la app usa como día 1 del programa. Sin ella y sin un cliente
-      // previo no hay contra qué contar los días, así que la fila espera.
+      /**
+       * La fecha de inicio es la de la primera sesión de onboarding y es el día
+       * 1 del programa. Cuando falta, el cliente entra igual: no importarlo es
+       * peor, porque un cliente que no existe no se puede asignar ni abrir ni
+       * corregir, y su consultora no lo ve en la cartera.
+       *
+       * Entra con la fecha de creación de la fila en Notion, marcada como
+       * provisional. Eso apaga el reloj del programa para ese cliente —no se
+       * le miden hitos ni se le emiten alertas— porque medirlo contra una
+       * fecha inventada es peor que no medirlo. La marca se apaga sola en
+       * cuanto alguien carga la fecha real.
+       */
       const inicio = leer(f, PROPS.fechaInicio).slice(0, 10);
-      const alta = /^\d{4}-\d{2}-\d{2}$/.test(inicio) ? inicio : previo?.fechaAlta;
+      const esFecha = /^\d{4}-\d{2}-\d{2}$/.test(inicio);
+      const alta = esFecha
+        ? inicio
+        : (previo?.fechaAltaProvisional ? undefined : previo?.fechaAlta) ?? (f.creada ?? '').slice(0, 10);
+      const provisional = !esFecha;
+
       if (!alta) {
-        r.salteadas.push({ fila, motivo: `«${nombre}» no tiene Fecha Inicio Programa y es un cliente nuevo. En Notion hay una vista, «Completar Fechas de Inicio», que junta justo estos casos.` });
+        r.salteadas.push({ fila, motivo: `«${nombre}» no tiene Fecha Inicio Programa y Notion tampoco informó cuándo se creó la fila, así que no hay ninguna fecha de dónde partir.` });
         continue;
+      }
+      if (provisional) {
+        r.salteadas.push({
+          fila,
+          motivo: `«${nombre}» no tiene Fecha Inicio Programa. Entró igual, con la fecha en que se creó la fila en Notion (${alta}) marcada como provisional: se puede asignar y trabajar, pero no se le miden hitos ni se le emiten alertas hasta que esté la fecha real. En Notion está la vista «Completar Fechas de Inicio», que junta justo estos casos.`,
+        });
       }
 
       // La asignación. Un nombre que no está en el equipo no se adivina por
@@ -357,6 +377,7 @@ export async function sincronizarNotion(hoy: string): Promise<Reporte> {
         telefono: leer(f, PROPS.telefono) || previo?.telefono,
         programa: leer(f, PROPS.programa) || previo?.programa || 'Founders',
         fechaAlta: alta,
+        fechaAltaProvisional: provisional,
         fechaFinPrevista: Number.isFinite(meses) && meses > 0 ? sumarMeses(alta, meses) : previo?.fechaFinPrevista,
         consultoraId: fijadaEnLaApp ? previo?.consultoraId : (consultora?.id ?? previo?.consultoraId),
         estado: estado ?? previo?.estado ?? 'activo',

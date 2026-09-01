@@ -716,6 +716,20 @@ export const SEVERIDAD: Record<Semaforo, number> = { verde: 0, amarillo: 1, rojo
  * Idempotente por (cliente, código): si ya hay una abierta, no se emite otra.
  */
 export function correrReglas(ctx: ContextoCliente): AlertaViva[] {
+  /**
+   * Si la fecha de alta es una estimación, el reloj del programa no corre.
+   *
+   * Casi todas estas reglas miden contra el día del programa —día 60 sin
+   * venta, hitos vencidos, cadencia de sesiones— y contra una fecha inventada
+   * darían un número que parece un diagnóstico y no lo es. Setenta clientes
+   * emitiendo alertas falsas hacen que el equipo deje de leer la bandeja, y
+   * eso es más caro que no alertarlos: la bandeja sirve mientras se le crea.
+   *
+   * El cliente igual existe, se asigna, se abre y se edita. Lo único que
+   * espera es la medición, y se destraba sola cuando alguien carga la fecha.
+   */
+  if (ctx.cliente.fechaAltaProvisional) return [];
+
   const abiertasPorCodigo = new Map(
     ctx.registros.alertas.filter((a) => !a.cerradaAt).map((a) => [a.codigo, a]),
   );

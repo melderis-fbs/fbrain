@@ -11,7 +11,11 @@ const HOY = '2026-08-31';
 
 function pagina(filas: Record<string, unknown>[], next?: string) {
   return {
-    results: filas.map((props) => ({ properties: props, url: 'https://notion.so/x' })),
+    results: filas.map((props) => ({
+      properties: props,
+      url: 'https://notion.so/x',
+      created_time: '2026-02-11T13:00:00.000Z',
+    })),
     has_more: Boolean(next),
     next_cursor: next ?? null,
   };
@@ -145,13 +149,36 @@ describe('sincronizarNotion', () => {
     expect(d.clientes.find((c) => c.nombre === 'Ada Lovelace')!.consultoraId).toBeUndefined();
   });
 
-  it('sin fecha de inicio no inventa el día 1: saltea y dice dónde arreglarlo', async () => {
+  it('sin fecha de inicio el cliente entra igual, con la fecha marcada como provisional', async () => {
     mockearNotion(pagina([cliente({ 'Fecha Inicio Programa': fecha(null) })]));
     const { sincronizarNotion } = await import('./notion');
+    const { getRepo } = await import('@/data');
     const r = await sincronizarNotion(HOY);
 
-    expect(r.solapas[0].aplicadas).toBe(0);
+    // No importarlo era peor: un cliente que no existe no se puede asignar,
+    // ni abrir, ni corregir, y su consultora no lo ve en la cartera.
+    expect(r.solapas[0].aplicadas).toBe(1);
     expect(r.solapas[0].salteadas[0].motivo).toContain('Completar Fechas de Inicio');
+
+    const ada = (await getRepo().cargarTodo(HOY)).clientes.find((c) => c.nombre === 'Ada Lovelace')!;
+    expect(ada.fechaAltaProvisional).toBe(true);
+    // La fecha de creación de la fila en Notion, que es lo mejor que hay.
+    expect(ada.fechaAlta).toBe('2026-02-11');
+  });
+
+  it('cuando llega la fecha real, la marca se apaga sola', async () => {
+    mockearNotion(pagina([cliente({ 'Fecha Inicio Programa': fecha(null) })]));
+    const { sincronizarNotion } = await import('./notion');
+    const { getRepo } = await import('@/data');
+    await sincronizarNotion(HOY);
+    expect((await getRepo().cargarTodo(HOY)).clientes.find((c) => c.nombre === 'Ada Lovelace')!.fechaAltaProvisional).toBe(true);
+
+    // Alguien completa la fecha en Notion y se vuelve a sincronizar.
+    mockearNotion(pagina([cliente()]));
+    await sincronizarNotion(HOY);
+    const ada = (await getRepo().cargarTodo(HOY)).clientes.find((c) => c.nombre === 'Ada Lovelace')!;
+    expect(ada.fechaAltaProvisional).toBe(false);
+    expect(ada.fechaAlta).toBe('2026-03-04');
   });
 
   it('no pisa lo que ya cargó la consultora en la app', async () => {
