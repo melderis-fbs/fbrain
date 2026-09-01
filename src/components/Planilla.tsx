@@ -53,8 +53,10 @@ export function Planilla({
           {corriendo ? etiquetaCorriendo : etiqueta}
         </button>
         {!configurada && (
-          <span className="text-[12px] text-ink-3">
-            Falta <code>{faltante}</code> en el entorno.
+          <span className="max-w-md text-[12px] leading-relaxed text-ink-3">
+            Falta <code>{faltante}</code> en el entorno. Si ya la cargaste en Vercel, falta
+            redeployar: una variable nueva no entra en el deploy que ya está corriendo. Y
+            verificá que esté tildada para <strong>Production</strong>, no sólo para Preview.
           </span>
         )}
       </div>
