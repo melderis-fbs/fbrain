@@ -33,6 +33,22 @@
 --  escribís «Kathe» y en Notion dice «Kathering», la importación va a
 --  reportar la fila como no asignable en vez de adivinar.
 
+--  SI YA CARGASTE EL EQUIPO ANTES, esto NO borra nada y se puede correr de
+--  nuevo sin miedo: el `on conflict` de abajo actualiza por email la fila que
+--  ya exista —le corrige el nombre— e inserta sólo las que falten. El
+--  `auth_user_id` no se toca, así que los usuarios que ya creaste y enlazaste
+--  siguen funcionando. Lo único que cambia es el nombre, que es lo que tiene
+--  que coincidir con Notion.
+--
+--  Lo que sí importa: los emails de acá abajo tienen que ser los MISMOS que
+--  ya cargaste. Si no coinciden, en vez de corregir la fila vieja va a crear
+--  una nueva y vas a terminar con el equipo duplicado. Antes de correr esto,
+--  mirá qué hay:
+--
+--      select nombre, email, rol, activa,
+--             auth_user_id is not null as enlazado
+--      from consultoras order by nombre;
+
 insert into consultoras (nombre, email, rol, cupo_maximo, activa) values
   ('Vicky',     'vicky@foundersbs.com',     'admin',      0,  true),
   ('Coti',      'coti@foundersbs.com',      'consultora', 12, true),
@@ -48,7 +64,22 @@ insert into consultoras (nombre, email, rol, cupo_maximo, activa) values
   -- importar y se vea que quedaron sin dueño, en vez de que la fila se saltee
   -- y el cliente no exista. No se les crea usuario: no pueden entrar.
   ('Javier',    'javier@foundersbs.com',    'consultora', 0,  false),
-  ('Angie',     'angie@foundersbs.com',     'consultora', 0,  false);
+  ('Angie',     'angie@foundersbs.com',     'consultora', 0,  false)
+
+on conflict (email) do update set
+  nombre      = excluded.nombre,
+  rol         = excluded.rol,
+  cupo_maximo = excluded.cupo_maximo,
+  activa      = excluded.activa;
+
+
+-- Si los nombres viejos quedaron con OTRO email del que usaste ahora, arriba
+-- se insertaron filas nuevas y las viejas siguen ahí. Esto las muestra: son
+-- las que no están en la lista de Notion y hay que borrar a mano.
+
+select nombre, email from consultoras
+where nombre not in ('Vicky','Coti','Kathering','Johann','Romina',
+                     'Natalia','Victoria','Jhosanna','Javier','Angie');
 
 
 -- =====================================================================

@@ -148,7 +148,10 @@ En este orden, porque cada paso depende del anterior:
    coincidir exactamente con la columna `Consultor` de Notion**, que es un
    select con esos valores: si acá dice «Kathe» y allá «Kathering», la
    importación reporta la fila como no asignable en vez de adivinar.
-   Cambiá los emails por los reales antes de correrlo.
+   Cambiá los emails por los reales antes de correrlo. **Si ya lo habías
+   cargado con los nombres viejos, no borres nada**: el archivo actualiza por
+   email la fila que ya exista y deja intacto el enlace con el usuario. Lo
+   único que cambia es el nombre.
 
 1. **Clientes y cuotas** desde la planilla. Compartí *Control de ingresos |
    FOUNDERS 2026* como *cualquiera con el enlace puede ver*, poné el ID en
