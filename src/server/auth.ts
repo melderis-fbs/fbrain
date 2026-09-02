@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { cache } from 'react';
-import { getRepo } from '@/data';
+import { getDataset, getRepo } from '@/data';
 import { clienteSupabase, haySupabase } from '@/data/supabase/client';
 import type { Consultora } from '@/domain/types';
 import { hoyIso } from './workspace';
@@ -19,25 +19,28 @@ export const getUsuario = cache(async (): Promise<Consultora | null> => {
 
   if (repo.modo === 'supabase' && haySupabase()) {
     const sb = await clienteSupabase();
-    const { data } = await sb.auth.getUser();
-    if (!data.user) return null;
-    const { data: fila } = await sb.from('consultoras').select('*').eq('auth_user_id', data.user.id).single();
-    if (!fila) return null;
-    return {
-      id: fila.id,
-      nombre: fila.nombre,
-      email: fila.email,
-      rol: fila.rol,
-      cupoMaximo: fila.cupo_maximo,
-      aceptaNuevos: fila.acepta_nuevos,
-      activa: fila.activa,
-      color: fila.color ?? '#4a3aa7',
-    };
+
+    /**
+     * `getClaims` valida el token con la clave pública del proyecto, en
+     * memoria. `getUser` hacía lo mismo preguntándole al servidor de auth: un
+     * viaje de red por request, y el middleware ya había hecho otro igual
+     * para refrescar la sesión. Tres viajes secuenciales antes de leer un solo
+     * dato es lo que hacía que cada pantalla arrancara con medio segundo de
+     * retraso.
+     */
+    const { data: claims } = await sb.auth.getClaims();
+    const authUserId = claims?.claims?.sub;
+    if (!authUserId) return null;
+
+    // El equipo ya viene en la carga general del request, así que buscarlo
+    // acá no cuesta una consulta más.
+    const d = await getDataset(hoyIso());
+    return d.equipo.find((c) => c.authUserId === authUserId) ?? null;
   }
 
   const id = store.get(COOKIE_SESION)?.value;
   if (!id) return null;
-  const d = await repo.cargarTodo(hoyIso());
+  const d = await getDataset(hoyIso());
   return d.equipo.find((c) => c.id === id) ?? null;
 });
 

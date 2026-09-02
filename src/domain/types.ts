@@ -18,6 +18,12 @@ export type RolUsuario = 'consultora' | 'admin';
 
 export interface Consultora {
   id: string;
+  /**
+   * El usuario de Supabase Auth con el que entra. Es lo que enlaza «quién es
+   * en el equipo» con «con qué se loguea», y lo que hace que RLS le devuelva
+   * sus clientes y no los de otra. En demostración no existe.
+   */
+  authUserId?: string;
   nombre: string;
   email: string;
   rol: RolUsuario;

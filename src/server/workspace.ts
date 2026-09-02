@@ -1,5 +1,5 @@
 import { cache } from 'react';
-import { getRepo } from '@/data';
+import { getRepo, getDataset } from '@/data';
 import type { Dataset } from '@/data/repo';
 import { aplicarTechoSemanal, correrReglas, type AlertaViva } from '@/domain/alertas';
 import {
@@ -57,9 +57,8 @@ export function hoyIso(): string {
  * en que el equipo deja de confiar en la app.
  */
 export const getWorkspace = cache(async (): Promise<Workspace> => {
-  const repo = getRepo();
   const hoy = hoyIso();
-  const dataset = await repo.cargarTodo(hoy);
+  const dataset = await getDataset(hoy);
 
   const porCliente = <T extends { clienteId: string }>(arr: T[]) => {
     const m = new Map<string, T[]>();
@@ -151,7 +150,7 @@ export const getWorkspace = cache(async (): Promise<Workspace> => {
 
   return {
     hoy,
-    modo: repo.modo,
+    modo: getRepo().modo,
     dataset,
     equipo: dataset.equipo,
     consultoras: dataset.equipo.filter((c) => c.rol === 'consultora'),
