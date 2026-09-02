@@ -36,6 +36,31 @@ export default async function AlertasPage() {
     (a) => new Date(ws.hoy).getTime() - new Date(a.emitidaAt).getTime() > 7 * 86400000,
   );
 
+  /**
+   * AGRUPAR POR REGLA.
+   *
+   * Una alerta por cliente es lo correcto en la base y es ruido en la
+   * pantalla: si la misma regla dispara sobre cuarenta y ocho clientes, no son
+   * cuarenta y ocho problemas — es uno, y la decisión se toma una vez. Con
+   * ciento seis tarjetas abiertas nadie lee la bandeja; con seis renglones sí,
+   * y desde cada uno se llega a los clientes sin perder ninguno.
+   *
+   * Se ordena por cantidad: la regla que más dispara es la que más dice sobre
+   * la cartera, y es por donde conviene empezar.
+   */
+  const agrupar = (items: typeof todas) => {
+    const m = new Map<string, typeof todas>();
+    for (const a of items) {
+      const l = m.get(a.codigo);
+      if (l) l.push(a);
+      else m.set(a.codigo, [a]);
+    }
+    return [...m.entries()].sort((x, y) => y[1].length - x[1].length);
+  };
+
+  const nombresDe = (items: typeof todas) =>
+    items.map((a) => porCliente.get(a.clienteId)!.ctx.cliente.nombre);
+
   const tarjeta = (a: (typeof todas)[number], compacta = false) => {
     const v = porCliente.get(a.clienteId)!;
     return (
@@ -89,22 +114,47 @@ export default async function AlertasPage() {
       {(['negro', 'rojo'] as Semaforo[]).map((estado) => {
         const items = graves.filter((a) => a.estadoSemaforo === estado);
         if (!items.length) return null;
+        const grupos = agrupar(items);
         return (
           <section key={estado} className="mb-6">
-            <SectionTitle>
-              {TITULO[estado]} <span className="tnum text-ink-3">· {items.length}</span>
+            <SectionTitle hint={`${grupos.length} regla${grupos.length > 1 ? 's' : ''} · ${items.length} cliente${items.length > 1 ? 's' : ''}`}>
+              {TITULO[estado]}
             </SectionTitle>
-            <div className="space-y-3">{items.map((a) => tarjeta(a))}</div>
+            <div className="space-y-2">
+              {grupos.map(([codigo, del]) => (
+                <Grupo
+                  key={codigo}
+                  codigo={codigo}
+                  titulo={del[0].reglaTitulo}
+                  nombres={nombresDe(del)}
+                  tono={estado === 'negro' ? 'var(--critical)' : 'var(--serious)'}
+                >
+                  {del.map((a) => tarjeta(a))}
+                </Grupo>
+              ))}
+            </div>
           </section>
         );
       })}
 
       {nuevas.length > 0 && (
         <section className="mb-6">
-          <SectionTitle>
-            {TITULO.amarillo} <span className="tnum text-ink-3">· {nuevas.length}</span>
+          <SectionTitle hint={`${agrupar(nuevas).length} regla(s) · ${nuevas.length} cliente(s)`}>
+            {TITULO.amarillo}
           </SectionTitle>
-          <div className="space-y-3">{nuevas.map((a) => tarjeta(a))}</div>
+          <div className="space-y-2">
+            {agrupar(nuevas).map(([codigo, del]) => (
+              <Grupo
+                key={codigo}
+                codigo={codigo}
+                titulo={del[0].reglaTitulo}
+                nombres={nombresDe(del)}
+                tono="var(--warning)"
+              >
+                {del.map((a) => tarjeta(a))}
+              </Grupo>
+            ))}
+          </div>
         </section>
       )}
 
@@ -117,25 +167,26 @@ export default async function AlertasPage() {
             Abiertas de semanas anteriores. Se bajan de a poco, empezando por las de mayor prioridad.
           </p>
           <div className="space-y-2">
-            {backlog.slice(0, 40).map((a) => {
-              const v = porCliente.get(a.clienteId)!;
-              return (
-                <div key={a.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-line px-3 py-2 text-[12.5px]">
-                  <span aria-hidden>🟡</span>
-                  <Link href={`/clientes/${a.clienteId}`} className="font-medium hover:underline">
-                    {v.ctx.cliente.nombre}
-                  </Link>
-                  <span className="text-ink-3">{a.codigo}</span>
-                  <span className="min-w-0 flex-1 truncate text-ink-2">{a.titulo}</span>
-                  <span className="tnum text-[11px] text-ink-3">prioridad {a.prioridad}</span>
+            {agrupar(backlog).map(([codigo, del]) => (
+              <div key={codigo} className="rounded-lg border border-line px-3 py-2">
+                <div className="flex flex-wrap items-baseline gap-x-3">
+                  <span className="tnum text-[11px] font-semibold text-ink-3">{codigo}</span>
+                  <strong className="text-[12.5px] font-medium">{del[0].reglaTitulo}</strong>
+                  <span className="tnum ml-auto text-[12px] text-ink-2">{del.length}</span>
                 </div>
-              );
-            })}
-            {backlog.length > 40 && (
-              <p className="text-[12px] text-ink-3">
-                Y {backlog.length - 40} más. Se ven completas desde el expediente de cada cliente.
-              </p>
-            )}
+                <p className="mt-0.5 text-[11.5px] leading-relaxed text-ink-3">
+                  {del.slice(0, 8).map((a, i) => (
+                    <span key={a.id}>
+                      {i > 0 && ' · '}
+                      <Link href={`/clientes/${a.clienteId}`} className="hover:underline">
+                        {porCliente.get(a.clienteId)!.ctx.cliente.nombre}
+                      </Link>
+                    </span>
+                  ))}
+                  {del.length > 8 && ` · y ${del.length - 8} más`}
+                </p>
+              </div>
+            ))}
           </div>
         </details>
       )}
@@ -153,5 +204,53 @@ export default async function AlertasPage() {
         </details>
       )}
     </div>
+  );
+}
+
+/**
+ * Un renglón por regla: se lee sin abrir, y se abre cuando hace falta.
+ *
+ * Los nombres van en el resumen a propósito. Saber *quiénes* es la mitad de la
+ * decisión, y si hay que desplegar para averiguarlo el renglón no sirve de
+ * nada. Con más de seis se corta y se dice cuántos faltan.
+ */
+function Grupo({
+  codigo,
+  titulo,
+  nombres,
+  tono,
+  children,
+}: {
+  codigo: string;
+  titulo: string;
+  nombres: string[];
+  tono: string;
+  children: React.ReactNode;
+}) {
+  const muestra = nombres.slice(0, 6);
+  const resto = nombres.length - muestra.length;
+
+  return (
+    <details className="overflow-hidden rounded-xl border border-line bg-surface">
+      <summary className="cursor-pointer list-none px-4 py-3 hover:bg-surface-2/50">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <span
+            className="inline-block h-2.5 w-2.5 flex-none rounded-full"
+            style={{ background: tono }}
+            aria-hidden
+          />
+          <span className="tnum text-[11px] font-semibold text-ink-3">{codigo}</span>
+          <strong className="text-[13.5px] font-semibold">{titulo}</strong>
+          <span className="tnum ml-auto text-[12.5px] font-semibold" style={{ color: tono }}>
+            {nombres.length} cliente{nombres.length > 1 ? 's' : ''}
+          </span>
+        </div>
+        <p className="mt-1 pl-[22px] text-[12px] leading-relaxed text-ink-3">
+          {muestra.join(' · ')}
+          {resto > 0 && ` · y ${resto} más`}
+        </p>
+      </summary>
+      <div className="space-y-3 border-t border-line bg-surface-2/30 p-4">{children}</div>
+    </details>
   );
 }
