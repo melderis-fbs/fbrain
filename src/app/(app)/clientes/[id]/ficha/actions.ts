@@ -128,13 +128,24 @@ async function guardarFichaInterno(clienteId: string, formData: FormData) {
     });
   }
 
+  /**
+   * Una sola moneda para todo el cliente.
+   *
+   * Había tres campos —negocio, estrategia y objetivo— y el formulario mostraba
+   * uno solo. Los otros dos se guardaban siempre en pesos, así que una cartera
+   * en dólares terminaba con el precio de la oferta y el ticket en ARS sin que
+   * nadie lo pidiera. Un cliente factura en una moneda; pedirla tres veces es
+   * pedir tres formas de contradecirse.
+   */
+  const moneda = txt(formData.get('moneda')) ?? txt(formData.get('negocioMoneda')) ?? 'USD';
+
   // --------------------------------------------------------------- negocio
   const negocio: Negocio = {
     clienteId,
     queVende: txt(formData.get('queVende')),
     aQuien: txt(formData.get('aQuien')),
     precio: num(formData.get('negocioPrecio')),
-    moneda: txt(formData.get('negocioMoneda')) ?? 'ARS',
+    moneda,
     comoEntrega: txt(formData.get('comoEntrega')),
     facturacionMensual: num(formData.get('facturacionMensual')),
     cantidadClientes: num(formData.get('cantidadClientes')),
@@ -170,7 +181,7 @@ async function guardarFichaInterno(clienteId: string, formData: FormData) {
     mecanismo: txt(formData.get('mecanismo')),
     canal: txt(formData.get('canal')),
     precio: num(formData.get('estrategiaPrecio')),
-    moneda: txt(formData.get('estrategiaMoneda')) ?? 'ARS',
+    moneda,
   };
   const hayAlgo = Object.values(campos).some((x) => x !== undefined && x !== 'ARS');
   const cambio =
@@ -195,7 +206,13 @@ async function guardarFichaInterno(clienteId: string, formData: FormData) {
 
   // -------------------------------------------------------------- objetivo
   const meta = num(formData.get('metaMensual'));
-  const ticket = num(formData.get('ticket'));
+  /**
+   * El ticket de la cuenta inversa es, en la práctica, el precio de la oferta.
+   * Tenerlos como dos campos separados y obligatorios invita a que se
+   * desincronicen, y entonces la cuenta inversa se calcula contra un número
+   * que ya nadie sostiene. Si no se escribe, se toma el de la oferta.
+   */
+  const ticket = num(formData.get('ticket')) ?? num(formData.get('estrategiaPrecio'));
   const objPrevio = v.ctx.objetivo;
   if (meta !== undefined && ticket !== undefined &&
       (!objPrevio || objPrevio.metaMensual !== meta || objPrevio.ticket !== ticket)) {
@@ -204,7 +221,7 @@ async function guardarFichaInterno(clienteId: string, formData: FormData) {
       clienteId,
       metaMensual: meta,
       ticket,
-      moneda: txt(formData.get('objetivoMoneda')) ?? 'ARS',
+      moneda,
       // Sin tasas medidas se usan las de objetivo del método.
       tasaCierre: objPrevio?.tasaCierre ?? 0.25,
       tasaAsistencia: objPrevio?.tasaAsistencia ?? 0.7,

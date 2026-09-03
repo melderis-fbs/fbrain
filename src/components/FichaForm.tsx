@@ -98,6 +98,11 @@ export function FichaForm({
 }) {
   const [campos, setCampos] = useState<Campos>(inicial);
   const [errorGuardar, setErrorGuardar] = useState<string | null>(null);
+
+  /** Los campos de la estrategia: si alguno se movió, hay que decir por qué. */
+  const cambioLaEstrategia = (
+    ['clienteIdeal', 'problema', 'deseo', 'promesa', 'oferta', 'mecanismo', 'canal', 'estrategiaPrecio'] as const
+  ).some((k) => (campos[k] ?? '') !== (inicial[k] ?? ''));
   const [documento, setDocumento] = useState('');
   const [extrayendo, setExtrayendo] = useState(false);
   const [fuentes, setFuentes] = useState<Fuente[]>([]);
@@ -136,7 +141,7 @@ export function FichaForm({
         poner('queVende', f.negocio.queVende);
         poner('aQuien', f.negocio.aQuien);
         poner('negocioPrecio', f.negocio.precio);
-        poner('negocioMoneda', f.negocio.moneda);
+        poner('moneda', f.negocio.moneda);
         poner('comoEntrega', f.negocio.comoEntrega);
         poner('facturacionMensual', f.negocio.facturacionMensual);
         poner('cantidadClientes', f.negocio.cantidadClientes);
@@ -356,7 +361,11 @@ export function FichaForm({
         <Campo name="queVende" label="Qué vende" valor={campos} set={set} area={2} />
         <Campo name="aQuien" label="A quién" valor={campos} set={set} area={2} />
         <Campo name="negocioPrecio" label="Precio" valor={campos} set={set} tipo="number" ancho="half" />
-        <Campo name="negocioMoneda" label="Moneda" valor={campos} set={set} ancho="half" opciones={[{ v: 'ARS', l: 'ARS' }, { v: 'USD', l: 'USD' }]} />
+        <Campo
+          name="moneda" label="Moneda" valor={campos} set={set} ancho="half"
+          opciones={[{ v: 'USD', l: 'USD' }, { v: 'ARS', l: 'ARS' }]}
+          hint="Vale para todo el cliente: el precio de hoy, el de la oferta y el ticket."
+        />
         <Campo name="comoEntrega" label="Cómo entrega" valor={campos} set={set} area={2} />
         <Campo name="facturacionMensual" label="Facturación mensual" valor={campos} set={set} tipo="number" ancho="half" />
         <Campo name="cantidadClientes" label="Cuántos clientes tiene" valor={campos} set={set} tipo="number" ancho="half" />
@@ -386,13 +395,27 @@ export function FichaForm({
         <Campo name="canal" label="Canal" valor={campos} set={set} ancho="half" />
         <Campo name="estrategiaPrecio" label="Precio de la oferta" valor={campos} set={set} tipo="number" ancho="half" />
         <Campo name="metaMensual" label="Meta mensual" valor={campos} set={set} tipo="number" ancho="half" />
-        <Campo name="ticket" label="Ticket" valor={campos} set={set} tipo="number" ancho="half" />
-        <Campo name="motivoCambio" label="Motivo del cambio" valor={campos} set={set} ancho="half" hint="Sólo si cambiaste algo de la estrategia." />
         <Campo
-          name="iniciativa" label="¿De quién fue el cambio?" valor={campos} set={set} ancho="half"
-          opciones={[{ v: 'consultora', l: 'De la consultora' }, { v: 'cliente', l: 'Del cliente' }]}
-          hint="Un cambio de precio a iniciativa del cliente dispara alerta."
+          name="ticket" label="Ticket" valor={campos} set={set} tipo="number" ancho="half"
+          hint="Si lo dejás vacío se usa el precio de la oferta, que en la práctica es el mismo número."
         />
+
+        {/*
+          El motivo y la iniciativa sólo cuando efectivamente cambió algo de la
+          estrategia. Pedirlos siempre los convierte en dos campos que todos
+          saltean, y entonces el día que un cliente baja su precio por su cuenta
+          —que es la alerta que más caro sale— nadie escribió de quién fue.
+        */}
+        {cambioLaEstrategia && (
+          <>
+            <Campo name="motivoCambio" label="Motivo del cambio" valor={campos} set={set} ancho="half" />
+            <Campo
+              name="iniciativa" label="¿De quién fue el cambio?" valor={campos} set={set} ancho="half"
+              opciones={[{ v: 'consultora', l: 'De la consultora' }, { v: 'cliente', l: 'Del cliente' }]}
+              hint="Un cambio de precio a iniciativa del cliente dispara alerta."
+            />
+          </>
+        )}
       </Seccion>
 
       <div className="sticky bottom-3 flex items-center gap-3 rounded-xl border border-line bg-surface p-3" style={{ boxShadow: 'var(--shadow)' }}>

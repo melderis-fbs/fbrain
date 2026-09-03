@@ -50,7 +50,8 @@ export default async function FichaPage({ params }: { params: Promise<{ id: stri
     queVende: s(negocio?.queVende),
     aQuien: s(negocio?.aQuien),
     negocioPrecio: s(negocio?.precio),
-    negocioMoneda: s(negocio?.moneda) || 'ARS',
+    // Una sola, y la del negocio manda porque es la que se carga primero.
+    moneda: s(negocio?.moneda) || s(estrategia?.moneda) || s(objetivo?.moneda) || 'USD',
     comoEntrega: s(negocio?.comoEntrega),
     facturacionMensual: s(negocio?.facturacionMensual),
     cantidadClientes: s(negocio?.cantidadClientes),
@@ -73,12 +74,10 @@ export default async function FichaPage({ params }: { params: Promise<{ id: stri
     mecanismo: s(estrategia?.mecanismo),
     canal: s(estrategia?.canal),
     estrategiaPrecio: s(estrategia?.precio),
-    estrategiaMoneda: s(estrategia?.moneda) || 'ARS',
     iniciativa: 'consultora',
 
     metaMensual: s(objetivo?.metaMensual),
     ticket: s(objetivo?.ticket),
-    objetivoMoneda: s(objetivo?.moneda) || 'ARS',
   };
 
   /**
