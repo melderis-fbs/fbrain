@@ -100,15 +100,36 @@ const PAGINA = 1000;
  *     —una política de RLS que falta, un permiso mal puesto— se veía igual
  *     que una tabla vacía: la app decía "no hay clientes" en vez de "no pude
  *     leer los clientes", que son problemas distintos y se arreglan distinto.
+ *
+ * La única excepción es una tabla que todavía no existe, y sólo si la app
+ * puede trabajar sin ella. Un deploy siempre llega antes que la migración
+ * —son dos sistemas distintos y nadie los aprieta al mismo tiempo—, así que
+ * una tabla nueva y accesoria no puede dejar la cartera entera en una pantalla
+ * de error. Eso pasó con `propuestas_ficha` y era enteramente evitable: se
+ * degrada la función que la usa, no la app.
+ *
+ * Ojo con el alcance: sólo «no existe». Un permiso mal puesto, un problema de
+ * red o un techo de filas siguen siendo errores ruidosos, que es lo que hay
+ * que ser.
  */
+const NO_EXISTE = /does not exist|schema cache|could not find the table/i;
+
 async function traerTodas(
   sb: Awaited<ReturnType<typeof clienteSupabase>>,
   tabla: string,
+  opcional = false,
 ): Promise<Record<string, unknown>[]> {
   const filas: Record<string, unknown>[] = [];
   for (let desde = 0; ; desde += PAGINA) {
     const { data, error } = await sb.from(tabla).select('*').range(desde, desde + PAGINA - 1);
     if (error) {
+      if (opcional && (error.code === '42P01' || error.code === 'PGRST205' || NO_EXISTE.test(error.message))) {
+        console.warn(
+          `[datos] «${tabla}» no existe todavía: ${error.message}. ` +
+            'Falta correr supabase/actualizar.sql. La app sigue andando sin eso.',
+        );
+        return [];
+      }
       throw new Error(
         `No se pudo leer «${tabla}»: ${error.message}. ` +
           (error.code === '42501' || /row-level security/i.test(error.message)
@@ -133,10 +154,15 @@ export const supabaseRepo: Repo = {
       'objetivos_comerciales', 'metricas_semanales', 'sesiones', 'compromisos',
       'pagos', 'asistencias_mentoria', 'hitos_cliente', 'lecturas_consultora',
       'alertas', 'traspasos', 'diagnosticos', 'documentos_cliente',
-      'prorrogas', 'bajas', 'atribuciones', 'revisiones_caso', 'propuestas_ficha',
+      'prorrogas', 'bajas', 'atribuciones', 'revisiones_caso',
     ];
-    const [eq, cl, ne, au, es, ob, me, se, co, pa, as, hi, le, al, tr, di, dc, pr, ba, at, rv, pf] =
-      await Promise.all(tablas.map((t) => traerTodas(sb, t)));
+    const [[eq, cl, ne, au, es, ob, me, se, co, pa, as, hi, le, al, tr, di, dc, pr, ba, at, rv], pf] =
+      await Promise.all([
+        Promise.all(tablas.map((t) => traerTodas(sb, t))),
+        // Accesoria: es el borrador que dejó el extractor. Sin ella la ficha se
+        // carga a mano, como antes, y todo lo demás anda igual.
+        traerTodas(sb, 'propuestas_ficha', true),
+      ]);
 
     return {
       equipo: eq.map((r) => camel(r, M.consultora)),

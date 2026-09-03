@@ -103,7 +103,7 @@ describe('proponerFichas', () => {
     for (const c of elegidos) {
       // La cartera de demostración viene con la ficha llena; se vacía para que
       // estos clientes sean los candidatos y nadie más lo sea.
-      await repo.guardarNegocio({ clienteId: c.id, actualizadoAt: HOY });
+      await repo.guardarNegocio({ clienteId: c.id, moneda: 'USD', actualizadoAt: HOY });
       await repo.guardarDocumento({
         id: `d-${c.id}`, clienteId: c.id, tipo: 'formulario_onboarding',
         titulo: 'Onboarding', contenido: 'x'.repeat(300), fecha: '2026-03-01', creadoAt: HOY,
