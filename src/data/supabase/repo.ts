@@ -34,6 +34,7 @@ const M = {
   alerta: { id: 'id', cliente_id: 'clienteId', sesion_id: 'sesionId', codigo: 'codigo', origen: 'origen', estado_semaforo: 'estadoSemaforo', titulo: 'titulo', cuerpo: 'cuerpo', cita_textual: 'citaTextual', fecha_cita: 'fechaCita', pedido: 'pedido', destinatario: 'destinatario', plazo_horas: 'plazoHoras', prioridad: 'prioridad', emitida_at: 'emitidaAt', emitida_en_semana: 'emitidaEnSemana', diferida: 'diferida', cerrada_at: 'cerradaAt', cerrada_por: 'cerradaPor', texto_cierre: 'textoCierre', escalada_a_id: 'escaladaAId', veces_emitida: 'vecesEmitida' },
   traspaso: { id: 'id', cliente_id: 'clienteId', consultora_origen_id: 'consultoraOrigenId', consultora_destino_id: 'consultoraDestinoId', fecha: 'fecha', motivo: 'motivo' },
   documento: { id: 'id', cliente_id: 'clienteId', tipo: 'tipo', titulo: 'titulo', contenido: 'contenido', fecha: 'fecha', subido_por: 'subidoPor', creado_at: 'creadoAt', archivo: 'archivo' },
+  propuesta: { cliente_id: 'clienteId', datos: 'datos', documentos: 'documentos', motor_version: 'motorVersion', creado_at: 'creadoAt', aplicada_at: 'aplicadaAt' },
   diagnostico: { id: 'id', cliente_id: 'clienteId', consultora_id: 'consultoraId', pregunta: 'pregunta', hipotesis_consultora: 'hipotesisConsultora', cuello_botella: 'cuelloBotella', tipo_bloqueo: 'tipoBloqueo', eslabon_roto: 'eslabonRoto', coincidio: 'coincidio', payload: 'payload', prompt_version: 'promptVersion', modelo: 'modelo', created_at: 'createdAt' },
   prorroga: { id: 'id', cliente_id: 'clienteId', pago_id: 'pagoId', dias_otorgados: 'diasOtorgados', autorizada_por: 'autorizadaPor', autorizada_at: 'autorizadaAt', nueva_fecha: 'nuevaFecha', motivo: 'motivo', resultado: 'resultado', resuelta_at: 'resueltaAt' },
   baja: { id: 'id', cliente_id: 'clienteId', fecha: 'fecha', motivo: 'motivo', solicitada_por: 'solicitadaPor', pidio_reembolso: 'pidioReembolso', nota: 'nota', pasos: 'pasos' },
@@ -132,9 +133,9 @@ export const supabaseRepo: Repo = {
       'objetivos_comerciales', 'metricas_semanales', 'sesiones', 'compromisos',
       'pagos', 'asistencias_mentoria', 'hitos_cliente', 'lecturas_consultora',
       'alertas', 'traspasos', 'diagnosticos', 'documentos_cliente',
-      'prorrogas', 'bajas', 'atribuciones', 'revisiones_caso',
+      'prorrogas', 'bajas', 'atribuciones', 'revisiones_caso', 'propuestas_ficha',
     ];
-    const [eq, cl, ne, au, es, ob, me, se, co, pa, as, hi, le, al, tr, di, dc, pr, ba, at, rv] =
+    const [eq, cl, ne, au, es, ob, me, se, co, pa, as, hi, le, al, tr, di, dc, pr, ba, at, rv, pf] =
       await Promise.all(tablas.map((t) => traerTodas(sb, t)));
 
     return {
@@ -159,6 +160,7 @@ export const supabaseRepo: Repo = {
       bajas: ba.map((r: any) => ({ ...camel(r, M.baja), pasos: r.pasos ?? [] })),
       atribuciones: at.map((r) => camel(r, M.atribucion)),
       revisiones: rv.map((r) => camel(r, M.revision)),
+      propuestas: pf.map((r) => camel(r, M.propuesta)),
     } as Dataset;
   },
 
@@ -186,6 +188,14 @@ export const supabaseRepo: Repo = {
   async borrarDocumento(id) {
     const sb = await clienteSupabase();
     await ok(sb.from('documentos_cliente').delete().eq('id', id));
+  },
+  async guardarPropuestaFicha(p) {
+    const sb = await clienteSupabase();
+    await ok(sb.from('propuestas_ficha').upsert(snake(p as never, M.propuesta), { onConflict: 'cliente_id' }));
+  },
+  async borrarPropuestaFicha(clienteId) {
+    const sb = await clienteSupabase();
+    await ok(sb.from('propuestas_ficha').delete().eq('cliente_id', clienteId));
   },
   async guardarPago(p) {
     const sb = await clienteSupabase();

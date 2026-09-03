@@ -130,8 +130,13 @@ En **Settings → Environment Variables**. Los valores de Supabase están en
 browser de cualquiera que abra la app.
 
 Opcionales: `MODELO_CRITERIO`, `MODELO_EXTRACCION` (por defecto los dos usan
-`claude-opus-5`), `MAX_REINTENTOS_VALIDACION` (3) y
-`DRIVE_CLIENTES_POR_CORRIDA` (25).
+`claude-opus-5`), `MAX_REINTENTOS_VALIDACION` (3),
+`DRIVE_CLIENTES_POR_CORRIDA` (25) y `FICHA_CLIENTES_POR_CORRIDA` (4).
+
+Si la extracción se siente lenta, `MODELO_EXTRACCION=claude-sonnet-5` es la
+palanca más grande: responde bastante más rápido y sale 2,5 veces más barato.
+Extraer es copiar lo que dice el documento; el criterio del método se queda en
+Opus.
 
 ### 2.2bis · La cuenta de servicio de Google (veinte minutos, una sola vez)
 
@@ -258,6 +263,22 @@ En este orden, porque cada paso depende del anterior:
    Lo que no esté en Drive se sigue subiendo a mano en
    `/clientes/[id]/documentos`, y eso no se toca desde acá: lo que cargó una
    persona no lo pisa ninguna importación.
+
+6. **La ficha, propuesta desde esos documentos.** El cuarto botón de
+   `/planilla`: **Proponer las fichas**. Lee el arranque del caso de cada
+   cliente —el onboarding, la llamada de venta, las primeras sesiones— y deja
+   un borrador con los 32 campos del expediente y la cita de dónde salió cada
+   uno.
+
+   **No escribe ninguna ficha.** La consultora abre el cliente, ve arriba
+   *«Hay una propuesta esperando»*, la aplica —es instantáneo, ya está pago—,
+   corrige y guarda. La meta y el ticket propuestos alimentan la cuenta inversa
+   y el KPI semanal: aplicados sin que nadie los lea, un número mal deducido
+   deja de ser un dato flojo y pasa a ser el objetivo que ella persigue toda la
+   semana.
+
+   Va de a cuatro clientes por vuelta y la pantalla sigue sola. Cuesta cerca de
+   veinte centavos de dólar por cliente, una sola vez.
 
 ---
 

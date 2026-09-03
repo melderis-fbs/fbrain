@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { extraerFicha } from '@/server/acciones-motores';
+import { extraerFicha, extraerFichaDeExpediente } from '@/server/acciones-motores';
+import type { FichaExtraida } from '@/domain/motores/ficha';
 
 /**
  * LA FICHA DEL CLIENTE
@@ -85,6 +86,7 @@ export function FichaForm({
   esAdmin,
   conectado,
   guardados,
+  propuesta,
   accion,
 }: {
   clienteId: string;
@@ -92,8 +94,18 @@ export function FichaForm({
   equipo: { id: string; nombre: string }[];
   esAdmin: boolean;
   conectado: boolean;
-  /** Los documentos ya cargados del cliente, para no tener que pegarlos otra vez. */
-  guardados: { titulo: string; fecha: string; contenido: string }[];
+  /**
+   * Cuántos documentos tiene el cliente. Sólo el título y la fecha: el
+   * contenido se queda en el servidor. Mandarlo al navegador para después
+   * devolverlo hacía que la ficha de un cliente con diez transcripciones
+   * pesara un megabyte de sólo abrirla.
+   */
+  guardados: { titulo: string; fecha: string }[];
+  /**
+   * El borrador que dejó el barrido de `/planilla`, si hay uno sin aplicar.
+   * Ya está pago: usarlo no vuelve a llamar al modelo, es instantáneo.
+   */
+  propuesta?: { datos: FichaExtraida; documentos: number; creadoAt: string } | null;
   accion: (clienteId: string, fd: FormData) => Promise<{ error: string } | void>;
 }) {
   const [campos, setCampos] = useState<Campos>(inicial);
@@ -107,9 +119,92 @@ export function FichaForm({
   const [extrayendo, setExtrayendo] = useState(false);
   const [fuentes, setFuentes] = useState<Fuente[]>([]);
   const [contradicciones, setContradicciones] = useState<string[]>([]);
+  const [leidos, setLeidos] = useState<{ incluidos: number; omitidos: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const set = (k: string, v: string) => setCampos((c) => ({ ...c, [k]: v }));
+
+  /**
+   * Volcar una propuesta en el formulario.
+   *
+   * Lo mismo da que venga de una extracción recién hecha o del borrador que
+   * dejó el barrido: en los dos casos completa huecos y nada más. Guardar sigue
+   * siendo un acto de la persona.
+   */
+  function aplicar(f: FichaExtraida) {
+    // Sólo se pisan los campos vacíos: lo que ya cargó una persona gana.
+    setCampos((prev) => {
+      const next = { ...prev };
+      const poner = (k: string, v: unknown) => {
+        if (v === undefined || v === null || v === '') return;
+        if ((next[k] ?? '') !== '') return;
+        next[k] = Array.isArray(v) ? v.join(', ') : String(v);
+      };
+      poner('nombre', f.identidad.nombre);
+      poner('email', f.identidad.email);
+      poner('programa', f.identidad.programa);
+      poner('fuente', f.identidad.fuente);
+      poner('planPago', f.identidad.planPago);
+      poner('horasRealesSemana', f.identidad.horasRealesSemana);
+      poner('queVende', f.negocio.queVende);
+      poner('aQuien', f.negocio.aQuien);
+      poner('negocioPrecio', f.negocio.precio);
+      poner('moneda', f.negocio.moneda);
+      poner('comoEntrega', f.negocio.comoEntrega);
+      poner('facturacionMensual', f.negocio.facturacionMensual);
+      poner('cantidadClientes', f.negocio.cantidadClientes);
+      poner('origenClientes', f.negocio.origenClientes);
+      poner('queFunciono', f.negocio.queFunciono);
+      poner('queNoFunciono', f.negocio.queNoFunciono);
+      poner('haceExcepcionalmenteBien', f.autoridad.haceExcepcionalmenteBien);
+      poner('experienciaProfesional', f.autoridad.experienciaProfesional);
+      poner('resultadosPropios', f.autoridad.resultadosPropios);
+      poner('resultadosTerceros', f.autoridad.resultadosTerceros);
+      poner('industriasQueConoce', f.autoridad.industriasQueConoce);
+      poner('autoridadDesperdiciada', f.autoridad.autoridadDesperdiciada);
+      poner('clienteIdeal', f.estrategia.clienteIdeal);
+      poner('problema', f.estrategia.problema);
+      poner('deseo', f.estrategia.deseo);
+      poner('promesa', f.estrategia.promesa);
+      poner('oferta', f.estrategia.oferta);
+      poner('mecanismo', f.estrategia.mecanismo);
+      poner('canal', f.estrategia.canal);
+      poner('estrategiaPrecio', f.estrategia.precio);
+      poner('metaMensual', f.objetivo.metaMensual);
+      poner('ticket', f.objetivo.ticket);
+      return next;
+    });
+    setFuentes(f.fuentes);
+    setContradicciones(f.contradicciones);
+  }
+
+  /**
+   * Extraer de lo que el cliente ya tiene cargado.
+   *
+   * El servidor elige qué documentos leer —el arranque del caso, no el
+   * expediente entero— y avisa cuántos leyó. Un extractor que en silencio lee
+   * tres de once documentos es un extractor en el que nadie puede confiar.
+   */
+  async function desdeElExpediente() {
+    setExtrayendo(true);
+    setError(null);
+    setFuentes([]);
+    setContradicciones([]);
+    setLeidos(null);
+    try {
+      const r = await extraerFichaDeExpediente(clienteId);
+      if (!r.ok) {
+        setError([r.error, ...(r.errores ?? [])].join(' · '));
+        return;
+      }
+      aplicar(r.ficha);
+      setLeidos({ incluidos: r.incluidos, omitidos: r.omitidos.length });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Falló la extracción.');
+    } finally {
+      setExtrayendo(false);
+    }
+  }
 
   async function extraer(desde?: string) {
     const fuente = desde ?? documento;
@@ -123,51 +218,7 @@ export function FichaForm({
         setError([r.error, ...(r.errores ?? [])].join(' · '));
         return;
       }
-      const f = r.ficha;
-      // Sólo se pisan los campos vacíos: lo que ya cargó una persona gana.
-      setCampos((prev) => {
-        const next = { ...prev };
-        const poner = (k: string, v: unknown) => {
-          if (v === undefined || v === null || v === '') return;
-          if ((next[k] ?? '') !== '') return;
-          next[k] = Array.isArray(v) ? v.join(', ') : String(v);
-        };
-        poner('nombre', f.identidad.nombre);
-        poner('email', f.identidad.email);
-        poner('programa', f.identidad.programa);
-        poner('fuente', f.identidad.fuente);
-        poner('planPago', f.identidad.planPago);
-        poner('horasRealesSemana', f.identidad.horasRealesSemana);
-        poner('queVende', f.negocio.queVende);
-        poner('aQuien', f.negocio.aQuien);
-        poner('negocioPrecio', f.negocio.precio);
-        poner('moneda', f.negocio.moneda);
-        poner('comoEntrega', f.negocio.comoEntrega);
-        poner('facturacionMensual', f.negocio.facturacionMensual);
-        poner('cantidadClientes', f.negocio.cantidadClientes);
-        poner('origenClientes', f.negocio.origenClientes);
-        poner('queFunciono', f.negocio.queFunciono);
-        poner('queNoFunciono', f.negocio.queNoFunciono);
-        poner('haceExcepcionalmenteBien', f.autoridad.haceExcepcionalmenteBien);
-        poner('experienciaProfesional', f.autoridad.experienciaProfesional);
-        poner('resultadosPropios', f.autoridad.resultadosPropios);
-        poner('resultadosTerceros', f.autoridad.resultadosTerceros);
-        poner('industriasQueConoce', f.autoridad.industriasQueConoce);
-        poner('autoridadDesperdiciada', f.autoridad.autoridadDesperdiciada);
-        poner('clienteIdeal', f.estrategia.clienteIdeal);
-        poner('problema', f.estrategia.problema);
-        poner('deseo', f.estrategia.deseo);
-        poner('promesa', f.estrategia.promesa);
-        poner('oferta', f.estrategia.oferta);
-        poner('mecanismo', f.estrategia.mecanismo);
-        poner('canal', f.estrategia.canal);
-        poner('estrategiaPrecio', f.estrategia.precio);
-        poner('metaMensual', f.objetivo.metaMensual);
-        poner('ticket', f.objetivo.ticket);
-        return next;
-      });
-      setFuentes(f.fuentes);
-      setContradicciones(f.contradicciones);
+      aplicar(r.ficha);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Falló la extracción.');
     } finally {
@@ -194,6 +245,34 @@ export function FichaForm({
         </p>
       )}
 
+      {/* --------------------------------------- la propuesta que esperaba */}
+      {propuesta && (
+        <section
+          className="rounded-xl border p-4"
+          style={{ borderColor: 'var(--accent)', background: 'var(--accent-soft, transparent)' }}
+        >
+          <h2 className="text-[14px] font-semibold">Hay una propuesta esperando</h2>
+          <p className="mt-1 text-[12.5px] leading-relaxed text-ink-2">
+            El extractor ya leyó los {propuesta.documentos} documento
+            {propuesta.documentos > 1 ? 's' : ''} de este cliente
+            {propuesta.creadoAt && <> el {propuesta.creadoAt}</>} y dejó los campos propuestos.
+            Está pago: usarla es instantáneo, no vuelve a llamar al modelo.
+          </p>
+          <p className="mt-1 text-[12px] leading-relaxed text-ink-3">
+            Completa sólo los campos vacíos y deja abajo la cita de dónde salió cada cosa. No
+            guarda nada — revisás y guardás vos.
+          </p>
+          <button
+            type="button"
+            onClick={() => aplicar(propuesta.datos)}
+            className="mt-3 rounded-lg px-3 py-1.5 text-[12px] font-semibold text-white"
+            style={{ background: 'var(--accent)' }}
+          >
+            Usar la propuesta
+          </button>
+        </section>
+      )}
+
       {/* ------------------------------------------------ documentos */}
       <section className="rounded-xl border border-line bg-surface p-4">
         <h2 className="text-[14px] font-semibold">Arrancar desde lo que ya tenés</h2>
@@ -214,13 +293,7 @@ export function FichaForm({
           {guardados.length > 0 && (
             <button
               type="button"
-              onClick={() =>
-                extraer(
-                  guardados
-                    .map((d) => `### ${d.titulo} · ${d.fecha}\n\n${d.contenido}`)
-                    .join('\n\n---\n\n'),
-                )
-              }
+              onClick={desdeElExpediente}
               disabled={!conectado || extrayendo}
               className="rounded-lg px-3 py-1.5 text-[12px] font-semibold text-white disabled:opacity-40"
               style={{ background: 'var(--accent)' }}
@@ -251,6 +324,16 @@ export function FichaForm({
         {error && (
           <p className="mt-3 rounded-lg border px-3 py-2 text-[12px]" style={{ borderColor: 'var(--critical)', background: 'var(--critical-soft)', color: 'var(--critical-ink)' }}>
             {error}
+          </p>
+        )}
+        {leidos && (
+          <p className="mt-3 text-[12px] leading-relaxed text-ink-3">
+            Leyó {leidos.incluidos} documento{leidos.incluidos > 1 ? 's' : ''} — el arranque del
+            caso, que es de donde sale la ficha.
+            {leidos.omitidos > 0 && (
+              <> Dejó afuera {leidos.omitidos} por tamaño: lo posterior no cambia la ficha, cambia
+              la estrategia, y eso se carga como versión nueva.</>
+            )}
           </p>
         )}
         {contradicciones.length > 0 && (

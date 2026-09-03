@@ -235,6 +235,19 @@ async function guardarFichaInterno(clienteId: string, formData: FormData) {
     await getRepo().guardarObjetivo(objetivo);
   }
 
+  /**
+   * La propuesta del extractor queda marcada como decidida.
+   *
+   * No se borra: si mañana hay que discutir de dónde salió un dato de la
+   * ficha, la propuesta con su cita es la única respuesta. Lo que cambia es
+   * que deja de ofrecerse —alguien ya la tuvo a la vista y guardó— y que el
+   * barrido no vuelve a gastar una llamada en este cliente.
+   */
+  const pendiente = ws.dataset.propuestas.find((p) => p.clienteId === clienteId && !p.aplicadaAt);
+  if (pendiente) {
+    await getRepo().guardarPropuestaFicha({ ...pendiente, aplicadaAt: hoy });
+  }
+
   revalidatePath(`/clientes/${clienteId}`);
   revalidatePath(`/clientes/${clienteId}/ficha`);
   redirect(`/clientes/${clienteId}`);

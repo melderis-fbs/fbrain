@@ -91,6 +91,12 @@ export type ReporteSolapa = {
   error?: string;
   /** Aclaración que no es un fallo: la solapa no está configurada. */
   nota?: string;
+  /**
+   * Cuántos quedaron para la próxima corrida. Una importación que se corta por
+   * tiempo no es un error, pero callarlo sí: sin este número nadie sabe si lo
+   * que está mirando es la cartera entera o los primeros veinticinco.
+   */
+  restantes?: number;
 };
 export type Reporte = { at: string; solapas: ReporteSolapa[] };
 

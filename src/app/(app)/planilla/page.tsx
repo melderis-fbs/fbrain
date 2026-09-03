@@ -4,10 +4,20 @@ import { getUsuario, veTodo } from '@/server/auth';
 import { hayPlanilla } from '@/server/planilla';
 import { hayNotion } from '@/server/notion';
 import { hayDrive } from '@/server/drive';
+import { hayModelo } from '@/server/modelo';
 import { CLIENTES, CUOTAS, esDePlanilla, SOLAPAS } from '@/server/planilla-mapeo';
-import { sincronizarAhora, sincronizarDriveAhora, sincronizarNotionAhora } from './actions';
+import { proponerFichasAhora, sincronizarAhora, sincronizarDriveAhora, sincronizarNotionAhora } from './actions';
 
 export const metadata = { title: 'Las fuentes · Founders Brain' };
+
+/**
+ * Las importaciones son largas por naturaleza: leen una planilla de 160 filas,
+ * cien carpetas de Drive o llaman al modelo una vez por cliente. Con el tope
+ * por defecto de la plataforma, la corrida se corta a mitad de camino y el
+ * reporte no llega nunca. Cada corrida igual trabaja por tandas, así que un
+ * corte no pierde lo hecho — pero conviene que no se corte.
+ */
+export const maxDuration = 300;
 
 export default async function PlanillaPage() {
   const usuario = await getUsuario();
@@ -90,6 +100,39 @@ export default async function PlanillaPage() {
             etiqueta="Traer de Drive"
             etiquetaCorriendo="Bajando documentos…"
             faltante="GOOGLE_SERVICE_ACCOUNT_JSON"
+            repetir
+          />
+        </div>
+      </section>
+
+      <section className="mt-4 rounded-xl border border-line bg-surface p-4">
+        <h2 className="text-[14px] font-semibold">4 · La ficha, desde los documentos</h2>
+        <p className="mt-1 text-[12.5px] leading-relaxed text-ink-2">
+          Los documentos entran como texto, y eso todavía no llena una ficha. Esto lee el
+          expediente de cada cliente y <strong>propone</strong> los campos que están vacíos: qué
+          vende, a quién, precio, qué funcionó, autoridad, cliente ideal, promesa, oferta, canal,
+          meta y ticket. Con la cita de dónde salió cada cosa.
+        </p>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-ink-2">
+          <strong>No guarda ninguna ficha.</strong> Deja un borrador por cliente; la consultora lo
+          ve al abrir la ficha, corrige lo que haga falta y guarda. No es prolijidad: la meta y el
+          ticket alimentan la cuenta inversa y el KPI semanal, así que un número mal deducido, si
+          se aplicara solo, dejaría de ser un dato flojo y sería el objetivo que ella persigue toda
+          la semana.
+        </p>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-ink-2">
+          Va de a cuatro clientes por vuelta y la pantalla sigue sola hasta terminar. Arranca por
+          los que tienen el expediente más vacío, y no vuelve a gastar una llamada en un cliente
+          que ya tiene su propuesta.
+        </p>
+        <div className="mt-3">
+          <Planilla
+            configurada={hayModelo()}
+            sincronizar={proponerFichasAhora}
+            etiqueta="Proponer las fichas"
+            etiquetaCorriendo="Leyendo expedientes…"
+            faltante="ANTHROPIC_API_KEY"
+            repetir
           />
         </div>
       </section>

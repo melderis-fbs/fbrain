@@ -10,6 +10,8 @@
  * y el índice de avance son cálculo, no columnas.
  */
 
+import type { FichaExtraida } from './motores/ficha';
+
 // ---------------------------------------------------------------------------
 // Equipo
 // ---------------------------------------------------------------------------
@@ -544,6 +546,32 @@ export interface DocumentoCliente {
   creadoAt: string;
   /** Si la carga vino de un archivo, cuál. Sirve para no subir dos veces lo mismo. */
   archivo?: string;
+}
+
+/**
+ * LA PROPUESTA DE FICHA
+ *
+ * El extractor leyó los documentos de un cliente y propuso los campos del
+ * expediente. Todavía no es la ficha: es un borrador esperando que una persona
+ * lo lea.
+ *
+ * Se guarda en vez de aplicarse porque la meta y el ticket propuestos
+ * alimentan la cuenta inversa y el KPI semanal. Un número mal deducido, si se
+ * aplica solo, deja de ser un dato flojo y se convierte en el objetivo que la
+ * consultora persigue toda la semana.
+ *
+ * Una por cliente: es un borrador, no un historial.
+ */
+export interface PropuestaFicha {
+  clienteId: string;
+  /** Lo que devolvió el motor, con sus citas y sus contradicciones. */
+  datos: FichaExtraida;
+  /** Sobre cuántos documentos se extrajo: una sobre seis no vale como una sobre uno. */
+  documentos: number;
+  motorVersion?: string;
+  creadoAt: string;
+  /** Cuándo alguien guardó la ficha teniéndola a la vista. */
+  aplicadaAt?: string;
 }
 
 export interface Diagnostico {

@@ -1,7 +1,7 @@
 import type {
   Alerta, AsistenciaMentoria, AtribucionManual, Autoridad, Baja, Cliente, Compromiso, Consultora,
   Diagnostico, DocumentoCliente, EstrategiaVersion, HitoCliente, LecturaConsultora, MetricaSemanal,
-  Negocio, ObjetivoComercial, Pago, Prorroga, RevisionCaso, Sesion, Traspaso,
+  Negocio, ObjetivoComercial, Pago, Prorroga, PropuestaFicha, RevisionCaso, Sesion, Traspaso,
 } from '@/domain/types';
 
 export interface Dataset {
@@ -22,6 +22,7 @@ export interface Dataset {
   traspasos: Traspaso[];
   diagnosticos: Diagnostico[];
   documentos: DocumentoCliente[];
+  propuestas: PropuestaFicha[];
   prorrogas: Prorroga[];
   bajas: Baja[];
   atribuciones: AtribucionManual[];
@@ -53,6 +54,13 @@ export interface Repo {
   /** Los documentos que sube el consultor: transcripciones, llamada de venta. */
   guardarDocumento(d: DocumentoCliente): Promise<void>;
   borrarDocumento(id: string): Promise<void>;
+  /**
+   * El borrador de ficha que dejó el extractor. Se guarda en vez de aplicarse:
+   * quien decide si un dato entra al expediente es la persona que atiende al
+   * cliente, no el barrido.
+   */
+  guardarPropuestaFicha(p: PropuestaFicha): Promise<void>;
+  borrarPropuestaFicha(clienteId: string): Promise<void>;
   guardarSesion(s: Sesion): Promise<void>;
   guardarMetrica(m: MetricaSemanal): Promise<void>;
   guardarCompromiso(c: Compromiso): Promise<void>;

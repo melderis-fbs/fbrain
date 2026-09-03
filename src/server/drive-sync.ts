@@ -176,6 +176,7 @@ export async function sincronizarDrive(hoy: string): Promise<Reporte> {
     }
 
     if (orden.length > tanda.length) {
+      r.restantes = orden.length - tanda.length;
       r.nota =
         `Se procesaron ${tanda.length} de ${orden.length} clientes con carpeta. ` +
         'Volvé a sincronizar para seguir: cada corrida arranca por los que tienen menos documentos, y lo ya traído no se vuelve a bajar.';

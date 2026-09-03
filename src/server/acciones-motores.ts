@@ -26,7 +26,7 @@ import {
   VERSION_COHERENCIA,
   VERSION_ONBOARDING,
 } from '@/domain/motores/otros';
-import { fichaExtraidaSchema, PROMPT_FICHA, VERSION_FICHA } from '@/domain/motores/ficha';
+import { extraerDeDocumentos, extraerDeTexto } from '@/server/ficha-extractor';
 import { getUsuario } from '@/server/auth';
 import { getWorkspace, hoyIso } from '@/server/workspace';
 import { correrMotor } from '@/server/modelo';
@@ -197,20 +197,18 @@ export async function correrOnboarding(clienteId: string) {
 export async function extraerFicha(documento: string) {
   const usuario = await getUsuario();
   if (!usuario) redirect('/login');
+  return extraerDeTexto(documento);
+}
 
-  const texto = documento.trim();
-  if (texto.length < 50) {
-    return { ok: false as const, error: 'Pegá el documento completo: con menos de 50 caracteres no hay nada que extraer.' };
-  }
-
-  const r = await correrMotor({
-    motor: 'ficha',
-    promptMotor: PROMPT_FICHA,
-    contexto: `## DOCUMENTOS DEL CLIENTE\n\n${texto}`,
-    schema: fichaExtraidaSchema,
-    promptVersion: VERSION_FICHA,
-    tipo: 'extraccion',
-  });
-  if (!r.ok) return { ok: false as const, error: r.error, errores: r.errores };
-  return { ok: true as const, ficha: r.datos, uso: r.uso };
+/**
+ * Lo mismo, pero desde los documentos que el cliente ya tiene cargados.
+ *
+ * La selección y la lectura pasan acá, del lado del servidor. Antes el
+ * navegador tenía los documentos enteros en memoria y los mandaba de vuelta
+ * en cada extracción: la ficha de un cliente con diez transcripciones pesaba
+ * un megabyte de sólo abrirla, y esa espera era la mitad de la lentitud.
+ */
+export async function extraerFichaDeExpediente(clienteId: string) {
+  const { ctx } = await contextoDe(clienteId);
+  return extraerDeDocumentos(ctx.registros.documentos);
 }

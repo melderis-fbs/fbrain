@@ -23,7 +23,7 @@ let cache: { key: string; data: Dataset } | null = null;
 function asegurar(hoy: string): Dataset {
   if (cache && cache.key === hoy) return cache.data;
   const base = generarDataset(hoy);
-  cache = { key: hoy, data: { equipo: equipoDe(hoy), documentos: [], ...base } };
+  cache = { key: hoy, data: { equipo: equipoDe(hoy), documentos: [], propuestas: [], ...base } };
   return cache.data;
 }
 
@@ -71,6 +71,21 @@ export const demoRepo: Repo = {
     const i = d.documentos.findIndex((y) => y.id === x.id);
     if (i >= 0) d.documentos[i] = x;
     else d.documentos.unshift(x);
+  },
+
+  async guardarPropuestaFicha(p) {
+    const d = cache?.data;
+    if (!d) return;
+    const i = d.propuestas.findIndex((x) => x.clienteId === p.clienteId);
+    if (i >= 0) d.propuestas[i] = p;
+    else d.propuestas.push(p);
+  },
+
+  async borrarPropuestaFicha(clienteId) {
+    const d = cache?.data;
+    if (!d) return;
+    const i = d.propuestas.findIndex((x) => x.clienteId === clienteId);
+    if (i >= 0) d.propuestas.splice(i, 1);
   },
 
   async borrarDocumento(id) {

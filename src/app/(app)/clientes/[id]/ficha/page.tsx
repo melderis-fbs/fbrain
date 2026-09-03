@@ -99,6 +99,15 @@ export default async function FichaPage({ params }: { params: Promise<{ id: stri
     .filter(([, ok]) => !ok)
     .map(([k]) => k);
 
+  /**
+   * El borrador que dejó el barrido, si nadie lo aplicó todavía. Se muestra
+   * arriba de todo: es lo primero que conviene ver al abrir una ficha vacía.
+   */
+  const guardada = ws.dataset.propuestas.find((p) => p.clienteId === id && !p.aplicadaAt);
+  const propuesta = guardada
+    ? { datos: guardada.datos, documentos: guardada.documentos, creadoAt: guardada.creadoAt.slice(0, 10) }
+    : null;
+
   return (
     <div className="mx-auto max-w-3xl">
       <div className="mb-4 text-[12px] text-ink-3">
@@ -120,11 +129,8 @@ export default async function FichaPage({ params }: { params: Promise<{ id: stri
         equipo={equipoParaElSelector.map((c) => ({ id: c.id, nombre: c.nombre }))}
         esAdmin={veTodo(usuario.rol)}
         conectado={hayModelo()}
-        guardados={v.ctx.registros.documentos.map((d) => ({
-          titulo: d.titulo,
-          fecha: d.fecha,
-          contenido: d.contenido,
-        }))}
+        guardados={v.ctx.registros.documentos.map((d) => ({ titulo: d.titulo, fecha: d.fecha }))}
+        propuesta={propuesta ?? null}
         accion={guardarFicha}
       />
     </div>
