@@ -77,3 +77,22 @@ export function fechaDePlanilla(v: string): string | undefined {
   const anio = a.length === 2 ? `20${a}` : a;
   return `${anio}-${mes.padStart(2, '0')}-${d.padStart(2, '0')}`;
 }
+
+/**
+ * Escribir CSV. La contraparte del parser de arriba, y con las mismas cuatro
+ * reglas: se entrecomilla si el valor tiene coma, comilla o salto de línea, y
+ * las comillas de adentro se duplican.
+ *
+ * Existe porque la app tiene que poder devolver una tabla, no sólo leerla:
+ * armar a mano una planilla de 194 filas es el trabajo que la app está para
+ * evitar. Un campo con una coma sin escapar corre todas las columnas de esa
+ * fila una posición, y eso no se ve hasta que alguien lee una ficha donde el
+ * «cliente ideal» quedó en «promesa».
+ */
+export function aCsv(filas: (string | number | undefined)[][]): string {
+  const campo = (v: string | number | undefined) => {
+    const s = v === undefined || v === null ? '' : String(v);
+    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  return filas.map((f) => f.map(campo).join(',')).join('\n');
+}

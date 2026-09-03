@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fechaDePlanilla, normalizarEncabezado, numeroDePlanilla, parsearCsv } from './csv';
+import { aCsv, fechaDePlanilla, normalizarEncabezado, numeroDePlanilla, parsearCsv } from './csv';
 
 describe('parsearCsv', () => {
   it('separa filas y columnas', () => {
@@ -79,5 +79,28 @@ describe('fechaDePlanilla', () => {
     expect(fechaDePlanilla('')).toBeUndefined();
     expect(fechaDePlanilla('marzo')).toBeUndefined();
     expect(fechaDePlanilla('pendiente')).toBeUndefined();
+  });
+});
+
+describe('aCsv', () => {
+  it('entrecomilla lo que hay que entrecomillar, y nada más', () => {
+    expect(aCsv([['a', 'b']])).toBe('a,b');
+    expect(aCsv([['con, coma']])).toBe('"con, coma"');
+    expect(aCsv([['dijo "hola"']])).toBe('"dijo ""hola"""');
+    expect(aCsv([['dos\nlineas']])).toBe('"dos\nlineas"');
+  });
+
+  it('vacío y cero no son lo mismo', () => {
+    expect(aCsv([[undefined, 0, '']])).toBe(',0,');
+  });
+
+  it('ida y vuelta: lo que escribe, lo lee', () => {
+    const filas = [
+      ['nombre', 'que vende', 'cliente ideal'],
+      ['Ana, la de marca', 'Consultoría "premium"', 'Arquitecto\ncon estudio'],
+    ];
+    // Es el riesgo real: un campo con una coma sin escapar corre todas las
+    // columnas de esa fila y el «cliente ideal» termina guardado en «promesa».
+    expect(parsearCsv(aCsv(filas))).toEqual(filas);
   });
 });

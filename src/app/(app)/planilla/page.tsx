@@ -85,20 +85,40 @@ export default async function PlanillaPage() {
           cargar de una tabla, sin abrir 194 fichas. Sirve cuando esa información ya existe en
           algún lado: las respuestas del formulario de onboarding, por ejemplo.
         </p>
-        <ol className="mt-2 space-y-1 text-[12.5px] leading-relaxed text-ink-2">
+        <p className="mt-3 text-[12.5px] leading-relaxed text-ink-2">
+          <strong>No hace falta armar la tabla.</strong> Bajala de acá: viene con una fila por
+          cliente, el nombre exacto como está guardado, y las columnas del expediente ya
+          completas con lo que la app sabe. Sólo hay que llenar los huecos.
+        </p>
+        <a
+          href="/planilla/plantilla"
+          className="mt-3 inline-block rounded-lg px-4 py-2 text-[13px] font-semibold text-white"
+          style={{ background: 'var(--accent)' }}
+        >
+          Bajar la plantilla con todos los clientes
+        </a>
+        <p className="mt-2 text-[12px] leading-relaxed text-ink-3">
+          Es un CSV: se abre en Excel o se importa a Google Sheets. Las columnas{' '}
+          <em>consultora</em> y <em>email</em> están de referencia, para saber de quién es cada
+          fila, y el importador las ignora. Sirve también para ver de un vistazo qué le falta al
+          expediente de la cartera, que hoy sólo se puede saber abriendo las fichas de a una.
+        </p>
+
+        <ol className="mt-3 space-y-1 text-[12.5px] leading-relaxed text-ink-2">
           <li>
-            <strong>1.</strong> En la <strong>misma planilla</strong> que ya está conectada, creá
-            una solapa nueva llamada exactamente <code>{SOLAPAS.ficha}</code>. Es una solapa
-            aparte para no tocar la de finanzas, que usa todo el equipo.
+            <strong>1.</strong> Bajá la plantilla y completá los huecos —a mano, o pegando las
+            columnas que ya tengas de otra planilla, como las respuestas del formulario de
+            onboarding.
           </li>
           <li>
-            <strong>2.</strong> Primera fila, los encabezados: una columna <code>nombre</code> y
-            las columnas del expediente que quieras llenar — están todas listadas abajo, en{' '}
-            <em>Los encabezados que reconoce</em>. Las que no uses, no las pongas.
+            <strong>2.</strong> En la <strong>misma planilla</strong> que ya está conectada, creá
+            una solapa nueva llamada exactamente <code>{SOLAPAS.ficha}</code> y pegá ahí la tabla,
+            con su fila de encabezados. Es una solapa aparte para no tocar la de finanzas, que usa
+            todo el equipo.
           </li>
           <li>
-            <strong>3.</strong> Una fila por cliente. <strong>El nombre tiene que ser el
-            mismo</strong> que tiene en la app, acentos incluidos: así se identifica.
+            <strong>3.</strong> <strong>No cambies la columna <code>nombre</code></strong>: es
+            con la que se identifica cada cliente. Las columnas que no quieras usar, borralas.
           </li>
           <li>
             <strong>4.</strong> Apretá <em>Sincronizar ahora</em> arriba. Es el mismo botón: lee
