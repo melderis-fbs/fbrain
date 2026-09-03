@@ -336,3 +336,106 @@ describe('sincronizar · la planilla real de Founders', () => {
     for (const s of faltantes) expect(s.error).toBeUndefined();
   });
 });
+
+describe('sincronizar · una tabla parcial no borra el expediente', () => {
+  /**
+   * La forma normal de cargar 194 fichas es por tandas: una tabla con el
+   * negocio, otra con la estrategia, otra con la meta. Si la segunda tanda
+   * borra lo que cargó la primera, la herramienta es peor que no tenerla — y
+   * no se nota hasta que alguien abre una ficha que estaba llena.
+   */
+  const csv = (encabezado: string, fila: string) => `${encabezado}\n${fila}`;
+
+  beforeEach(() => {
+    vi.stubEnv('SHEETS_SOLAPA_PAGOS', '');
+    vi.stubEnv('SHEETS_SOLAPA_ASISTENCIAS', '');
+  });
+
+  it('la segunda subida completa, no reemplaza', async () => {
+    const { getRepo } = await import('@/data');
+    const repo = getRepo();
+
+    // Tanda 1 · el negocio y la estrategia
+    mockearDrive({
+      Clientes: csv(
+        'nombre,fecha alta,que vende,a quien,cliente ideal,oferta',
+        'Ana Prueba,2026-02-10,Consultoría de marca,Estudios de arquitectura,Arquitecto con estudio propio,Programa de 12 semanas',
+      ),
+    });
+    const { sincronizar } = await import('./planilla');
+    await sincronizar(HOY);
+
+    // Tanda 2 · sólo la meta y el ticket, como saldría de otra planilla. Sin
+    // fecha de alta, que es lo normal: el cliente ya existe y la trae de antes.
+    mockearDrive({
+      Clientes: csv('nombre,meta mensual,ticket', 'Ana Prueba,9000,3000'),
+    });
+    await sincronizar(HOY);
+
+    const d = await repo.cargarTodo(HOY);
+    const cliente = d.clientes.find((c) => c.nombre === 'Ana Prueba')!;
+    const negocio = d.negocios.find((n) => n.clienteId === cliente.id)!;
+    const estrategias = d.estrategias.filter((e) => e.clienteId === cliente.id);
+    const objetivo = d.objetivos.filter((o) => o.clienteId === cliente.id).at(-1)!;
+
+    // Lo de la tanda 1 sigue ahí.
+    expect(negocio.queVende).toBe('Consultoría de marca');
+    expect(negocio.aQuien).toBe('Estudios de arquitectura');
+    // Y la estrategia no quedó vaciada por una v2 con celdas en blanco: esa v2
+    // sería la vigente, la que usa el diagnóstico y contra la que el test de
+    // coherencia mide el drift.
+    expect(estrategias.at(-1)!.clienteIdeal).toBe('Arquitecto con estudio propio');
+    expect(estrategias.at(-1)!.oferta).toBe('Programa de 12 semanas');
+    // Sin campos de estrategia en la fila, tampoco hay versión nueva.
+    expect(estrategias).toHaveLength(1);
+    // Y lo nuevo entró.
+    expect(objetivo.metaMensual).toBe(9000);
+    expect(objetivo.ticket).toBe(3000);
+  });
+
+  it('una tabla con los 32 campos del expediente entra de una', async () => {
+    const { getRepo } = await import('@/data');
+    const repo = getRepo();
+    mockearDrive({
+      Clientes: csv(
+        [
+          'nombre', 'fecha alta', 'que vende', 'a quien', 'precio', 'moneda', 'como entrega',
+          'facturacion mensual', 'cantidad clientes', 'origen clientes',
+          'que funciono', 'que no funciono', 'hace excepcionalmente bien',
+          'experiencia profesional', 'resultados propios', 'resultados terceros',
+          'industrias que conoce', 'autoridad desperdiciada', 'cliente ideal',
+          'problema', 'deseo', 'promesa', 'oferta', 'mecanismo', 'canal',
+          'precio estrategia', 'meta mensual', 'ticket',
+        ].join(','),
+        [
+          'Beto Prueba', '2026-03-01', 'Mentoría', 'Coaches', '1500', 'USD', 'Sesiones semanales',
+          '6000', '4', 'Referidos', 'Los referidos', 'Los anuncios',
+          'Diagnosticar rápido', '12 años en ventas', 'Facturó 20k en un mes',
+          'Tres clientes a 10k', 'ventas coaching', 'Su cartera de exalumnos',
+          'Coach con clientes', 'No consigue reuniones', 'Agenda llena',
+          'Diez reuniones al mes', 'Programa de 8 semanas', 'Método de outbound',
+          'Instagram', '2000', '12000', '2000',
+        ].join(','),
+      ),
+    });
+    const { sincronizar } = await import('./planilla');
+    const r = await sincronizar(HOY);
+    expect(r.solapas[0].error).toBeUndefined();
+    expect(r.solapas[0].salteadas).toEqual([]);
+    expect(r.solapas[0].aplicadas).toBe(1);
+
+    const d = await repo.cargarTodo(HOY);
+    const cliente = d.clientes.find((c) => c.nombre === 'Beto Prueba')!;
+    const negocio = d.negocios.find((n) => n.clienteId === cliente.id)!;
+    const autoridad = d.autoridades.find((a) => a.clienteId === cliente.id)!;
+    const estrategia = d.estrategias.filter((e) => e.clienteId === cliente.id).at(-1)!;
+    const objetivo = d.objetivos.filter((o) => o.clienteId === cliente.id).at(-1)!;
+
+    expect(negocio.facturacionMensual).toBe(6000);
+    expect(autoridad.industriasQueConoce).toEqual(['ventas coaching']);
+    expect(estrategia.mecanismo).toBe('Método de outbound');
+    expect(objetivo.metaMensual).toBe(12000);
+    // La moneda de la fila manda sobre el default del entorno (que acá es ARS).
+    expect(negocio.moneda).toBe('USD');
+  });
+});

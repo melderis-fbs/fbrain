@@ -278,38 +278,74 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
 
       const moneda = opcional(leer(f, CLIENTES, 'moneda')) ?? MONEDA_POR_DEFECTO;
 
-      // --- negocio
-      const negocio: Negocio = {
-        clienteId: id,
+      /**
+       * --- negocio
+       *
+       * Se fusiona con lo que ya había. Es la misma regla que rige la fila del
+       * cliente y hay que decir por qué: el bloque se guarda entero, así que
+       * subir una tabla con «a quién» pero sin «qué vende» reemplazaba el
+       * bloque completo y dejaba en null lo que alguien había cargado a mano.
+       *
+       * Celda vacía es «sin dato», nunca «borrá lo que sabías». Sin esto, una
+       * planilla parcial —que es la forma normal de cargar por tandas— es una
+       * herramienta de pérdida de datos silenciosa.
+       */
+      const negocioPrevio = dataset.negocios.find((n) => n.clienteId === id);
+      const negocioFila = {
         queVende: opcional(leer(f, CLIENTES, 'queVende')),
         aQuien: opcional(leer(f, CLIENTES, 'aQuien')),
         precio: numero(leer(f, CLIENTES, 'negocioPrecio')) ?? undefined,
-        moneda,
         comoEntrega: opcional(leer(f, CLIENTES, 'comoEntrega')),
         facturacionMensual: numero(leer(f, CLIENTES, 'facturacionMensual')) ?? undefined,
         cantidadClientes: numero(leer(f, CLIENTES, 'cantidadClientes')) ?? undefined,
         origenClientes: opcional(leer(f, CLIENTES, 'origenClientes')),
         queFunciono: opcional(leer(f, CLIENTES, 'queFunciono')),
         queNoFunciono: opcional(leer(f, CLIENTES, 'queNoFunciono')),
-        actualizadoAt: hoy,
       };
-      if (Object.values(negocio).some((x) => x !== undefined && x !== id && x !== hoy && x !== moneda)) {
+      if (Object.values(negocioFila).some((x) => x !== undefined)) {
+        const negocio: Negocio = {
+          ...negocioPrevio,
+          clienteId: id,
+          queVende: negocioFila.queVende ?? negocioPrevio?.queVende,
+          aQuien: negocioFila.aQuien ?? negocioPrevio?.aQuien,
+          precio: negocioFila.precio ?? negocioPrevio?.precio,
+          moneda: opcional(leer(f, CLIENTES, 'moneda')) ?? negocioPrevio?.moneda ?? moneda,
+          comoEntrega: negocioFila.comoEntrega ?? negocioPrevio?.comoEntrega,
+          facturacionMensual: negocioFila.facturacionMensual ?? negocioPrevio?.facturacionMensual,
+          cantidadClientes: negocioFila.cantidadClientes ?? negocioPrevio?.cantidadClientes,
+          origenClientes: negocioFila.origenClientes ?? negocioPrevio?.origenClientes,
+          queFunciono: negocioFila.queFunciono ?? negocioPrevio?.queFunciono,
+          queNoFunciono: negocioFila.queNoFunciono ?? negocioPrevio?.queNoFunciono,
+          actualizadoAt: hoy,
+        };
         await repo.guardarNegocio(negocio);
       }
 
-      // --- autoridad
+      // --- autoridad · misma regla que negocio: vacío no borra
+      const autoridadPrevia = dataset.autoridades.find((a) => a.clienteId === id);
       const industrias = leer(f, CLIENTES, 'industriasQueConoce');
-      const autoridad: Autoridad = {
-        clienteId: id,
+      const autoridadFila = {
         haceExcepcionalmenteBien: opcional(leer(f, CLIENTES, 'haceExcepcionalmenteBien')),
         experienciaProfesional: opcional(leer(f, CLIENTES, 'experienciaProfesional')),
         resultadosPropios: opcional(leer(f, CLIENTES, 'resultadosPropios')),
         resultadosTerceros: opcional(leer(f, CLIENTES, 'resultadosTerceros')),
-        industriasQueConoce: industrias ? industrias.split(',').map((x) => x.trim()).filter(Boolean) : [],
+        industriasQueConoce: industrias
+          ? industrias.split(',').map((x) => x.trim()).filter(Boolean)
+          : undefined,
         autoridadDesperdiciada: opcional(leer(f, CLIENTES, 'autoridadDesperdiciada')),
-        actualizadoAt: hoy,
       };
-      if (autoridad.industriasQueConoce.length || autoridad.haceExcepcionalmenteBien || autoridad.experienciaProfesional) {
+      if (Object.values(autoridadFila).some((x) => x !== undefined)) {
+        const autoridad: Autoridad = {
+          ...autoridadPrevia,
+          clienteId: id,
+          haceExcepcionalmenteBien: autoridadFila.haceExcepcionalmenteBien ?? autoridadPrevia?.haceExcepcionalmenteBien,
+          experienciaProfesional: autoridadFila.experienciaProfesional ?? autoridadPrevia?.experienciaProfesional,
+          resultadosPropios: autoridadFila.resultadosPropios ?? autoridadPrevia?.resultadosPropios,
+          resultadosTerceros: autoridadFila.resultadosTerceros ?? autoridadPrevia?.resultadosTerceros,
+          industriasQueConoce: autoridadFila.industriasQueConoce ?? autoridadPrevia?.industriasQueConoce ?? [],
+          autoridadDesperdiciada: autoridadFila.autoridadDesperdiciada ?? autoridadPrevia?.autoridadDesperdiciada,
+          actualizadoAt: hoy,
+        };
         await repo.guardarAutoridad(autoridad);
       }
 
@@ -326,16 +362,34 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
         precio: numero(leer(f, CLIENTES, 'estrategiaPrecio')) ?? undefined,
       };
       const hayEstrategia = Object.values(est).some((x) => x !== undefined);
-      const cambio = !previa || (Object.keys(est) as (keyof typeof est)[]).some(
-        (k) => est[k] !== ((previa as unknown as Record<string, unknown>)[k] ?? undefined),
+      /**
+       * La versión nueva arranca de la anterior y le pisa sólo lo que trae la
+       * fila. Acá el error era peor que en los otros dos bloques: una tabla
+       * parcial creaba una v2 con los campos que faltaban vacíos, y esa v2 es
+       * la vigente — la que el diagnóstico usa y contra la que el test de
+       * coherencia compara el drift. Se perdía la estrategia y encima quedaba
+       * registrado como si alguien la hubiera cambiado a propósito.
+       */
+      const fusion = {
+        clienteIdeal: est.clienteIdeal ?? previa?.clienteIdeal,
+        problema: est.problema ?? previa?.problema,
+        deseo: est.deseo ?? previa?.deseo,
+        promesa: est.promesa ?? previa?.promesa,
+        oferta: est.oferta ?? previa?.oferta,
+        mecanismo: est.mecanismo ?? previa?.mecanismo,
+        canal: est.canal ?? previa?.canal,
+        precio: est.precio ?? previa?.precio,
+      };
+      const cambio = !previa || (Object.keys(fusion) as (keyof typeof fusion)[]).some(
+        (k) => fusion[k] !== ((previa as unknown as Record<string, unknown>)[k] ?? undefined),
       );
       if (hayEstrategia && cambio) {
         const nueva: EstrategiaVersion = {
           id: nuevoId(),
           clienteId: id,
           version: (previa?.version ?? 0) + 1,
-          ...est,
-          moneda,
+          ...fusion,
+          moneda: opcional(leer(f, CLIENTES, 'moneda')) ?? previa?.moneda ?? moneda,
           vigenteDesde: hoy,
           motivoCambio: opcional(leer(f, CLIENTES, 'motivoCambio')) ?? 'Importado de la planilla',
           iniciativa: 'consultora',
