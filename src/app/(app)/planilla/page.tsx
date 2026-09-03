@@ -3,8 +3,9 @@ import { Planilla } from '@/components/Planilla';
 import { getUsuario, veTodo } from '@/server/auth';
 import { hayPlanilla } from '@/server/planilla';
 import { hayNotion } from '@/server/notion';
+import { hayDrive } from '@/server/drive';
 import { CLIENTES, CUOTAS, esDePlanilla, SOLAPAS } from '@/server/planilla-mapeo';
-import { sincronizarAhora, sincronizarNotionAhora } from './actions';
+import { sincronizarAhora, sincronizarDriveAhora, sincronizarNotionAhora } from './actions';
 
 export const metadata = { title: 'Las fuentes · Founders Brain' };
 
@@ -17,9 +18,11 @@ export default async function PlanillaPage() {
     <div className="mx-auto max-w-3xl">
       <h1 className="text-[22px] font-semibold tracking-tight">Las fuentes</h1>
       <p className="mt-1 text-[13px] leading-relaxed text-ink-2">
-        Founders lleva dos sistemas en paralelo y cada uno es bueno en algo distinto. La app lee
-        los dos y ninguno tiene que migrar a ningún lado: la <em>planilla de finanzas</em> sabe de
-        plata y <em>Auditoría Clientes</em> en Notion sabe del programa. Nadie carga dos veces.
+        Founders ya tiene la información cargada en tres lugares y cada uno es bueno en algo
+        distinto. La app lee los tres y ninguno tiene que migrar a ningún lado: la{' '}
+        <em>planilla de finanzas</em> sabe de plata, <em>Auditoría Clientes</em> en Notion sabe del
+        programa, y en <em>Drive</em> están las transcripciones de cada sesión. Nadie carga dos
+        veces, y nadie copia y pega cien documentos.
       </p>
       <p className="mt-2 text-[13px] leading-relaxed text-ink-2">
         Las <strong>métricas semanales no están acá</strong>: viven en la base del CRM y se cargan
@@ -62,8 +65,88 @@ export default async function PlanillaPage() {
         </div>
       </section>
 
+      <section className="mt-4 rounded-xl border border-line bg-surface p-4">
+        <h2 className="text-[14px] font-semibold">3 · Las transcripciones, en Drive</h2>
+        <p className="mt-1 text-[12.5px] leading-relaxed text-ink-2">
+          De acá sale el <strong>expediente</strong>: las notas que deja Gemini después de cada
+          sesión, el formulario de onboarding, la llamada de venta. Es lo que le permite al
+          diagnóstico <strong>citar textual</strong> en vez de opinar, que es lo que el método
+          exige antes de emitir cualquier cosa.
+        </p>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-ink-2">
+          <strong>Correla después de Notion.</strong> La carpeta de cada cliente la trae Notion, de
+          la columna «carpeta automatica de drive»: sin eso no hay a dónde ir a buscar. Nada se
+          adivina por el título — el documento es del cliente cuya carpeta lo contiene.
+        </p>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-ink-2">
+          Cada corrida toma una tanda, arrancando por los clientes que menos documentos tienen, y
+          lo ya traído no se vuelve a bajar. Si el reporte avisa que quedaron clientes, se aprieta
+          otra vez: es para que un corte por tiempo no deje todo a medias.
+        </p>
+        <div className="mt-3">
+          <Planilla
+            configurada={hayDrive()}
+            sincronizar={sincronizarDriveAhora}
+            etiqueta="Traer de Drive"
+            etiquetaCorriendo="Bajando documentos…"
+            faltante="GOOGLE_SERVICE_ACCOUNT_JSON"
+          />
+        </div>
+      </section>
+
+      <details className="mt-4 rounded-xl border border-line bg-surface p-4">
+        <summary className="cursor-pointer text-[13px] font-semibold">
+          Cómo se conecta Drive · veinte minutos, una sola vez
+        </summary>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-ink-2">
+          Es lo único que no se resuelve pegando un valor que ya existe. Hay que crearle a la app
+          un usuario propio de Google —una <em>cuenta de servicio</em>— y compartirle las carpetas
+          como se le comparten a una persona.
+        </p>
+        <ol className="mt-3 space-y-2 text-[12.5px] leading-relaxed text-ink-2">
+          <li>
+            <strong>1.</strong> En{' '}
+            <a
+              className="underline decoration-line hover:decoration-ink-2"
+              href="https://console.cloud.google.com"
+              target="_blank"
+              rel="noreferrer"
+            >
+              console.cloud.google.com
+            </a>
+            , crear un proyecto. El nombre no importa.
+          </li>
+          <li>
+            <strong>2.</strong> <em>APIs y servicios → Biblioteca</em> → buscar{' '}
+            <strong>Google Drive API</strong> → <em>Habilitar</em>. Si falta este paso, la
+            credencial se emite igual y el error recién aparece al leer la primera carpeta.
+          </li>
+          <li>
+            <strong>3.</strong> <em>IAM y administración → Cuentas de servicio → Crear cuenta de
+            servicio</em>. <strong>No le des ningún rol</strong>: el permiso para ver las carpetas
+            no lo da Google Cloud, lo da Drive en el paso 5.
+          </li>
+          <li>
+            <strong>4.</strong> Abrirla → <em>Claves → Agregar clave → Crear nueva → JSON</em>. Se
+            descarga un archivo: su contenido <strong>entero</strong> va en{' '}
+            <code>GOOGLE_SERVICE_ACCOUNT_JSON</code> en Vercel, pegado tal cual.
+          </li>
+          <li>
+            <strong>5.</strong> En Drive, compartir la carpeta que contiene las carpetas de los
+            clientes con el email de la cuenta de servicio —el <code>client_email</code> del JSON,
+            termina en <code>.iam.gserviceaccount.com</code>— como <strong>Lector</strong>.{' '}
+            <strong>Sin este paso Drive contesta 404</strong> aunque todo lo demás esté bien.
+          </li>
+        </ol>
+        <p className="mt-3 text-[12px] leading-relaxed text-ink-3">
+          Ese JSON es una credencial: no va al repositorio ni a un chat. Si se filtra, se borra la
+          clave en el paso 4 y se crea otra. Lo que se pide es <strong>sólo lectura</strong>: la app
+          no puede escribir ni borrar nada en Drive.
+        </p>
+      </details>
+
       <section className="mt-6 rounded-xl border border-line bg-surface p-4">
-        <h2 className="text-[14px] font-semibold">Cómo se conecta</h2>
+        <h2 className="text-[14px] font-semibold">Cómo se conecta la planilla</h2>
         <ol className="mt-2 space-y-1.5 text-[13px] leading-relaxed text-ink-2">
           <li>
             <strong>1.</strong> En Drive, compartir la planilla como{' '}

@@ -6,6 +6,7 @@ import { getUsuario, veTodo } from '@/server/auth';
 import { hoyIso } from '@/server/workspace';
 import { sincronizar, type Reporte } from '@/server/planilla';
 import { sincronizarNotion } from '@/server/notion';
+import { sincronizarDrive } from '@/server/drive-sync';
 
 /**
  * Sincronizar es de administración. No por celo: una consultora que dispara
@@ -39,6 +40,25 @@ export async function sincronizarNotionAhora(): Promise<Reporte> {
   revalidatePath('/cartera');
   revalidatePath('/grilla');
   revalidatePath('/mis-clientes');
+  revalidatePath('/planilla');
+  return reporte;
+}
+
+/**
+ * Drive va tercero y no es casual: la carpeta de cada cliente la trae Notion,
+ * así que sin Notion corrido antes no hay a dónde ir a buscar.
+ *
+ * Cada corrida toma una tanda de clientes —los que menos documentos tienen— y
+ * lo ya traído no se vuelve a bajar. Se aprieta el botón varias veces hasta
+ * que el reporte deja de avisar que quedaron clientes por procesar.
+ */
+export async function sincronizarDriveAhora(): Promise<Reporte> {
+  const usuario = await getUsuario();
+  if (!usuario) redirect('/login');
+  if (!veTodo(usuario.rol)) redirect('/mis-clientes');
+
+  const reporte = await sincronizarDrive(hoyIso());
+  revalidatePath('/cartera');
   revalidatePath('/planilla');
   return reporte;
 }

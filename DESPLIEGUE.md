@@ -124,12 +124,42 @@ En **Settings → Environment Variables**. Los valores de Supabase están en
 | `SHEETS_PLANILLA_ID` | El ID de tu planilla de Drive | No entran las cuotas |
 | `NOTION_TOKEN` | notion.so/profile/integrations → New integration | No entra la asignación: nadie ve su cartera |
 | `NOTION_DB_CLIENTES` | El ID de «Auditoría Clientes» en su URL | Idem |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | El JSON de una cuenta de servicio de Google (ver 2.2bis) | No entran las transcripciones: el expediente se carga a mano |
 
 **`ANTHROPIC_API_KEY` nunca lleva `NEXT_PUBLIC_`.** Ese prefijo la mandaría al
 browser de cualquiera que abra la app.
 
 Opcionales: `MODELO_CRITERIO`, `MODELO_EXTRACCION` (por defecto los dos usan
-`claude-opus-5`) y `MAX_REINTENTOS_VALIDACION` (3).
+`claude-opus-5`), `MAX_REINTENTOS_VALIDACION` (3) y
+`DRIVE_CLIENTES_POR_CORRIDA` (25).
+
+### 2.2bis · La cuenta de servicio de Google (veinte minutos, una sola vez)
+
+Esto es lo único de todo el despliegue que no se resuelve pegando un valor que
+ya existe. Es para que la app pueda abrir las carpetas de Drive de los clientes
+y traerse las transcripciones solas, en vez de subirlas a mano de a una.
+
+1. [console.cloud.google.com](https://console.cloud.google.com) → crear un
+   proyecto. El nombre no importa; «founders-brain» está bien.
+2. **APIs y servicios → Biblioteca** → buscar **Google Drive API** →
+   **Habilitar**. Si se saltea este paso, el token se emite igual y el error
+   recién aparece al leer la primera carpeta.
+3. **IAM y administración → Cuentas de servicio → Crear cuenta de servicio**.
+   Nombre: `brain`. **No le des ningún rol**: el permiso para ver las carpetas
+   no lo da Google Cloud, lo da Drive en el paso 5.
+4. Abrir la cuenta creada → **Claves → Agregar clave → Crear nueva clave →
+   JSON**. Se descarga un archivo. Su contenido **entero** —las llaves
+   incluidas— va en `GOOGLE_SERVICE_ACCOUNT_JSON` en Vercel. Pegalo tal cual;
+   los saltos de línea de la clave privada la app los arregla sola.
+5. En **Drive**, compartir la carpeta que contiene las carpetas de los clientes
+   con el email de la cuenta de servicio —el `client_email` del JSON, termina
+   en `.iam.gserviceaccount.com`—, con permiso de **Lector**. Se comparte igual
+   que con una persona. **Sin este paso Drive contesta 404** aunque todo lo
+   demás esté bien.
+
+Ese archivo JSON es una credencial: no va al repositorio ni a un chat. Si se
+filtra, se borra la clave desde el paso 4 y se crea otra. El permiso pedido es
+**sólo lectura**: la app no puede escribir ni borrar nada en Drive.
 
 ### 2.3 · Deploy
 
@@ -210,9 +240,24 @@ En este orden, porque cada paso depende del anterior:
 4. **Estrategia versión 1** de cada cliente, con su fecha real. Sin esto el
    test de coherencia no tiene contra qué comparar.
 
-5. **Documentos.** Cada consultora sube en `/clientes/[id]/documentos` la
-   llamada de venta y las transcripciones que tenga. Es lo que le permite al
-   diagnóstico citar textual.
+5. **Documentos, desde Drive.** En `/planilla`, el tercer botón: **Traer de
+   Drive**, y después de Notion, porque la carpeta de cada cliente la trae
+   Notion (columna «carpeta automatica de drive», llena en 104 de los 113
+   activos). Entra lo que haya adentro: las notas de Gemini de cada sesión, el
+   onboarding, la llamada de venta.
+
+   Nada se adivina por el título: el documento es del cliente **cuya carpeta lo
+   contiene**. Cada corrida procesa una tanda de 25 clientes arrancando por los
+   que menos documentos tienen, y lo ya traído no se vuelve a bajar — se aprieta
+   otra vez hasta que el reporte deje de avisar que quedaron clientes.
+
+   Las grabaciones de video se saltean sin ruido: lo que dicen ya está en la
+   nota de texto. Un PDF escaneado se informa, porque es una imagen y necesita
+   un OCR que la app no tiene.
+
+   Lo que no esté en Drive se sigue subiendo a mano en
+   `/clientes/[id]/documentos`, y eso no se toca desde acá: lo que cargó una
+   persona no lo pisa ninguna importación.
 
 ---
 
