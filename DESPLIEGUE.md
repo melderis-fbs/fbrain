@@ -234,6 +234,19 @@ En este orden, porque cada paso depende del anterior:
    «Auditoría Clientes» → ••• → **Conexiones** → agregar la integración. Sin
    ese paso la API responde 404 aunque el token esté bien.
 
+1ter. **El expediente, de una tabla.** En la misma planilla, una solapa llamada
+   **`Ficha`**: una columna `nombre` y las columnas del expediente que tengas
+   —`que vende`, `a quien`, `cliente ideal`, `promesa`, `oferta`, `meta
+   mensual`, `ticket`…—, una fila por cliente. La lee el mismo botón
+   *Sincronizar ahora*.
+
+   Es el camino rápido cuando esa información ya existe en otra planilla, como
+   las respuestas del formulario de onboarding. Dos reglas: **celda vacía no
+   borra** (se puede cargar por tandas) y **completa fichas, no da de alta
+   clientes** (un nombre que no matchea se informa con su fila, no se adivina
+   por parecido). La lista completa de encabezados que reconoce está en
+   `/planilla`.
+
 2. **Objetivos comerciales** —meta y ticket de cada cliente. Se cargan desde la
    ficha o desde la planilla. **Sin esto no hay KPI semanal**: la cuenta inversa
    sale de la meta y el ticket propios de cada cliente, no de un benchmark.

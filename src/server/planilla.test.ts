@@ -439,3 +439,89 @@ describe('sincronizar · una tabla parcial no borra el expediente', () => {
     expect(negocio.moneda).toBe('USD');
   });
 });
+
+describe('sincronizar · la solapa «Ficha»', () => {
+  /**
+   * La forma de cargar el expediente de la cartera entera: una tabla con una
+   * fila por cliente. Lo que se prueba es que complete sin dar de alta a nadie
+   * y que lo que no matchea se informe en vez de adivinarse.
+   */
+  const csv = (encabezado: string, ...filas: string[]) => [encabezado, ...filas].join('\n');
+
+  beforeEach(() => {
+    vi.stubEnv('SHEETS_SOLAPA_PAGOS', '');
+    vi.stubEnv('SHEETS_SOLAPA_ASISTENCIAS', '');
+    vi.stubEnv('SHEETS_SOLAPA_FICHA', 'Ficha');
+  });
+
+  it('carga el expediente de varios clientes de una tabla', async () => {
+    const { getRepo } = await import('@/data');
+    const repo = getRepo();
+    mockearDrive({
+      Clientes: csv(
+        'nombre,fecha alta',
+        'Ana Ficha,2026-01-10',
+        'Beto Ficha,2026-01-11',
+      ),
+      Ficha: csv(
+        'nombre,que vende,cliente ideal,meta mensual,ticket',
+        'Ana Ficha,Consultoría de marca,Arquitecto con estudio,9000,3000',
+        'Beto Ficha,Mentoría de ventas,Coach con clientes,12000,2000',
+      ),
+    });
+    const { sincronizar } = await import('./planilla');
+    const r = await sincronizar(HOY);
+
+    const ficha = r.solapas.find((x) => x.solapa === 'Ficha')!;
+    expect(ficha.error).toBeUndefined();
+    expect(ficha.aplicadas).toBe(2);
+    expect(ficha.salteadas).toEqual([]);
+
+    const d = await repo.cargarTodo(HOY);
+    const ana = d.clientes.find((c) => c.nombre === 'Ana Ficha')!;
+    expect(d.negocios.find((n) => n.clienteId === ana.id)!.queVende).toBe('Consultoría de marca');
+    expect(d.estrategias.filter((e) => e.clienteId === ana.id).at(-1)!.clienteIdeal).toBe('Arquitecto con estudio');
+    expect(d.objetivos.filter((o) => o.clienteId === ana.id).at(-1)!.metaMensual).toBe(9000);
+  });
+
+  it('un nombre que no existe se informa: completa fichas, no da de alta', async () => {
+    const { getRepo } = await import('@/data');
+    const repo = getRepo();
+    const antes = (await repo.cargarTodo(HOY)).clientes.length;
+
+    mockearDrive({
+      Clientes: csv('nombre,fecha alta', 'Ana Ficha,2026-01-10'),
+      Ficha: csv('nombre,que vende', 'Ana Fica,Consultoría'),
+    });
+    const { sincronizar } = await import('./planilla');
+    const r = await sincronizar(HOY);
+
+    const ficha = r.solapas.find((x) => x.solapa === 'Ficha')!;
+    expect(ficha.aplicadas).toBe(0);
+    // Con su nombre tal como vino, para que se vea el error de tipeo.
+    expect(ficha.salteadas[0].motivo).toContain('Ana Fica');
+    // Y sin crear un cliente fantasma por una letra de diferencia.
+    expect((await repo.cargarTodo(HOY)).clientes.length).toBe(antes + 1);
+  });
+
+  it('sin la solapa creada no miente: Google devuelve la primera y hay que detectarlo', async () => {
+    mockearDrive({
+      // Sólo existe la de clientes. Google, pedida «Ficha», devuelve esta.
+      Clientes: csv('nombre,fecha alta,monto total', 'Ana Ficha,2026-01-10,5000'),
+    });
+    vi.stubGlobal('fetch', async (url: string | URL) => {
+      const csvClientes = csv('nombre,fecha alta,monto total', 'Ana Ficha,2026-01-10,5000');
+      void url;
+      return new Response(csvClientes, { status: 200, headers: { 'Content-Type': 'text/csv' } });
+    });
+
+    const { sincronizar } = await import('./planilla');
+    const r = await sincronizar(HOY);
+
+    const ficha = r.solapas.find((x) => x.solapa === 'Ficha')!;
+    // Lo importante: no dice «1 ficha aplicada» sobre la solapa de finanzas.
+    expect(ficha.aplicadas).toBe(0);
+    expect(ficha.nota).toContain('solapa');
+    expect(ficha.error).toBeUndefined();
+  });
+});

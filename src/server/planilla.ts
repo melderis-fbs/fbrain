@@ -7,8 +7,8 @@ import type {
   Mentoria, Negocio, ObjetivoComercial, Pago,
 } from '@/domain/types';
 import {
-  ASISTENCIAS, CLIENTES, CUOTAS, ESTADO_CLIENTE, ESTADO_DEUDA, ESTADO_PAGO, MENTORIAS,
-  MONEDA_POR_DEFECTO, PAGOS, SOLAPAS, type Mapeo,
+  ASISTENCIAS, CAMPOS_DE_FICHA, CLIENTES, CUOTAS, ESTADO_CLIENTE, ESTADO_DEUDA, ESTADO_PAGO,
+  MENTORIAS, MONEDA_POR_DEFECTO, PAGOS, SOLAPAS, type Mapeo,
 } from './planilla-mapeo';
 
 /**
@@ -154,6 +154,171 @@ function verificarQueSeaLaSolapa(filas: Fila[], solapa: string): void {
   );
 }
 
+/**
+ * LOS CUATRO BLOQUES DEL EXPEDIENTE DE UNA FILA
+ *
+ * Vive afuera del bucle de clientes porque lo usan dos solapas: la de finanzas
+ * —donde alguien puede haber agregado columnas del expediente al final— y la
+ * solapa «Ficha», que existe justamente para poder cargar los 32 campos de una
+ * tabla sin ensuciar la planilla de finanzas ni tocar ninguna configuración.
+ *
+ * La regla que gobierna las tres escrituras es la misma: **celda vacía es «sin
+ * dato», nunca «borrá lo que sabías»**. Los bloques se guardan enteros, así que
+ * sin la fusión una tabla parcial —que es la forma normal de cargar por
+ * tandas— borraba lo que había cargado la tanda anterior.
+ */
+async function escribirExpediente(
+  f: Fila,
+  id: string,
+  dataset: Awaited<ReturnType<ReturnType<typeof getRepo>['cargarTodo']>>,
+  repo: ReturnType<typeof getRepo>,
+  hoy: string,
+): Promise<void> {
+    const moneda = opcional(leer(f, CLIENTES, 'moneda')) ?? MONEDA_POR_DEFECTO;
+
+    /**
+     * --- negocio
+     *
+     * Se fusiona con lo que ya había. Es la misma regla que rige la fila del
+     * cliente y hay que decir por qué: el bloque se guarda entero, así que
+     * subir una tabla con «a quién» pero sin «qué vende» reemplazaba el
+     * bloque completo y dejaba en null lo que alguien había cargado a mano.
+     *
+     * Celda vacía es «sin dato», nunca «borrá lo que sabías». Sin esto, una
+     * planilla parcial —que es la forma normal de cargar por tandas— es una
+     * herramienta de pérdida de datos silenciosa.
+     */
+    const negocioPrevio = dataset.negocios.find((n) => n.clienteId === id);
+    const negocioFila = {
+      queVende: opcional(leer(f, CLIENTES, 'queVende')),
+      aQuien: opcional(leer(f, CLIENTES, 'aQuien')),
+      precio: numero(leer(f, CLIENTES, 'negocioPrecio')) ?? undefined,
+      comoEntrega: opcional(leer(f, CLIENTES, 'comoEntrega')),
+      facturacionMensual: numero(leer(f, CLIENTES, 'facturacionMensual')) ?? undefined,
+      cantidadClientes: numero(leer(f, CLIENTES, 'cantidadClientes')) ?? undefined,
+      origenClientes: opcional(leer(f, CLIENTES, 'origenClientes')),
+      queFunciono: opcional(leer(f, CLIENTES, 'queFunciono')),
+      queNoFunciono: opcional(leer(f, CLIENTES, 'queNoFunciono')),
+    };
+    if (Object.values(negocioFila).some((x) => x !== undefined)) {
+      const negocio: Negocio = {
+        ...negocioPrevio,
+        clienteId: id,
+        queVende: negocioFila.queVende ?? negocioPrevio?.queVende,
+        aQuien: negocioFila.aQuien ?? negocioPrevio?.aQuien,
+        precio: negocioFila.precio ?? negocioPrevio?.precio,
+        moneda: opcional(leer(f, CLIENTES, 'moneda')) ?? negocioPrevio?.moneda ?? moneda,
+        comoEntrega: negocioFila.comoEntrega ?? negocioPrevio?.comoEntrega,
+        facturacionMensual: negocioFila.facturacionMensual ?? negocioPrevio?.facturacionMensual,
+        cantidadClientes: negocioFila.cantidadClientes ?? negocioPrevio?.cantidadClientes,
+        origenClientes: negocioFila.origenClientes ?? negocioPrevio?.origenClientes,
+        queFunciono: negocioFila.queFunciono ?? negocioPrevio?.queFunciono,
+        queNoFunciono: negocioFila.queNoFunciono ?? negocioPrevio?.queNoFunciono,
+        actualizadoAt: hoy,
+      };
+      await repo.guardarNegocio(negocio);
+    }
+
+    // --- autoridad · misma regla que negocio: vacío no borra
+    const autoridadPrevia = dataset.autoridades.find((a) => a.clienteId === id);
+    const industrias = leer(f, CLIENTES, 'industriasQueConoce');
+    const autoridadFila = {
+      haceExcepcionalmenteBien: opcional(leer(f, CLIENTES, 'haceExcepcionalmenteBien')),
+      experienciaProfesional: opcional(leer(f, CLIENTES, 'experienciaProfesional')),
+      resultadosPropios: opcional(leer(f, CLIENTES, 'resultadosPropios')),
+      resultadosTerceros: opcional(leer(f, CLIENTES, 'resultadosTerceros')),
+      industriasQueConoce: industrias
+        ? industrias.split(',').map((x) => x.trim()).filter(Boolean)
+        : undefined,
+      autoridadDesperdiciada: opcional(leer(f, CLIENTES, 'autoridadDesperdiciada')),
+    };
+    if (Object.values(autoridadFila).some((x) => x !== undefined)) {
+      const autoridad: Autoridad = {
+        ...autoridadPrevia,
+        clienteId: id,
+        haceExcepcionalmenteBien: autoridadFila.haceExcepcionalmenteBien ?? autoridadPrevia?.haceExcepcionalmenteBien,
+        experienciaProfesional: autoridadFila.experienciaProfesional ?? autoridadPrevia?.experienciaProfesional,
+        resultadosPropios: autoridadFila.resultadosPropios ?? autoridadPrevia?.resultadosPropios,
+        resultadosTerceros: autoridadFila.resultadosTerceros ?? autoridadPrevia?.resultadosTerceros,
+        industriasQueConoce: autoridadFila.industriasQueConoce ?? autoridadPrevia?.industriasQueConoce ?? [],
+        autoridadDesperdiciada: autoridadFila.autoridadDesperdiciada ?? autoridadPrevia?.autoridadDesperdiciada,
+        actualizadoAt: hoy,
+      };
+      await repo.guardarAutoridad(autoridad);
+    }
+
+    // --- estrategia · append-only, sólo si cambió algo
+    const previa = dataset.estrategias.filter((e) => e.clienteId === id).at(-1);
+    const est = {
+      clienteIdeal: opcional(leer(f, CLIENTES, 'clienteIdeal')),
+      problema: opcional(leer(f, CLIENTES, 'problema')),
+      deseo: opcional(leer(f, CLIENTES, 'deseo')),
+      promesa: opcional(leer(f, CLIENTES, 'promesa')),
+      oferta: opcional(leer(f, CLIENTES, 'oferta')),
+      mecanismo: opcional(leer(f, CLIENTES, 'mecanismo')),
+      canal: opcional(leer(f, CLIENTES, 'canal')),
+      precio: numero(leer(f, CLIENTES, 'estrategiaPrecio')) ?? undefined,
+    };
+    const hayEstrategia = Object.values(est).some((x) => x !== undefined);
+    /**
+     * La versión nueva arranca de la anterior y le pisa sólo lo que trae la
+     * fila. Acá el error era peor que en los otros dos bloques: una tabla
+     * parcial creaba una v2 con los campos que faltaban vacíos, y esa v2 es
+     * la vigente — la que el diagnóstico usa y contra la que el test de
+     * coherencia compara el drift. Se perdía la estrategia y encima quedaba
+     * registrado como si alguien la hubiera cambiado a propósito.
+     */
+    const fusion = {
+      clienteIdeal: est.clienteIdeal ?? previa?.clienteIdeal,
+      problema: est.problema ?? previa?.problema,
+      deseo: est.deseo ?? previa?.deseo,
+      promesa: est.promesa ?? previa?.promesa,
+      oferta: est.oferta ?? previa?.oferta,
+      mecanismo: est.mecanismo ?? previa?.mecanismo,
+      canal: est.canal ?? previa?.canal,
+      precio: est.precio ?? previa?.precio,
+    };
+    const cambio = !previa || (Object.keys(fusion) as (keyof typeof fusion)[]).some(
+      (k) => fusion[k] !== ((previa as unknown as Record<string, unknown>)[k] ?? undefined),
+    );
+    if (hayEstrategia && cambio) {
+      const nueva: EstrategiaVersion = {
+        id: nuevoId(),
+        clienteId: id,
+        version: (previa?.version ?? 0) + 1,
+        ...fusion,
+        moneda: opcional(leer(f, CLIENTES, 'moneda')) ?? previa?.moneda ?? moneda,
+        vigenteDesde: hoy,
+        motivoCambio: opcional(leer(f, CLIENTES, 'motivoCambio')) ?? 'Importado de la planilla',
+        iniciativa: 'consultora',
+      };
+      await repo.guardarEstrategia(nueva);
+    }
+
+    // --- objetivo comercial
+    const meta = numero(leer(f, CLIENTES, 'metaMensual'));
+    const ticket = numero(leer(f, CLIENTES, 'ticket'));
+    const objPrevio = dataset.objetivos.filter((o) => o.clienteId === id).at(-1);
+    if (meta !== null && ticket !== null &&
+        (!objPrevio || objPrevio.metaMensual !== meta || objPrevio.ticket !== ticket)) {
+      const objetivo: ObjetivoComercial = {
+        id: nuevoId(),
+        clienteId: id,
+        metaMensual: meta,
+        ticket,
+        moneda,
+        tasaCierre: objPrevio?.tasaCierre ?? 0.25,
+        tasaAsistencia: objPrevio?.tasaAsistencia ?? 0.7,
+        tasaAgendamiento: objPrevio?.tasaAgendamiento ?? 0.2,
+        tasaAvance: objPrevio?.tasaAvance ?? 0.3,
+        tasaDmSobreAlcance: objPrevio?.tasaDmSobreAlcance ?? 0.02,
+        diaInicioProspeccion: objPrevio?.diaInicioProspeccion ?? 14,
+        vigenteDesde: hoy,
+      };
+      await repo.guardarObjetivo(objetivo);
+    }
+}
+
 // ---------------------------------------------------------------- sincronía
 
 export async function sincronizar(hoy: string): Promise<Reporte> {
@@ -276,149 +441,11 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
       await repo.guardarCliente(cliente);
       porNombre.set(normalizar(nombre), cliente);
 
+      // La moneda de las cuotas de abajo. El expediente resuelve la suya
+      // adentro, que puede venir de una solapa distinta.
       const moneda = opcional(leer(f, CLIENTES, 'moneda')) ?? MONEDA_POR_DEFECTO;
 
-      /**
-       * --- negocio
-       *
-       * Se fusiona con lo que ya había. Es la misma regla que rige la fila del
-       * cliente y hay que decir por qué: el bloque se guarda entero, así que
-       * subir una tabla con «a quién» pero sin «qué vende» reemplazaba el
-       * bloque completo y dejaba en null lo que alguien había cargado a mano.
-       *
-       * Celda vacía es «sin dato», nunca «borrá lo que sabías». Sin esto, una
-       * planilla parcial —que es la forma normal de cargar por tandas— es una
-       * herramienta de pérdida de datos silenciosa.
-       */
-      const negocioPrevio = dataset.negocios.find((n) => n.clienteId === id);
-      const negocioFila = {
-        queVende: opcional(leer(f, CLIENTES, 'queVende')),
-        aQuien: opcional(leer(f, CLIENTES, 'aQuien')),
-        precio: numero(leer(f, CLIENTES, 'negocioPrecio')) ?? undefined,
-        comoEntrega: opcional(leer(f, CLIENTES, 'comoEntrega')),
-        facturacionMensual: numero(leer(f, CLIENTES, 'facturacionMensual')) ?? undefined,
-        cantidadClientes: numero(leer(f, CLIENTES, 'cantidadClientes')) ?? undefined,
-        origenClientes: opcional(leer(f, CLIENTES, 'origenClientes')),
-        queFunciono: opcional(leer(f, CLIENTES, 'queFunciono')),
-        queNoFunciono: opcional(leer(f, CLIENTES, 'queNoFunciono')),
-      };
-      if (Object.values(negocioFila).some((x) => x !== undefined)) {
-        const negocio: Negocio = {
-          ...negocioPrevio,
-          clienteId: id,
-          queVende: negocioFila.queVende ?? negocioPrevio?.queVende,
-          aQuien: negocioFila.aQuien ?? negocioPrevio?.aQuien,
-          precio: negocioFila.precio ?? negocioPrevio?.precio,
-          moneda: opcional(leer(f, CLIENTES, 'moneda')) ?? negocioPrevio?.moneda ?? moneda,
-          comoEntrega: negocioFila.comoEntrega ?? negocioPrevio?.comoEntrega,
-          facturacionMensual: negocioFila.facturacionMensual ?? negocioPrevio?.facturacionMensual,
-          cantidadClientes: negocioFila.cantidadClientes ?? negocioPrevio?.cantidadClientes,
-          origenClientes: negocioFila.origenClientes ?? negocioPrevio?.origenClientes,
-          queFunciono: negocioFila.queFunciono ?? negocioPrevio?.queFunciono,
-          queNoFunciono: negocioFila.queNoFunciono ?? negocioPrevio?.queNoFunciono,
-          actualizadoAt: hoy,
-        };
-        await repo.guardarNegocio(negocio);
-      }
-
-      // --- autoridad · misma regla que negocio: vacío no borra
-      const autoridadPrevia = dataset.autoridades.find((a) => a.clienteId === id);
-      const industrias = leer(f, CLIENTES, 'industriasQueConoce');
-      const autoridadFila = {
-        haceExcepcionalmenteBien: opcional(leer(f, CLIENTES, 'haceExcepcionalmenteBien')),
-        experienciaProfesional: opcional(leer(f, CLIENTES, 'experienciaProfesional')),
-        resultadosPropios: opcional(leer(f, CLIENTES, 'resultadosPropios')),
-        resultadosTerceros: opcional(leer(f, CLIENTES, 'resultadosTerceros')),
-        industriasQueConoce: industrias
-          ? industrias.split(',').map((x) => x.trim()).filter(Boolean)
-          : undefined,
-        autoridadDesperdiciada: opcional(leer(f, CLIENTES, 'autoridadDesperdiciada')),
-      };
-      if (Object.values(autoridadFila).some((x) => x !== undefined)) {
-        const autoridad: Autoridad = {
-          ...autoridadPrevia,
-          clienteId: id,
-          haceExcepcionalmenteBien: autoridadFila.haceExcepcionalmenteBien ?? autoridadPrevia?.haceExcepcionalmenteBien,
-          experienciaProfesional: autoridadFila.experienciaProfesional ?? autoridadPrevia?.experienciaProfesional,
-          resultadosPropios: autoridadFila.resultadosPropios ?? autoridadPrevia?.resultadosPropios,
-          resultadosTerceros: autoridadFila.resultadosTerceros ?? autoridadPrevia?.resultadosTerceros,
-          industriasQueConoce: autoridadFila.industriasQueConoce ?? autoridadPrevia?.industriasQueConoce ?? [],
-          autoridadDesperdiciada: autoridadFila.autoridadDesperdiciada ?? autoridadPrevia?.autoridadDesperdiciada,
-          actualizadoAt: hoy,
-        };
-        await repo.guardarAutoridad(autoridad);
-      }
-
-      // --- estrategia · append-only, sólo si cambió algo
-      const previa = dataset.estrategias.filter((e) => e.clienteId === id).at(-1);
-      const est = {
-        clienteIdeal: opcional(leer(f, CLIENTES, 'clienteIdeal')),
-        problema: opcional(leer(f, CLIENTES, 'problema')),
-        deseo: opcional(leer(f, CLIENTES, 'deseo')),
-        promesa: opcional(leer(f, CLIENTES, 'promesa')),
-        oferta: opcional(leer(f, CLIENTES, 'oferta')),
-        mecanismo: opcional(leer(f, CLIENTES, 'mecanismo')),
-        canal: opcional(leer(f, CLIENTES, 'canal')),
-        precio: numero(leer(f, CLIENTES, 'estrategiaPrecio')) ?? undefined,
-      };
-      const hayEstrategia = Object.values(est).some((x) => x !== undefined);
-      /**
-       * La versión nueva arranca de la anterior y le pisa sólo lo que trae la
-       * fila. Acá el error era peor que en los otros dos bloques: una tabla
-       * parcial creaba una v2 con los campos que faltaban vacíos, y esa v2 es
-       * la vigente — la que el diagnóstico usa y contra la que el test de
-       * coherencia compara el drift. Se perdía la estrategia y encima quedaba
-       * registrado como si alguien la hubiera cambiado a propósito.
-       */
-      const fusion = {
-        clienteIdeal: est.clienteIdeal ?? previa?.clienteIdeal,
-        problema: est.problema ?? previa?.problema,
-        deseo: est.deseo ?? previa?.deseo,
-        promesa: est.promesa ?? previa?.promesa,
-        oferta: est.oferta ?? previa?.oferta,
-        mecanismo: est.mecanismo ?? previa?.mecanismo,
-        canal: est.canal ?? previa?.canal,
-        precio: est.precio ?? previa?.precio,
-      };
-      const cambio = !previa || (Object.keys(fusion) as (keyof typeof fusion)[]).some(
-        (k) => fusion[k] !== ((previa as unknown as Record<string, unknown>)[k] ?? undefined),
-      );
-      if (hayEstrategia && cambio) {
-        const nueva: EstrategiaVersion = {
-          id: nuevoId(),
-          clienteId: id,
-          version: (previa?.version ?? 0) + 1,
-          ...fusion,
-          moneda: opcional(leer(f, CLIENTES, 'moneda')) ?? previa?.moneda ?? moneda,
-          vigenteDesde: hoy,
-          motivoCambio: opcional(leer(f, CLIENTES, 'motivoCambio')) ?? 'Importado de la planilla',
-          iniciativa: 'consultora',
-        };
-        await repo.guardarEstrategia(nueva);
-      }
-
-      // --- objetivo comercial
-      const meta = numero(leer(f, CLIENTES, 'metaMensual'));
-      const ticket = numero(leer(f, CLIENTES, 'ticket'));
-      const objPrevio = dataset.objetivos.filter((o) => o.clienteId === id).at(-1);
-      if (meta !== null && ticket !== null &&
-          (!objPrevio || objPrevio.metaMensual !== meta || objPrevio.ticket !== ticket)) {
-        const objetivo: ObjetivoComercial = {
-          id: nuevoId(),
-          clienteId: id,
-          metaMensual: meta,
-          ticket,
-          moneda,
-          tasaCierre: objPrevio?.tasaCierre ?? 0.25,
-          tasaAsistencia: objPrevio?.tasaAsistencia ?? 0.7,
-          tasaAgendamiento: objPrevio?.tasaAgendamiento ?? 0.2,
-          tasaAvance: objPrevio?.tasaAvance ?? 0.3,
-          tasaDmSobreAlcance: objPrevio?.tasaDmSobreAlcance ?? 0.02,
-          diaInicioProspeccion: objPrevio?.diaInicioProspeccion ?? 14,
-          vigenteDesde: hoy,
-        };
-        await repo.guardarObjetivo(objetivo);
-      }
+      await escribirExpediente(f, id, dataset, repo, hoy);
 
       /**
        * Las cuatro cuotas de finanzas, en formato ancho.
@@ -466,6 +493,79 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
     rc.error = e instanceof Error ? e.message : 'Error desconocido.';
   }
   solapas.push(rc);
+
+  // ------------------------------------------------- 1bis · la solapa «Ficha»
+  /**
+   * Los 32 campos del expediente, de una tabla.
+   *
+   * Es el camino para cargar el negocio, la autoridad y la estrategia de la
+   * cartera entera sin abrir 194 fichas: se pega una tabla con una fila por
+   * cliente y se sincroniza. La fila se identifica por nombre, igual que todo
+   * lo demás, y **no se adivina por parecido**: una ficha en el expediente
+   * equivocado es peor que una ficha faltante, así que lo que no matchea se
+   * informa con su número de fila y su nombre tal como vino.
+   *
+   * A diferencia de la solapa de finanzas, acá no se crea ningún cliente. Esta
+   * solapa completa, no da de alta: un nombre que no existe es casi siempre un
+   * error de tipeo, y crear un cliente fantasma por una «í» sin acento es
+   * exactamente lo que no queremos.
+   */
+  if (SOLAPAS.ficha) {
+    /**
+     * La solapa se busca siempre, pero sólo se reporta si hay algo que decir.
+     *
+     * Con el nombre por defecto, quien nunca creó la solapa no tiene por qué
+     * ver una tarjeta que le avisa de algo que no pidió, en cada corrida. Si
+     * en cambio alguien nombró la solapa a mano en el entorno, entonces sí
+     * espera un resultado y el silencio sería lo confuso.
+     */
+    const nombrada = Boolean(process.env.SHEETS_SOLAPA_FICHA);
+    const rf: ReporteSolapa = { solapa: SOLAPAS.ficha, leidas: 0, aplicadas: 0, salteadas: [] };
+    try {
+      const filas = await bajar(SOLAPAS.ficha);
+      // Se mira el encabezado, no los valores: una tabla cuya primera fila
+      // esté vacía sigue siendo la solapa correcta.
+      const encabezados = new Set(Object.keys(filas[0] ?? {}));
+      const tieneCampos = CAMPOS_DE_FICHA.some((campo) =>
+        CLIENTES[campo].some((alias) => encabezados.has(normalizar(alias))),
+      );
+
+      if (!tieneCampos) {
+        // Google no da error cuando la solapa no existe: devuelve la primera
+        // del archivo. Sin esto, el reporte diría que cargó 160 fichas.
+        rf.nota =
+          `No hay una solapa «${SOLAPAS.ficha}» con columnas del expediente, así que no se cargó ninguna ficha desde ahí. ` +
+          'Si querés cargar el negocio, la autoridad y la estrategia de varios clientes de una vez, creá una solapa con ese nombre exacto: una columna «nombre» y las columnas del expediente que quieras llenar.';
+      } else {
+        rf.leidas = filas.length;
+        for (const [i, f] of filas.entries()) {
+          const nombre = leer(f, CLIENTES, 'nombre');
+          if (!nombre) {
+            rf.salteadas.push({ fila: i + 2, motivo: 'Sin nombre de cliente.' });
+            continue;
+          }
+          const cliente = porNombre.get(normalizar(nombre));
+          if (!cliente) {
+            rf.salteadas.push({
+              fila: i + 2,
+              motivo: `«${nombre}» no existe en la cartera con ese nombre exacto. Esta solapa completa fichas, no da de alta clientes: revisá el nombre —acentos incluidos— o cargá al cliente primero.`,
+            });
+            continue;
+          }
+          await escribirExpediente(f, cliente.id, dataset, repo, hoy);
+          rf.aplicadas++;
+        }
+      }
+    } catch (e) {
+      const mensaje = e instanceof Error ? e.message : 'Error desconocido.';
+      // Que la solapa no exista no es un fallo: es el caso normal hasta que
+      // alguien la crea. Lo demás —la planilla sin compartir, un 500 de
+      // Google— sí lo es.
+      if (/No existe la solapa/i.test(mensaje)) rf.nota = mensaje;
+      else rf.error = mensaje;
+    }
+    if (nombrada || rf.aplicadas || rf.salteadas.length || rf.error) solapas.push(rf);
+  }
 
   // --------------------------------------------------------------- 2 · pagos
   if (!SOLAPAS.pagos) {

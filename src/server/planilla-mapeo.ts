@@ -23,7 +23,30 @@ export const SOLAPAS = {
   clientes: process.env.SHEETS_SOLAPA_CLIENTES ?? 'Seguimiento clientes',
   pagos: process.env.SHEETS_SOLAPA_PAGOS ?? '',
   asistencias: process.env.SHEETS_SOLAPA_ASISTENCIAS ?? '',
+  /**
+   * La solapa del expediente, y la única que se llama por su nombre por
+   * defecto sin existir todavía.
+   *
+   * Está porque cargar los 32 campos del expediente no tenía dónde: la app
+   * leía una sola solapa, la de finanzas, así que la única forma era meter 32
+   * columnas al final de la planilla que usa todo el equipo, o ir cambiando
+   * una variable de entorno de ida y de vuelta. Las dos son malas.
+   *
+   * Ahora alcanza con crear una solapa llamada «Ficha» en la misma planilla y
+   * pegar la tabla ahí. Si no existe, se saltea con un renglón que lo explica.
+   */
+  ficha: process.env.SHEETS_SOLAPA_FICHA ?? 'Ficha',
 } as const;
+
+/**
+ * Los campos del expediente, para reconocer la solapa «Ficha».
+ *
+ * Hace falta porque Google, cuando el nombre de la solapa no existe, **no da
+ * error**: devuelve la primera solapa del archivo. Sin este chequeo, no tener
+ * la solapa «Ficha» haría que se leyera la de finanzas por segunda vez y el
+ * reporte diría que cargó 160 fichas.
+ */
+export const CAMPOS_DE_FICHA = ['queVende', 'aQuien', 'clienteIdeal', 'promesa', 'oferta', 'haceExcepcionalmenteBien', 'metaMensual', 'ticket'] as const;
 
 /**
  * Las dos últimas van vacías a propósito. La planilla de Founders hoy no tiene

@@ -76,6 +76,46 @@ export default async function PlanillaPage() {
       </section>
 
       <section className="mt-4 rounded-xl border border-line bg-surface p-4">
+        <h2 className="text-[14px] font-semibold">
+          1bis · El expediente, desde una tabla{' '}
+          <span className="font-normal text-ink-3">· solapa «{SOLAPAS.ficha}»</span>
+        </h2>
+        <p className="mt-1 text-[12.5px] leading-relaxed text-ink-2">
+          Los 32 campos del expediente —negocio, autoridad, estrategia, meta— también se pueden
+          cargar de una tabla, sin abrir 194 fichas. Sirve cuando esa información ya existe en
+          algún lado: las respuestas del formulario de onboarding, por ejemplo.
+        </p>
+        <ol className="mt-2 space-y-1 text-[12.5px] leading-relaxed text-ink-2">
+          <li>
+            <strong>1.</strong> En la <strong>misma planilla</strong> que ya está conectada, creá
+            una solapa nueva llamada exactamente <code>{SOLAPAS.ficha}</code>. Es una solapa
+            aparte para no tocar la de finanzas, que usa todo el equipo.
+          </li>
+          <li>
+            <strong>2.</strong> Primera fila, los encabezados: una columna <code>nombre</code> y
+            las columnas del expediente que quieras llenar — están todas listadas abajo, en{' '}
+            <em>Los encabezados que reconoce</em>. Las que no uses, no las pongas.
+          </li>
+          <li>
+            <strong>3.</strong> Una fila por cliente. <strong>El nombre tiene que ser el
+            mismo</strong> que tiene en la app, acentos incluidos: así se identifica.
+          </li>
+          <li>
+            <strong>4.</strong> Apretá <em>Sincronizar ahora</em> arriba. Es el mismo botón: lee
+            las dos solapas en la misma corrida.
+          </li>
+        </ol>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-ink-2">
+          Dos cosas que hace y conviene saber. <strong>Celda vacía no borra</strong>: completa lo
+          que está en blanco y deja intacto el resto, así que se puede cargar por tandas —una
+          tabla con el negocio, otra con la meta— sin que una pise a la anterior. Y{' '}
+          <strong>completa fichas, no da de alta clientes</strong>: un nombre que no existe se
+          informa con su número de fila en vez de crear un cliente nuevo, porque casi siempre es
+          un error de tipeo y no una persona que falta.
+        </p>
+      </section>
+
+      <section className="mt-4 rounded-xl border border-line bg-surface p-4">
         <h2 className="text-[14px] font-semibold">3 · Las transcripciones, en Drive</h2>
         <p className="mt-1 text-[12.5px] leading-relaxed text-ink-2">
           De acá sale el <strong>expediente</strong>: las notas que deja Gemini después de cada
