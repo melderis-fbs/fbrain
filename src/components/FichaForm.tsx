@@ -418,8 +418,7 @@ export function FichaForm({
           editar acá para el cliente que todavía no está en ella o cuando hay
           que corregir algo sin esperar a la próxima sincronización.
         */}
-        <Campo name="closer" label="Closer" valor={campos} set={set} ancho="half" hint="Quién cerró la venta." />
-        <Campo name="setter" label="Setter" valor={campos} set={set} ancho="half" />
+        <Campo name="closer" label="Cerró la venta" valor={campos} set={set} ancho="half" hint="A quién preguntarle qué se le prometió a este cliente." />
         <Campo
           name="montoTotal" label="Monto total" valor={campos} set={set} tipo="number" ancho="half"
           hint="Lo contratado. No es la suma de las cuotas cargadas: si difieren, la diferencia es justamente lo que hay que mirar."

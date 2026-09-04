@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Planilla } from '@/components/Planilla';
 import { getUsuario, veTodo } from '@/server/auth';
+import { getWorkspace } from '@/server/workspace';
 import { hayPlanilla } from '@/server/planilla';
 import { hayNotion } from '@/server/notion';
 import { hayDrive, modoDrive } from '@/server/drive';
@@ -25,6 +26,33 @@ export default async function PlanillaPage() {
   if (!usuario) redirect('/login');
   if (!veTodo(usuario.rol)) redirect('/mis-clientes');
 
+  const ws = await getWorkspace();
+  const d = ws.dataset;
+  const vivos = d.clientes.filter((c) => ['activo', 'pausado'].includes(c.estado));
+
+  /**
+   * Qué hay cargado, contado de la base.
+   *
+   * Existe porque «¿qué se pudo cargar?» es una pregunta que se hace todas las
+   * semanas y hasta ahora se contestaba de memoria, mirando el reporte de la
+   * última corrida. Un reporte dice qué entró esa vez; esto dice qué hay.
+   */
+  const inventario: { que: string; hay: number; de?: number; nota: string }[] = [
+    { que: 'Clientes', hay: d.clientes.length, nota: `${vivos.length} activos o en pausa` },
+    { que: 'Con consultora asignada', hay: vivos.filter((c) => c.consultoraId).length, de: vivos.length, nota: 'sin esto la consultora no ve el cliente' },
+    { que: 'Con fecha de inicio real', hay: vivos.filter((c) => !c.fechaAltaProvisional).length, de: vivos.length, nota: 'las reglas no corren sobre una fecha estimada' },
+    { que: 'Con carpeta de Drive', hay: d.clientes.filter((c) => c.driveFolderId).length, nota: 'de acá salen las transcripciones' },
+    { que: 'Cuotas', hay: d.pagos.length, nota: 'de la planilla de finanzas' },
+    { que: 'Documentos del expediente', hay: d.documentos.length, nota: 'lo que lee el diagnóstico para citar textual' },
+    { que: 'Fichas propuestas sin revisar', hay: d.propuestas.filter((p) => !p.aplicadaAt).length, nota: 'borradores del extractor esperando a una persona' },
+    { que: 'Negocio cargado', hay: d.negocios.filter((n) => n.queVende).length, de: vivos.length, nota: 'qué vende y a quién' },
+    { que: 'Estrategia vigente', hay: new Set(d.estrategias.map((e) => e.clienteId)).size, de: vivos.length, nota: 'cliente ideal, oferta, promesa' },
+    { que: 'Meta y ticket', hay: new Set(d.objetivos.map((o) => o.clienteId)).size, de: vivos.length, nota: 'sin esto no hay cuenta inversa ni KPI semanal' },
+    { que: 'Semanas de tracker', hay: d.metricas.length, nota: 'ocho reglas dependen de esto' },
+    { que: 'Sesiones registradas', hay: d.sesiones.length, nota: 'la cadencia se mide con esto' },
+    { que: 'Lecturas de consultora', hay: d.lecturas.length, nota: 'el criterio humano después de cada sesión' },
+  ];
+
   return (
     <div className="mx-auto max-w-3xl">
       <h1 className="text-[22px] font-semibold tracking-tight">Las fuentes</h1>
@@ -43,10 +71,38 @@ export default async function PlanillaPage() {
       </p>
 
       <section className="mt-5 rounded-xl border border-line bg-surface p-4">
+        <h2 className="text-[14px] font-semibold">Qué hay cargado hoy</h2>
+        <p className="mt-1 text-[12.5px] leading-relaxed text-ink-2">
+          Contado de la base, no del último reporte. Un reporte dice qué entró esa vez; esto dice
+          qué hay.
+        </p>
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full min-w-[520px] text-[12.5px]">
+            <tbody>
+              {inventario.map((x) => {
+                const vacio = x.hay === 0;
+                const parcial = x.de !== undefined && x.hay > 0 && x.hay < x.de;
+                return (
+                  <tr key={x.que} className="border-b border-line last:border-0">
+                    <td className="py-1.5 pr-3 font-medium">{x.que}</td>
+                    <td className="tnum py-1.5 pr-3 text-right font-semibold whitespace-nowrap"
+                        style={{ color: vacio ? 'var(--critical-ink)' : parcial ? 'var(--warning-ink)' : 'var(--good-ink)' }}>
+                      {x.hay}{x.de !== undefined && <span className="font-normal text-ink-3"> de {x.de}</span>}
+                    </td>
+                    <td className="py-1.5 text-[11.5px] text-ink-3">{x.nota}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="mt-5 rounded-xl border border-line bg-surface p-4">
         <h2 className="text-[14px] font-semibold">1 · La planilla de finanzas</h2>
         <p className="mt-1 text-[12.5px] leading-relaxed text-ink-2">
           De acá salen las <strong>cuotas</strong>: cuántas, de cuánto, cuándo vencen y cuáles
-          están pagas. También el closer y la fuente de captación.
+          están pagas. Y quién cerró la venta, que es a quién preguntarle qué se le prometió al cliente.
         </p>
         <div className="mt-3">
           <Planilla configurada={hayPlanilla()} sincronizar={sincronizarAhora} />

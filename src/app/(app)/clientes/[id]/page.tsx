@@ -445,16 +445,18 @@ export default async function ExpedientePage({ params }: { params: Promise<{ id:
                     <dd><Chip tone={c.estadoDeuda === 'al_dia' ? 'good' : c.estadoDeuda === 'deudor' || c.estadoDeuda === 'en_tramite' ? 'warning' : 'critical'}>{ESTADO_DEUDA_LABEL[c.estadoDeuda]}</Chip></dd>
                   </div>
                 )}
+                {/*
+                  Queda quién cerró y nada más de lo comercial. Le sirve a la
+                  consultora para saber a quién preguntarle qué se le prometió
+                  a este cliente. El setter y la fuente de captación son
+                  métricas de marketing: se siguen guardando, no se muestran
+                  acá — esta pantalla es para atender un caso, no para medir
+                  la adquisición.
+                */}
                 {c.closer && (
                   <div>
-                    <dt className="text-ink-3">Cerró</dt>
-                    <dd className="font-medium">{c.closer}{c.setter && <span className="text-ink-3"> · agendó {c.setter}</span>}</dd>
-                  </div>
-                )}
-                {c.fuente && (
-                  <div>
-                    <dt className="text-ink-3">Fuente</dt>
-                    <dd className="font-medium">{c.fuente}</dd>
+                    <dt className="text-ink-3">Cerró la venta</dt>
+                    <dd className="font-medium">{c.closer}</dd>
                   </div>
                 )}
               </dl>
