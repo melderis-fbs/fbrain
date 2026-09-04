@@ -1,9 +1,10 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Planilla } from '@/components/Planilla';
 import { getUsuario, veTodo } from '@/server/auth';
 import { hayPlanilla } from '@/server/planilla';
 import { hayNotion } from '@/server/notion';
-import { hayDrive } from '@/server/drive';
+import { hayDrive, modoDrive } from '@/server/drive';
 import { hayModelo } from '@/server/modelo';
 import { CLIENTES, CUOTAS, esDePlanilla, SOLAPAS } from '@/server/planilla-mapeo';
 import { proponerFichasAhora, sincronizarAhora, sincronizarDriveAhora, sincronizarNotionAhora } from './actions';
@@ -159,10 +160,30 @@ export default async function PlanillaPage() {
             sincronizar={sincronizarDriveAhora}
             etiqueta="Traer de Drive"
             etiquetaCorriendo="Bajando documentos…"
-            faltante="GOOGLE_SERVICE_ACCOUNT_JSON"
+            faltante="GOOGLE_SERVICE_ACCOUNT_JSON (o la conexión con tu cuenta)"
             repetir
           />
         </div>
+        <p className="mt-3 text-[12.5px] leading-relaxed text-ink-2">
+          {modoDrive() === 'sin_conectar' ? (
+            <>
+              <strong>Drive todavía no está conectado.</strong> Hay dos formas y{' '}
+              <Link href="/planilla/google" className="underline decoration-line hover:decoration-ink-2">
+                acá está la que funciona con la política de Google de Founders
+              </Link>
+              : la app entra con tu cuenta, sin cuenta de servicio y sin compartirle carpetas a
+              nadie.
+            </>
+          ) : (
+            <>
+              Conectado{modoDrive() === 'oauth' ? ' con una cuenta de Google' : ' con una cuenta de servicio'}.{' '}
+              <Link href="/planilla/google" className="underline decoration-line hover:decoration-ink-2">
+                Cambiar la conexión
+              </Link>
+              .
+            </>
+          )}
+        </p>
       </section>
 
       <section className="mt-4 rounded-xl border border-line bg-surface p-4">

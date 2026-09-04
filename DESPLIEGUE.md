@@ -166,6 +166,17 @@ Ese archivo JSON es una credencial: no va al repositorio ni a un chat. Si se
 filtra, se borra la clave desde el paso 4 y se crea otra. El permiso pedido es
 **sólo lectura**: la app no puede escribir ni borrar nada en Drive.
 
+**Si el paso 4 falla** con «la creación de claves está inhabilitada», es la
+política `iam.disableServiceAccountKeyCreation`, que Google pone por defecto en
+las organizaciones nuevas. Se puede anular para ese proyecto en *IAM →
+Políticas de la organización*, pero hay un camino que no la toca: **entrar con
+tu propia cuenta**. La app usa un refresh token de un usuario que ya ve todas
+las carpetas, así que no hay clave que bloquear ni carpetas que compartir. El
+paso a paso está dentro de la app, en `/planilla/google`, y las variables son
+`GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` y
+`GOOGLE_OAUTH_REFRESH_TOKEN`. Al ser una app **interna** del Workspace, esa
+autorización no vence.
+
 ### 2.3 · Deploy
 
 **Deploy**. Toma dos o tres minutos. Cada push a `main` redeploya solo.

@@ -25,8 +25,38 @@ const API = 'https://www.googleapis.com/drive/v3';
 /** Sólo lectura. La app no escribe en Drive ni tiene por qué poder. */
 const SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
 
+/**
+ * DOS FORMAS DE ENTRAR A DRIVE, Y POR QUÉ HAY DOS
+ *
+ * La primera es una cuenta de servicio: un usuario propio de la app al que se
+ * le comparten las carpetas. Es la forma limpia.
+ *
+ * La segunda existe porque la primera no siempre se puede. Google bloquea por
+ * defecto la creación de claves de cuenta de servicio en las organizaciones
+ * nuevas —`iam.disableServiceAccountKeyCreation`— y en Founders esa política
+ * está puesta. Entonces la app entra con la cuenta de una persona, que ya ve
+ * todas las carpetas: no hay clave que la política pueda bloquear y no hay que
+ * compartirle nada a nadie.
+ *
+ * El scope es el mismo en las dos: sólo lectura.
+ */
 export function hayDrive(): boolean {
-  return Boolean(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+  return Boolean(process.env.GOOGLE_SERVICE_ACCOUNT_JSON) || hayOAuth();
+}
+
+export function hayOAuth(): boolean {
+  return Boolean(
+    process.env.GOOGLE_OAUTH_CLIENT_ID &&
+      process.env.GOOGLE_OAUTH_CLIENT_SECRET &&
+      process.env.GOOGLE_OAUTH_REFRESH_TOKEN,
+  );
+}
+
+/** Cómo está conectado hoy, para poder decirlo en pantalla. */
+export function modoDrive(): 'cuenta_de_servicio' | 'oauth' | 'sin_conectar' {
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) return 'cuenta_de_servicio';
+  if (hayOAuth()) return 'oauth';
+  return 'sin_conectar';
 }
 
 type Credenciales = { client_email: string; private_key: string };
@@ -60,7 +90,40 @@ const b64url = (s: string | Buffer) =>
  * Node, así que no hace falta ninguna librería con binarios nativos —que es
  * justamente lo que no se puede ejecutar en varios entornos de despliegue.
  */
+/**
+ * El token, por refresh token.
+ *
+ * El refresh token se saca una vez desde `/planilla/google` y se guarda como
+ * variable de entorno. No vence mientras la app siga siendo interna al
+ * Workspace y nadie revoque el acceso — que es justamente por qué esta vía
+ * sirve para una herramienta que corre sola.
+ */
+async function tokenPorRefresh(): Promise<string> {
+  const res = await fetch(OAUTH, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: process.env.GOOGLE_OAUTH_CLIENT_ID!,
+      client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET!,
+      refresh_token: process.env.GOOGLE_OAUTH_REFRESH_TOKEN!,
+      grant_type: 'refresh_token',
+    }),
+    cache: 'no-store',
+  });
+
+  const json = (await res.json().catch(() => ({}))) as { access_token?: string; error?: string; error_description?: string };
+  if (!res.ok || !json.access_token) {
+    throw new Error(
+      `Google no aceptó el refresh token: ${json.error_description ?? json.error ?? res.status}. ` +
+        'Si dice «invalid_grant», la autorización se revocó o el token se copió mal: hay que rehacerla en /planilla/google.',
+    );
+  }
+  return json.access_token;
+}
+
 async function token(): Promise<string> {
+  if (!process.env.GOOGLE_SERVICE_ACCOUNT_JSON && hayOAuth()) return tokenPorRefresh();
+
   const { client_email, private_key } = credenciales();
   const ahora = Math.floor(Date.now() / 1000);
 
