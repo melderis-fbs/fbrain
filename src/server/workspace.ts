@@ -1,7 +1,7 @@
 import { cache } from 'react';
 import { getRepo, getDataset } from '@/data';
 import type { Dataset } from '@/data/repo';
-import { aplicarTechoSemanal, correrReglas, type AlertaViva } from '@/domain/alertas';
+import { aplicarTechoSemanal, correrReglas, fuentesConDatos, type AlertaViva, type FuenteDato } from '@/domain/alertas';
 import {
   atribuir, desvioDeHitos, guionConfrontacion,
   type Atribucion, type DesvioHitos, type Guion,
@@ -35,6 +35,8 @@ export interface VistaCliente {
 
 export interface Workspace {
   hoy: string;
+  /** Las tablas con datos hoy. Decide qué reglas pueden opinar. */
+  fuentes: Set<FuenteDato>;
   modo: 'demo' | 'supabase';
   dataset: Dataset;
   equipo: Consultora[];
@@ -91,6 +93,13 @@ export const getWorkspace = cache(async (): Promise<Workspace> => {
   const revisiones = porCliente(dataset.revisiones);
   const equipoPorId = new Map(dataset.equipo.map((c) => [c.id, c]));
 
+  /**
+   * Qué tablas tienen datos. Se calcula una vez sobre la cartera entera, no
+   * por cliente: una regla que lee una tabla vacía no detecta un problema,
+   * detecta que la importación todavía no llegó.
+   */
+  const conectadas = fuentesConDatos(dataset);
+
   const vistas: VistaCliente[] = dataset.clientes.map((cliente) => {
     const registros: RegistrosCliente = {
       cliente,
@@ -116,7 +125,7 @@ export const getWorkspace = cache(async (): Promise<Workspace> => {
     };
     const consultora = cliente.consultoraId ? equipoPorId.get(cliente.consultoraId) : undefined;
     const ctx = construirContexto(registros, hoy, consultora);
-    const vivas = correrReglas(ctx);
+    const vivas = correrReglas(ctx, conectadas);
     const indice = calcularIndice(ctx);
     const semaforo = calcularSemaforo(vivas);
     const embudo = leerEmbudo(ctx);
@@ -150,6 +159,7 @@ export const getWorkspace = cache(async (): Promise<Workspace> => {
 
   return {
     hoy,
+    fuentes: conectadas,
     modo: getRepo().modo,
     dataset,
     equipo: dataset.equipo,

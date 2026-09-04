@@ -1,8 +1,9 @@
 import { Card, Chip, SectionTitle } from '@/components/ui';
-import { CRITERIOS, REGLAS } from '@/domain/alertas';
+import { CRITERIOS, REGLAS, fuentesFaltantes } from '@/domain/alertas';
 import { HITOS_POR_FASE } from '@/domain/fases';
 import { MOTORES } from '@/domain/motores/otros';
 import { hayModelo } from '@/server/modelo';
+import { getWorkspace } from '@/server/workspace';
 import { CONSTITUCION_HASH } from '@/domain/motores/constitucion';
 import { SEMAFORO_QUE_SIGNIFICA } from '@/domain/semaforo';
 import { UMBRALES } from '@/domain/cuenta-inversa';
@@ -21,9 +22,12 @@ const PILARES = [
   ['Relación y criterio', '10%', 'Lectura de la consultora, penalizada por alertas abiertas según su gravedad.'],
 ];
 
-export default function ModeloPage() {
+export default async function ModeloPage() {
   // El estado real: no lo declara un registro estático, lo declara el entorno.
   const conectado = hayModelo();
+  const ws = await getWorkspace();
+  const calladas = REGLAS.filter((r) => fuentesFaltantes(r, ws.fuentes).length);
+  const corriendo = REGLAS.filter((r) => !fuentesFaltantes(r, ws.fuentes).length);
   return (
     <div className="mx-auto max-w-4xl space-y-4">
       <header className="mb-2">
@@ -215,6 +219,19 @@ alcance_semanal        = (dms / 4) / tasa_dm_sobre_alcance`}</pre>
         <SectionTitle hint={`${REGLAS.length} reglas duras · sin modelo de lenguaje, corren todas las noches`}>
           Catálogo de reglas duras
         </SectionTitle>
+
+        {/*
+          Cuántas están corriendo de verdad. Es la información más importante
+          de esta pantalla: dice cuánto de lo que se ve en la bandeja es real.
+        */}
+        <p className="mb-3 text-[12.5px] leading-relaxed text-ink-2">
+          <strong className="tnum">{corriendo.length}</strong> de {REGLAS.length} están corriendo.
+          Las otras <strong className="tnum">{calladas.length}</strong> leen de una tabla que
+          todavía no tiene ninguna fila en la cartera, así que <strong>no disparan</strong>: una
+          regla sin datos no calla, acierta por la razón equivocada. «Día 90 sin ninguna venta» se
+          cumple perfecto cuando nadie cargó una métrica, y esa alerta manda a una consultora a
+          revisar un caso que quizás vendió la semana pasada.
+        </p>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[700px] text-[12px]">
             <thead>
@@ -222,22 +239,33 @@ alcance_semanal        = (dms / 4) / tasa_dm_sobre_alcance`}</pre>
                 <th className="py-2 pr-3 font-medium">Código</th>
                 <th className="py-2 pr-3 font-medium">Regla</th>
                 <th className="py-2 pr-3 font-medium">Disparo</th>
+                <th className="py-2 pr-3 font-medium">Estado</th>
                 <th className="py-2 font-medium">Origen</th>
               </tr>
             </thead>
             <tbody>
-              {REGLAS.map((r) => (
-                <tr key={r.codigo} className="border-b border-line last:border-0">
+              {REGLAS.map((r) => {
+                const faltan = fuentesFaltantes(r, ws.fuentes);
+                return (
+                <tr key={r.codigo} className={`border-b border-line last:border-0 ${faltan.length ? 'text-ink-3' : ''}`}>
                   <td className="py-2 pr-3 font-medium">{r.codigo}</td>
                   <td className="py-2 pr-3">{r.titulo}</td>
                   <td className="py-2 pr-3 text-ink-2">{r.descripcion}</td>
+                  <td className="py-2 pr-3">
+                    {faltan.length ? (
+                      <span className="text-[11.5px]">sin datos de {faltan.join(' y ')}</span>
+                    ) : (
+                      <Chip tone="good">corriendo</Chip>
+                    )}
+                  </td>
                   <td className="py-2">
                     <Chip tone={r.origenCatalogo === 'brain' ? 'accent' : 'neutral'}>
                       {r.origenCatalogo === 'brain' ? 'Brain' : 'fusión'}
                     </Chip>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

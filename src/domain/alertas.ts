@@ -37,6 +37,22 @@ function leerCobranzaSegura(c: ContextoCliente): LecturaCobranza | null {
  * inútil, que era la crítica razonable a la regla original.
  */
 
+/**
+ * De qué tabla lee una regla.
+ *
+ * Existe porque una regla sin datos no calla: **acierta por la razón
+ * equivocada**. «Día 90 sin ninguna venta» se cumple perfecto cuando nadie
+ * cargó una sola métrica, y esas 85 alertas idénticas mandaban a 85
+ * consultoras a hacer una revisión de caso sobre clientes que quizás vendieron
+ * la semana pasada.
+ *
+ * Es la misma regla que la app declara para la ingesta —celda vacía no es
+ * cero— aplicada al motor: sin fuente conectada, la regla no opina.
+ */
+export type FuenteDato =
+  | 'sesiones' | 'metricas' | 'pagos' | 'asistencias' | 'traspasos'
+  | 'compromisos' | 'lecturas' | 'estrategias' | 'prorrogas' | 'bajas' | 'objetivos';
+
 export interface ReglaDura {
   codigo: string;
   titulo: string;
@@ -44,6 +60,11 @@ export interface ReglaDura {
   descripcion: string;
   /** De dónde salió la regla: Brain trae 10; la fusión agregó las demás */
   origenCatalogo: 'brain' | 'cs-os';
+  /**
+   * Las tablas sin las cuales esta regla no puede concluir nada. Vacío quiere
+   * decir que le alcanza con la ficha del cliente y siempre puede correr.
+   */
+  fuentes: FuenteDato[];
   /** Códigos que, si están disparados, hacen redundante a esta regla. */
   suprimidaPor?: string[];
   evaluar: (ctx: ContextoCliente) => Disparo | null;
@@ -74,6 +95,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'RD-01',
     titulo: 'Cadencia rota',
     familia: 'cadencia',
+    fuentes: ['sesiones'],
     origenCatalogo: 'brain',
     descripcion: 'Más de 21 días sin sesión realizada. Más de 30 → rojo.',
     evaluar: (c) => {
@@ -108,6 +130,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'RD-02',
     titulo: 'Dos cancelaciones seguidas',
     familia: 'cadencia',
+    fuentes: ['sesiones'],
     origenCatalogo: 'brain',
     suprimidaPor: ['RD-01'],
     descripcion: 'Las dos últimas sesiones agendadas no se realizaron.',
@@ -135,6 +158,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'RD-03',
     titulo: 'Cuota vencida hace más de 30 días',
     familia: 'pago',
+    fuentes: ['pagos'],
     origenCatalogo: 'brain',
     descripcion: 'Se aplica también a clientes nuevos.',
     evaluar: (c) => {
@@ -155,6 +179,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'RD-04',
     titulo: 'Cambio de consultora reciente',
     familia: 'proceso',
+    fuentes: ['traspasos'],
     origenCatalogo: 'brain',
     descripcion: 'Traspaso en los últimos 30 días. Es el momento de mayor mortandad de la cartera.',
     evaluar: (c) => {
@@ -174,6 +199,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'RD-05',
     titulo: 'Sesión sin registro',
     familia: 'registro',
+    fuentes: ['sesiones'],
     origenCatalogo: 'brain',
     descripcion: 'Sesión realizada sin transcripción, grabación ni reporte. Con amarillo ya abierto → rojo.',
     evaluar: (c) => {
@@ -197,6 +223,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'RD-06',
     titulo: 'Reporte cargado tarde',
     familia: 'registro',
+    fuentes: ['sesiones'],
     origenCatalogo: 'brain',
     suprimidaPor: ['RD-05'],
     descripcion: 'Más de 48 h entre la sesión y la carga del reporte.',
@@ -222,6 +249,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'RD-07',
     titulo: 'Día 90 sin ninguna venta',
     familia: 'resultado',
+    fuentes: ['metricas'],
     origenCatalogo: 'brain',
     descripcion: 'El hito de resultado vencido. Es la alerta de mayor prioridad del sistema.',
     evaluar: (c) => {
@@ -241,6 +269,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'RD-08',
     titulo: 'Escalado automático',
     familia: 'proceso',
+    fuentes: [],
     origenCatalogo: 'brain',
     descripcion: 'Dos amarillas del mismo código en tres sesiones → rojo, sin que nadie opine.',
     evaluar: (c) => {
@@ -265,6 +294,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'RD-09',
     titulo: 'Cero asistencia a mentorías',
     familia: 'garantia',
+    fuentes: ['asistencias'],
     origenCatalogo: 'brain',
     descripcion: 'Sin ninguna asistencia en tres semanas. Prioridad alta si hay garantía firmada.',
     evaluar: (c) => {
@@ -286,6 +316,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'RD-10',
     titulo: 'Bajó su precio por iniciativa propia',
     familia: 'resultado',
+    fuentes: ['estrategias'],
     origenCatalogo: 'brain',
     descripcion: 'Caída de más del 10% en el precio, sin llamada de venta de por medio.',
     evaluar: (c) => {
@@ -313,6 +344,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'RD-11',
     titulo: 'Día 60 sin la primera venta',
     familia: 'resultado',
+    fuentes: ['metricas'],
     origenCatalogo: 'cs-os',
     suprimidaPor: ['RD-07'],
     descripcion: 'El objetivo del programa vencido. Treinta días antes de que sea rojo.',
@@ -333,6 +365,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'RD-12',
     titulo: 'KPI semanal incumplido',
     familia: 'resultado',
+    fuentes: ['metricas', 'objetivos'],
     origenCatalogo: 'cs-os',
     suprimidaPor: ['RD-15', 'RD-01'],
     descripcion: 'Tres semanas seguidas por debajo del KPI que sale de su propia cuenta inversa.',
@@ -360,6 +393,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'RD-13',
     titulo: 'Tracker sin cargar',
     familia: 'dato',
+    fuentes: ['metricas'],
     origenCatalogo: 'cs-os',
     suprimidaPor: ['RD-01'],
     descripcion: 'Sin métricas cargadas hace más de 21 días. El índice de este cliente no es confiable.',
@@ -380,6 +414,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'RD-14',
     titulo: 'Expediente ciego',
     familia: 'dato',
+    fuentes: [],
     origenCatalogo: 'cs-os',
     descripcion: 'Menos de 4 bloques cargados después del día 21. Los motores no pueden correr.',
     evaluar: (c) => {
@@ -403,6 +438,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'RD-15',
     titulo: 'Caída fuerte de actividad',
     familia: 'resultado',
+    fuentes: ['metricas'],
     origenCatalogo: 'cs-os',
     descripcion: 'Las últimas dos semanas por debajo del 40% del mes anterior.',
     evaluar: (c) => {
@@ -425,6 +461,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'RD-16',
     titulo: 'Garantía en riesgo del lado nuestro',
     familia: 'garantia',
+    fuentes: ['sesiones'],
     origenCatalogo: 'cs-os',
     descripcion: 'Cliente con garantía firmada y condiciones que no se están cumpliendo.',
     evaluar: (c) => {
@@ -448,6 +485,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'RD-17',
     titulo: 'Compromisos vencidos acumulados',
     familia: 'proceso',
+    fuentes: ['compromisos'],
     origenCatalogo: 'cs-os',
     suprimidaPor: ['RD-01'],
     descripcion: 'Tres o más compromisos vencidos sin cerrar.',
@@ -471,6 +509,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'CR-01',
     titulo: 'La consultora pidió intervención',
     familia: 'criterio',
+    fuentes: ['lecturas'],
     origenCatalogo: 'cs-os',
     descripcion: 'La consultora considera que no puede resolverlo sola.',
     evaluar: (c) => {
@@ -492,6 +531,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'CR-02',
     titulo: 'La consultora ve el caso en riesgo',
     familia: 'criterio',
+    fuentes: ['lecturas'],
     origenCatalogo: 'cs-os',
     descripcion: 'Percepción de deterioro que los números todavía no muestran.',
     evaluar: (c) => {
@@ -521,6 +561,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'RD-18',
     titulo: 'Cuota vencida dentro del margen del contrato',
     familia: 'pago',
+    fuentes: ['pagos'],
     origenCatalogo: 'cs-os',
     suprimidaPor: ['RD-19', 'RD-03', 'RD-20'],
     descripcion: 'Venció y todavía corren los días de gracia que firmó ese cliente.',
@@ -542,6 +583,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'RD-19',
     titulo: 'Corte de accesos pendiente',
     familia: 'pago',
+    fuentes: ['pagos'],
     origenCatalogo: 'cs-os',
     suprimidaPor: ['RD-03'],
     descripcion: 'Se cumplió el margen del contrato y el cliente sigue con acceso.',
@@ -563,6 +605,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'RD-20',
     titulo: 'Prórroga vencida sin pago',
     familia: 'pago',
+    fuentes: ['prorrogas'],
     origenCatalogo: 'cs-os',
     descripcion: 'Se otorgó una excepción con fecha y la fecha pasó.',
     evaluar: (c) => {
@@ -583,6 +626,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'RD-21',
     titulo: 'Baja con el checklist sin terminar',
     familia: 'proceso',
+    fuentes: ['bajas'],
     origenCatalogo: 'cs-os',
     descripcion: 'Cliente dado de baja que todavía tiene accesos abiertos.',
     evaluar: (c) => {
@@ -609,6 +653,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'RD-22',
     titulo: 'Cambio de consultora sin sesión de transición',
     familia: 'proceso',
+    fuentes: ['sesiones', 'traspasos'],
     origenCatalogo: 'cs-os',
     suprimidaPor: ['RD-01'],
     descripcion: 'Pasaron los días y el cliente todavía no se sentó con su consultora nueva.',
@@ -633,6 +678,7 @@ export const REGLAS: ReglaDura[] = [
     codigo: 'RD-23',
     titulo: 'El producto no corresponde al nivel del negocio',
     familia: 'proceso',
+    fuentes: [],
     origenCatalogo: 'cs-os',
     descripcion: 'Compró una etapa y trajo un negocio de otra. Es un problema de venta y asignación.',
     evaluar: (c) => {
@@ -715,7 +761,45 @@ export const SEVERIDAD: Record<Semaforo, number> = { verde: 0, amarillo: 1, rojo
  * Corre las reglas duras sobre un cliente y las reconcilia con lo persistido.
  * Idempotente por (cliente, código): si ya hay una abierta, no se emite otra.
  */
-export function correrReglas(ctx: ContextoCliente): AlertaViva[] {
+/**
+ * Qué fuentes tienen datos en la cartera entera.
+ *
+ * La pregunta es de cartera y no de cliente, y la diferencia es todo: que
+ * *este* cliente no tenga asistencias registradas mientras el resto sí es un
+ * hallazgo — hay que llamarlo. Que **nadie** tenga ninguna significa que esa
+ * tabla no está conectada, y ahí la regla no está detectando un problema: está
+ * detectando que la importación todavía no llegó.
+ */
+export function fuentesConDatos(d: {
+  sesiones: unknown[]; metricas: unknown[]; pagos: unknown[]; asistencias: unknown[];
+  traspasos: unknown[]; compromisos: unknown[]; lecturas: unknown[]; estrategias: unknown[];
+  prorrogas: unknown[]; bajas: unknown[]; objetivos: unknown[];
+}): Set<FuenteDato> {
+  const out = new Set<FuenteDato>();
+  const pares: [FuenteDato, unknown[]][] = [
+    ['sesiones', d.sesiones], ['metricas', d.metricas], ['pagos', d.pagos],
+    ['asistencias', d.asistencias], ['traspasos', d.traspasos], ['compromisos', d.compromisos],
+    ['lecturas', d.lecturas], ['estrategias', d.estrategias], ['prorrogas', d.prorrogas],
+    ['bajas', d.bajas], ['objetivos', d.objetivos],
+  ];
+  for (const [f, filas] of pares) if (filas.length > 0) out.add(f);
+  return out;
+}
+
+/** Las fuentes que le faltan a una regla para poder correr. */
+export function fuentesFaltantes(regla: ReglaDura, conectadas: ReadonlySet<FuenteDato>): FuenteDato[] {
+  return regla.fuentes.filter((f) => !conectadas.has(f));
+}
+
+export function correrReglas(
+  ctx: ContextoCliente,
+  /**
+   * Sin este argumento corren todas: es lo que hace falta para probar una
+   * regla contra un caso armado a mano. En la app siempre se pasa, calculado
+   * una vez por corrida sobre la cartera entera.
+   */
+  conectadas?: ReadonlySet<FuenteDato>,
+): AlertaViva[] {
   /**
    * Si la fecha de alta es una estimación, el reloj del programa no corre.
    *
@@ -742,6 +826,8 @@ export function correrReglas(ctx: ContextoCliente): AlertaViva[] {
   // de leer la bandeja.
   const evaluadas = new Map<string, Disparo>();
   for (const regla of REGLAS) {
+    // Sin la tabla que la regla necesita, no dispara. Ver `fuentesConDatos`.
+    if (conectadas && fuentesFaltantes(regla, conectadas).length) continue;
     try {
       const d = regla.evaluar(ctx);
       if (d) evaluadas.set(regla.codigo, d);

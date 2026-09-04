@@ -4,7 +4,7 @@ import { construirContexto, type RegistrosCliente } from './expediente';
 import { calcularIndice } from './indice';
 import { calcularSemaforo } from './semaforo';
 import { leerEmbudo } from './embudo';
-import { REGLAS, aplicarTechoSemanal, correrReglas, puedeCerrar, validarCierre } from './alertas';
+import { REGLAS, aplicarTechoSemanal, correrReglas, fuentesConDatos, fuentesFaltantes, puedeCerrar, validarCierre } from './alertas';
 import { calcularCuentaInversa, esperadoAlDia, objetivoSemanal, TASAS_OBJETIVO } from './cuenta-inversa';
 import { diagnosticoSchema, validar } from './motores/contratos';
 import { borradorLocal } from './motores/diagnostico';
@@ -746,5 +746,51 @@ describe('cobranza · el carril que no discute el servicio', () => {
     expect(r.prorrogasOtorgadas).toBe(4);
     expect(r.prorrogasQuePagaron).toBe(1);
     expect(r.tasaProrroga).toBeCloseTo(1 / 3);
+  });
+});
+
+describe('una regla sin su fuente no opina', () => {
+  const vacio = {
+    sesiones: [], metricas: [], pagos: [], asistencias: [], traspasos: [],
+    compromisos: [], lecturas: [], estrategias: [], prorrogas: [], bajas: [], objetivos: [],
+  };
+
+  it('cada regla declara de dónde lee', () => {
+    for (const r of REGLAS) expect(Array.isArray(r.fuentes)).toBe(true);
+    // Las que leen de una tabla son la mayoría; si alguien agrega una regla
+    // nueva sin fuente, esto no lo detecta — lo detecta la de abajo.
+    expect(REGLAS.filter((r) => r.fuentes.length).length).toBeGreaterThan(15);
+  });
+
+  it('«día 90 sin ninguna venta» necesita métricas cargadas', () => {
+    const rd07 = REGLAS.find((r) => r.codigo === 'RD-07')!;
+    expect(rd07.fuentes).toContain('metricas');
+    // Es la que disparaba 85 veces idénticas sobre una tabla vacía: sin una
+    // sola métrica en la cartera, «cero ventas» no es un hallazgo del cliente,
+    // es la importación que no llegó.
+    expect(fuentesFaltantes(rd07, fuentesConDatos(vacio))).toEqual(['metricas']);
+  });
+
+  it('«cero asistencia a mentorías» necesita asistencias', () => {
+    const rd09 = REGLAS.find((r) => r.codigo === 'RD-09')!;
+    expect(fuentesFaltantes(rd09, fuentesConDatos(vacio))).toEqual(['asistencias']);
+  });
+
+  it('una sola fila en la cartera alcanza para conectar la fuente', () => {
+    // Y esto es lo importante del otro lado: si la tabla tiene datos, que
+    // ESTE cliente no tenga ninguno sí es un hallazgo. La pregunta es de
+    // cartera, no de cliente.
+    const con = fuentesConDatos({ ...vacio, asistencias: [{}] });
+    expect(fuentesFaltantes(REGLAS.find((r) => r.codigo === 'RD-09')!, con)).toEqual([]);
+  });
+
+  it('las reglas que sólo miran la ficha corren siempre', () => {
+    const sinFuente = REGLAS.filter((r) => !r.fuentes.length).map((r) => r.codigo);
+    // El expediente ciego es la más importante de estas: con la cartera vacía
+    // es justamente la que hay que ver.
+    expect(sinFuente).toContain('RD-14');
+    for (const c of sinFuente) {
+      expect(fuentesFaltantes(REGLAS.find((r) => r.codigo === c)!, fuentesConDatos(vacio))).toEqual([]);
+    }
   });
 });
