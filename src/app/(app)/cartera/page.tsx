@@ -83,12 +83,24 @@ export default async function CarteraPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      <header className="mb-5">
-        <h1 className="text-[22px] font-semibold tracking-tight">Cartera</h1>
-        <p className="mt-1.5 text-[13px] text-ink-2">
-          {activos.length} clientes activos · {ws.consultoras.length} consultoras. Estado real de la
-          operación en una pantalla.
-        </p>
+      <header className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
+        <div>
+          <h1 className="text-[22px] font-semibold tracking-tight">Cartera</h1>
+          <p className="mt-1.5 text-[13px] text-ink-2">
+            {activos.length} clientes activos · {ws.consultoras.length} consultoras. Estado real de la
+            operación en una pantalla.
+          </p>
+        </div>
+        {/*
+          Mientras la importación arrastre clientes viejos, este número no es la
+          cartera: son alertas sobre gente que no está.
+        */}
+        <Link
+          href="/cartera/limpieza"
+          className="rounded-lg border border-line px-3 py-1.5 text-[12px] font-medium hover:border-accent"
+        >
+          Limpiar la cartera
+        </Link>
       </header>
 
       {/* 1 · Semáforo */}
