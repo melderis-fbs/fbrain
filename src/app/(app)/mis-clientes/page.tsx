@@ -2,10 +2,11 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getUsuario, veTodo } from '@/server/auth';
 import { getWorkspace, type VistaCliente } from '@/server/workspace';
-import { Avatar, Card, Chip, Empty, SemaforoCelda } from '@/components/ui';
+import { Card, Empty } from '@/components/ui';
 import { ListaComercial } from '@/components/ListaComercial';
-import { colorIndice } from '@/lib/ui';
-import { formatShort } from '@/lib/date';
+import { LeyendaTira, TiraCliente, type FilaCliente } from '@/components/TiraCliente';
+import { queNecesita, tiraDeEtapas } from '@/domain/tira';
+import { BLOQUE_LABEL } from '@/domain/expediente';
 
 export const metadata = { title: 'Mis clientes · Founders Brain' };
 
@@ -103,97 +104,33 @@ export default async function MisClientesPage({
         <ListaComercial vistas={filas} verConsultora={veTodo(usuario.rol)} hoy={ws.hoy} />
       ) : filas.length ? (
         <Card pad={false}>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1100px] text-[13px]">
-              <thead>
-                <tr className="border-b border-line text-left text-[10.5px] uppercase tracking-[0.07em] text-ink-3">
-                  <th className="px-3 py-2.5 font-medium">Semáforo</th>
-                  <th className="px-3 py-2.5 font-medium">Cliente</th>
-                  {veTodo(usuario.rol) && <th className="px-3 py-2.5 font-medium">Consultora</th>}
-                  <th className="px-3 py-2.5 font-medium">Fase</th>
-                  <th className="px-3 py-2.5 text-right font-medium">Índice</th>
-                  <th className="px-3 py-2.5 font-medium">Última sesión</th>
-                  <th className="px-3 py-2.5 font-medium">Compromiso vigente</th>
-                  <th className="px-3 py-2.5 text-right font-medium">Alertas</th>
-                  <th className="px-3 py-2.5 text-right font-medium">Ventas</th>
-                  <th className="px-3 py-2.5 font-medium">Esta semana</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filas.map((v) => {
-                  const c = v.ctx;
-                  const compromiso = c.registros.compromisos
-                    .filter((x) => x.estado === 'pendiente')
-                    .sort((a, b) => a.fechaVencimiento.localeCompare(b.fechaVencimiento))[0];
-                  const vencido = compromiso && compromiso.fechaVencimiento < ws.hoy;
-                  const sinSesion = (c.diasSinSesion ?? 999) > 21;
-                  const ventaCritica = c.ventas === 0 && c.dia >= 60;
-                  return (
-                    <tr key={c.cliente.id} className="border-b border-line last:border-0 hover:bg-surface-2/40">
-                      <td className="px-3 py-2 align-middle">
-                        <SemaforoCelda estado={v.semaforo} />
-                      </td>
-                      <td className="px-3 py-2">
-                        <Link href={`/clientes/${c.cliente.id}`} className="font-medium hover:underline">
-                          {c.cliente.nombre}
-                        </Link>
-                        <div className="text-[11px] text-ink-3">
-                          {c.cliente.programa} ·{' '}
-                          {c.cliente.fechaAltaProvisional ? (
-                            <span style={{ color: 'var(--warning-ink)' }}>sin fecha de inicio</span>
-                          ) : (
-                            <>día {c.dia}</>
-                          )}
-                          {c.cliente.tieneGarantia && ' · garantía'}
-                        </div>
-                      </td>
-                      {veTodo(usuario.rol) && (
-                        <td className="px-3 py-2">
-                          <span className="flex items-center gap-1.5">
-                            <Avatar persona={v.consultora} size={20} />
-                            <span className="text-[12px]">{v.consultora?.nombre}</span>
-                          </span>
-                        </td>
-                      )}
-                      <td className="px-3 py-2">
-                        <Chip tone="neutral">{c.fase}</Chip>
-                      </td>
-                      <td className="tnum px-3 py-2 text-right font-semibold" style={{ color: colorIndice(v.indice.valor) }}>
-                        {v.indice.valor}
-                        {v.indice.confianza !== 'alta' && (
-                          <span className="ml-1 text-[10px] font-normal text-ink-3">?</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-[12px]" style={{ color: sinSesion ? 'var(--critical-ink)' : undefined }}>
-                        {c.diasSinSesion === null ? 'nunca' : `hace ${c.diasSinSesion} d`}
-                      </td>
-                      <td className="max-w-[220px] px-3 py-2 text-[12px]">
-                        {compromiso ? (
-                          <span style={{ color: vencido ? 'var(--critical-ink)' : undefined }}>
-                            <span className="line-clamp-1">{compromiso.descripcion}</span>
-                            <span className="text-[11px] text-ink-3">{formatShort(compromiso.fechaVencimiento)}</span>
-                          </span>
-                        ) : (
-                          <span className="text-ink-3">sin compromiso vivo</span>
-                        )}
-                      </td>
-                      <td className="tnum px-3 py-2 text-right">{v.alertasAbiertas.length || '—'}</td>
-                      <td
-                        className="tnum px-3 py-2 text-right font-semibold"
-                        style={{ color: ventaCritica ? 'var(--critical-ink)' : undefined }}
-                      >
-                        {c.ventas}
-                      </td>
-                      <td className="max-w-[220px] px-3 py-2 text-[12px] text-ink-2">
-                        {c.kpiSemanal
-                          ? `${c.kpiSemanal.dms} DMs · ${c.kpiSemanal.agendas} agendas`
-                          : 'sin cuenta inversa'}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="px-3">
+            <LeyendaTira />
+          </div>
+          <div className="px-3 pb-1">
+            <TiraCliente
+              verConsultora={veTodo(usuario.rol)}
+              filas={filas.map((v): FilaCliente => {
+                const c = v.ctx;
+                return {
+                  id: c.cliente.id,
+                  nombre: c.cliente.nombre,
+                  semana: Math.max(1, Math.ceil(c.dia / 7)),
+                  dia: c.dia,
+                  programa: c.cliente.programa,
+                  sinFecha: Boolean(c.cliente.fechaAltaProvisional),
+                  semaforo: v.semaforo,
+                  etapas: tiraDeEtapas(c, v.desvio.atrasados),
+                  bloques: (Object.keys(BLOQUE_LABEL) as (keyof typeof BLOQUE_LABEL)[]).map((k) => ({
+                    label: BLOQUE_LABEL[k],
+                    corto: BLOQUE_LABEL[k].slice(0, 5),
+                    cargado: Boolean(c.bloques[k]),
+                  })),
+                  necesita: queNecesita(c, v.alertasAbiertas),
+                  consultora: v.consultora,
+                };
+              })}
+            />
           </div>
         </Card>
       ) : (
