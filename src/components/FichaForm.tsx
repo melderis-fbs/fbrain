@@ -277,8 +277,8 @@ export function FichaForm({
       <section className="rounded-xl border border-line bg-surface p-4">
         <h2 className="text-[14px] font-semibold">Arrancar desde lo que ya tenés</h2>
         <p className="mb-3 mt-0.5 text-[11.5px] leading-relaxed text-ink-3">
-          Pegá la transcripción de la llamada de venta, el formulario de onboarding o lo que haya en
-          Notion — o usá lo que ya subiste en Documentos. El extractor completa los campos vacíos y
+          Pegá la transcripción de la llamada de venta o el formulario de onboarding — o usá lo
+          que ya está cargado en Documentos. El extractor completa los campos vacíos y
           deja la cita de dónde sacó cada cosa.
           {' '}No pisa nada que ya hayas escrito, y lo que no está en el documento lo deja en blanco.
         </p>
@@ -388,7 +388,7 @@ export function FichaForm({
           <Campo
             name="consultoraId" label="Consultora asignada" valor={campos} set={set} ancho="half"
             opciones={[{ v: '', l: '— sin asignar —' }, ...equipo.map((c) => ({ v: c.id, l: c.nombre }))]}
-            hint="Cambiarla deja registrado el traspaso con su fecha, y la asignación de la app pasa a mandar sobre la de Notion."
+            hint="Cambiarla deja registrado el traspaso con su fecha y su motivo."
           />
         )}
         {/*

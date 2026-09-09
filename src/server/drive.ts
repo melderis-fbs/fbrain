@@ -5,14 +5,13 @@ import { createSign } from 'node:crypto';
  * DRIVE · LEER LA CARPETA DE CADA CLIENTE
  *
  * Founders ya tiene las transcripciones: son los documentos que genera Gemini
- * después de cada sesión, guardados en la carpeta del cliente en Drive. Y
- * Notion ya sabe cuál es esa carpeta —lo dice la columna «carpeta automatica
- * de drive», llena en 104 de los 113 clientes activos—.
+ * después de cada sesión, guardados en la carpeta del cliente en Drive. Y cada
+ * cliente declara su carpeta en su ficha.
  *
- * Con esas dos cosas no hay nada que adivinar: la app abre la carpeta que
- * Notion indica y lo que encuentra adentro es de ese cliente. Es la diferencia
- * con deducir el cliente del título del documento —«Sesión 4 (Maria -
- * Angie)»—, que obligaría a apostar a que «Maria» es «Maria Bidegain».
+ * Con esas dos cosas no hay nada que adivinar: la app abre la carpeta del
+ * cliente y lo que encuentra adentro es de él. Es la diferencia con deducir el
+ * cliente del título del documento —«Sesión 4 (Maria - Angie)»—, que obligaría
+ * a apostar a que «Maria» es «Maria Bidegain».
  *
  * Sin esto, cargar el expediente de la cartera son cien copiar y pegar. Y sin
  * expediente cargado el diagnóstico no puede citar textual, que es lo que el

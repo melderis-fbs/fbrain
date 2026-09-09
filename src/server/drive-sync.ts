@@ -8,7 +8,7 @@ import type { Reporte, ReporteSolapa } from './planilla';
 /**
  * TRAER LAS TRANSCRIPCIONES DE DRIVE
  *
- * Por cada cliente que tiene carpeta —la que trajo Notion— se lee lo que hay
+ * Por cada cliente que tiene carpeta declarada en su ficha se lee lo que hay
  * adentro y se guarda como documento del expediente. Nada se adivina: el
  * documento es del cliente cuya carpeta lo contiene.
  *
@@ -101,7 +101,7 @@ export async function sincronizarDrive(hoy: string): Promise<Reporte> {
       solapas: [{
         ...r,
         error:
-          'Ningún cliente tiene carpeta de Drive registrada. La carpeta la trae Notion, de la columna «carpeta automatica de drive»: hay que sincronizar Notion primero.',
+          'Ningún cliente tiene carpeta de Drive registrada. La carpeta se declara en la ficha de cada cliente, o entra con el CSV de la cartera.',
       }],
     };
   }
@@ -184,7 +184,7 @@ export async function sincronizarDrive(hoy: string): Promise<Reporte> {
     if (sinCarpeta.length) {
       r.salteadas.push({
         fila: 0,
-        motivo: `${sinCarpeta.length} cliente(s) activos no tienen carpeta de Drive en Notion, así que no se les pudo traer nada. Se completa la columna «carpeta automatica de drive» y entran en la próxima corrida.`,
+        motivo: `${sinCarpeta.length} cliente(s) activos no tienen carpeta de Drive declarada, así que no se les pudo traer nada. Se completa en su ficha y entran en la próxima corrida.`,
       });
     }
   } catch (e) {

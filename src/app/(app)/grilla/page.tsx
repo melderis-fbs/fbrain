@@ -142,7 +142,7 @@ export default async function GrillaPage({
           >
             <strong>{sinFecha} cliente{sinFecha > 1 ? 's' : ''} no aparecen acá porque no tienen fecha de inicio.</strong>{' '}
             Toda esta pantalla es una resta contra esa fecha, así que aparecerían en una semana
-            inventada con hitos que nadie incumplió. Se los completa en Notion, en{' '}
+            inventada con hitos que nadie incumplió. Se completa en la ficha de cada uno, en{' '}
             <em>Fecha Inicio Programa</em>. Ver quiénes son →
           </Link>
         </div>

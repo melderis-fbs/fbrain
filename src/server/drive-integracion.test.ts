@@ -159,12 +159,12 @@ describe('sincronizarDrive', () => {
     expect(r.solapas[0].salteadas.some((x) => /\.mp4/.test(x.motivo))).toBe(false);
   });
 
-  it('sin carpetas cargadas dice que hay que sincronizar Notion primero', async () => {
+  it('sin carpetas cargadas lo dice, y dice dónde se declaran', async () => {
     await sinCarpetas();
     mockearDrive({});
     const { sincronizarDrive } = await import('./drive-sync');
     const r = await sincronizarDrive(HOY);
-    expect(r.solapas[0].error).toContain('Notion');
+    expect(r.solapas[0].error).toContain('ficha');
   });
 
   it('sin credenciales no intenta nada y lo dice', async () => {

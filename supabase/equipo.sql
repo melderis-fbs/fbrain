@@ -27,10 +27,10 @@
 --  'admin'      → ve todo, más Cobranza, Consultoras y Planilla
 --  'consultora' → ve sólo sus propios clientes
 
---  LOS NOMBRES TIENEN QUE COINCIDIR CON LOS DE NOTION.
+--  LOS NOMBRES TIENEN QUE COINCIDIR CON LOS DEL CSV DE LA CARTERA.
 --  La asignación de cada cliente sale de la columna «Consultor» de
 --  «Auditoría Clientes», que es un select con estos valores exactos. Si acá
---  escribís «Kathe» y en Notion dice «Kathering», la importación va a
+--  escribís «Kathe» y en el CSV dice «Kathering», la importación va a
 --  reportar la fila como no asignable en vez de adivinar.
 
 --  SI YA CARGASTE EL EQUIPO ANTES, esto NO borra nada y se puede correr de
@@ -38,7 +38,7 @@
 --  ya exista —le corrige el nombre— e inserta sólo las que falten. El
 --  `auth_user_id` no se toca, así que los usuarios que ya creaste y enlazaste
 --  siguen funcionando. Lo único que cambia es el nombre, que es lo que tiene
---  que coincidir con Notion.
+--  que coincidir con el CSV.
 --
 --  Lo que sí importa: los emails de acá abajo tienen que ser los MISMOS que
 --  ya cargaste. Si no coinciden, en vez de corregir la fila vieja va a crear
@@ -60,7 +60,7 @@ insert into consultoras (nombre, email, rol, cupo_maximo, activa) values
   ('Jhosanna',  'jhosanna@foundersbs.com',  'consultora', 12, true),
 
   -- Ya no están en Founders, pero sus nombres siguen apareciendo en filas
-  -- viejas de Notion. Entran como inactivos para que esos clientes se puedan
+  -- viejas. Entran como inactivos para que esos clientes se puedan
   -- importar y se vea que quedaron sin dueño, en vez de que la fila se saltee
   -- y el cliente no exista. No se les crea usuario: no pueden entrar.
   ('Javier',    'javier@foundersbs.com',    'consultora', 0,  false),
@@ -75,7 +75,7 @@ on conflict (email) do update set
 
 -- Si los nombres viejos quedaron con OTRO email del que usaste ahora, arriba
 -- se insertaron filas nuevas y las viejas siguen ahí. Esto las muestra: son
--- las que no están en la lista de Notion y hay que borrar a mano.
+-- las que no están en esta lista y hay que borrar a mano.
 
 select nombre, email from consultoras
 where nombre not in ('Vicky','Coti','Kathering','Johann','Romina',

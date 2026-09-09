@@ -2254,13 +2254,13 @@ comment on column clientes.ultima_renovacion is
 
 -- 0011 · La fecha de inicio provisional
 --
--- En Notion hay clientes cargados sin «Fecha Inicio Programa» — al momento de
+-- Hay clientes cargados sin fecha de inicio de programa — al momento de
 -- escribir esto, 72 de 194. Hasta ahora esos clientes no se importaban, y eso
 -- es peor que importarlos mal: un cliente que no existe no se puede asignar,
 -- ni abrir, ni corregir. La consultora que lo atiende no lo ve en su cartera.
 --
 -- Ahora entran con una fecha provisional —la de creación de la fila en
--- Notion— y esta marca puesta. Lo que la marca cambia es que el reloj del
+-- estimada— y esta marca puesta. Lo que la marca cambia es que el reloj del
 -- programa NO corre para ellos: no se les calculan hitos ni se les emiten
 -- alertas, porque estarían medidas contra una fecha inventada y serían peor
 -- que no tener ninguna. Se apaga sola cuando alguien carga la fecha real.

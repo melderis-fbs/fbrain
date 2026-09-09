@@ -5,7 +5,6 @@ import { revalidatePath } from 'next/cache';
 import { getUsuario, veTodo } from '@/server/auth';
 import { hoyIso } from '@/server/workspace';
 import { sincronizar, type Reporte } from '@/server/planilla';
-import { sincronizarNotion } from '@/server/notion';
 import { sincronizarDrive } from '@/server/drive-sync';
 import { proponerFichas } from '@/server/ficha-masiva';
 
@@ -28,26 +27,8 @@ export async function sincronizarAhora(): Promise<Reporte> {
 }
 
 /**
- * Notion se corre después de la planilla, y el orden importa: las dos fuentes
- * comparten el estado del cliente y la fecha de alta, y la que manda en eso es
- * Notion, porque es donde el equipo lo mantiene al día.
- */
-export async function sincronizarNotionAhora(): Promise<Reporte> {
-  const usuario = await getUsuario();
-  if (!usuario) redirect('/login');
-  if (!veTodo(usuario.rol)) redirect('/mis-clientes');
-
-  const reporte = await sincronizarNotion(hoyIso());
-  revalidatePath('/cartera');
-  revalidatePath('/grilla');
-  revalidatePath('/mis-clientes');
-  revalidatePath('/planilla');
-  return reporte;
-}
-
-/**
- * Drive va tercero y no es casual: la carpeta de cada cliente la trae Notion,
- * así que sin Notion corrido antes no hay a dónde ir a buscar.
+ * Cada cliente declara su carpeta en su ficha; sin eso no hay a dónde ir a
+ * buscar, y la corrida lo dice con nombre y apellido.
  *
  * Cada corrida toma una tanda de clientes —los que menos documentos tienen— y
  * lo ya traído no se vuelve a bajar. Se aprieta el botón varias veces hasta

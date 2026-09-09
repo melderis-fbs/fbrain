@@ -4,11 +4,10 @@ import { Planilla } from '@/components/Planilla';
 import { getUsuario, veTodo } from '@/server/auth';
 import { getWorkspace } from '@/server/workspace';
 import { hayPlanilla } from '@/server/planilla';
-import { hayNotion } from '@/server/notion';
 import { hayDrive, modoDrive } from '@/server/drive';
 import { hayModelo } from '@/server/modelo';
 import { CLIENTES, CUOTAS, esDePlanilla, SOLAPAS } from '@/server/planilla-mapeo';
-import { proponerFichasAhora, sincronizarAhora, sincronizarDriveAhora, sincronizarNotionAhora } from './actions';
+import { proponerFichasAhora, sincronizarAhora, sincronizarDriveAhora } from './actions';
 
 export const metadata = { title: 'Las fuentes · Founders Brain' };
 
@@ -57,11 +56,10 @@ export default async function PlanillaPage() {
     <div className="mx-auto max-w-3xl">
       <h1 className="text-[22px] font-semibold tracking-tight">Las fuentes</h1>
       <p className="mt-1 text-[13px] leading-relaxed text-ink-2">
-        Founders ya tiene la información cargada en tres lugares y cada uno es bueno en algo
-        distinto. La app lee los tres y ninguno tiene que migrar a ningún lado: la{' '}
-        <em>planilla de finanzas</em> sabe de plata, <em>Auditoría Clientes</em> en Notion sabe del
-        programa, y en <em>Drive</em> están las transcripciones de cada sesión. Nadie carga dos
-        veces, y nadie copia y pega cien documentos.
+        Supabase es la fuente de verdad. Estas son las puertas por las que entra la información:
+        una planilla con la cartera y las cuotas, una solapa con el expediente, y las
+        transcripciones que ya viven en la carpeta de Drive de cada cliente. Ninguna reemplaza a
+        la base: la llenan.
       </p>
       <p className="mt-2 text-[13px] leading-relaxed text-ink-2">
         Las <strong>métricas semanales no están acá</strong>: viven en la base del CRM y se cargan
@@ -110,31 +108,8 @@ export default async function PlanillaPage() {
       </section>
 
       <section className="mt-4 rounded-xl border border-line bg-surface p-4">
-        <h2 className="text-[14px] font-semibold">2 · Auditoría Clientes, en Notion</h2>
-        <p className="mt-1 text-[12.5px] leading-relaxed text-ink-2">
-          De acá sale <strong>quién atiende a quién</strong>, más el estado del cliente, la fecha
-          en que arrancó el programa, su duración y el link a su carpeta de Drive. Es la fuente que
-          decide la asignación: sin esto nadie ve su cartera.
-        </p>
-        <p className="mt-2 text-[12.5px] leading-relaxed text-ink-2">
-          <strong>Correla después de la planilla.</strong> Las dos fuentes tienen el estado del
-          cliente y la fecha de alta, y en esos dos campos manda Notion, porque es donde el equipo
-          los mantiene al día. Al revés, la planilla los pisaría con lo que tenga.
-        </p>
-        <div className="mt-3">
-          <Planilla
-            configurada={hayNotion()}
-            sincronizar={sincronizarNotionAhora}
-            etiqueta="Sincronizar Notion"
-            etiquetaCorriendo="Leyendo Notion…"
-            faltante="NOTION_TOKEN / NOTION_DB_CLIENTES"
-          />
-        </div>
-      </section>
-
-      <section className="mt-4 rounded-xl border border-line bg-surface p-4">
         <h2 className="text-[14px] font-semibold">
-          1bis · El expediente, desde una tabla{' '}
+          2 · El expediente, desde una tabla{' '}
           <span className="font-normal text-ink-3">· solapa «{SOLAPAS.ficha}»</span>
         </h2>
         <p className="mt-1 text-[12.5px] leading-relaxed text-ink-2">
@@ -201,9 +176,8 @@ export default async function PlanillaPage() {
           exige antes de emitir cualquier cosa.
         </p>
         <p className="mt-2 text-[12.5px] leading-relaxed text-ink-2">
-          <strong>Correla después de Notion.</strong> La carpeta de cada cliente la trae Notion, de
-          la columna «carpeta automatica de drive»: sin eso no hay a dónde ir a buscar. Nada se
-          adivina por el título — el documento es del cliente cuya carpeta lo contiene.
+          Cada cliente tiene su carpeta declarada en su ficha. Nada se adivina por el título: el
+          documento es del cliente cuya carpeta lo contiene.
         </p>
         <p className="mt-2 text-[12.5px] leading-relaxed text-ink-2">
           Cada corrida toma una tanda, arrancando por los clientes que menos documentos tienen, y

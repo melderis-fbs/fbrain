@@ -122,8 +122,6 @@ En **Settings → Environment Variables**. Los valores de Supabase están en
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → API → anon public | Idem |
 | `ANTHROPIC_API_KEY` | console.anthropic.com | Los motores quedan "sin conectar"; el resto anda |
 | `SHEETS_PLANILLA_ID` | El ID de tu planilla de Drive | No entran las cuotas |
-| `NOTION_TOKEN` | notion.so/profile/integrations → New integration | No entra la asignación: nadie ve su cartera |
-| `NOTION_DB_CLIENTES` | El ID de «Auditoría Clientes» en su URL | Idem |
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | El JSON de una cuenta de servicio de Google (ver 2.2bis) | No entran las transcripciones: el expediente se carga a mano |
 
 **`ANTHROPIC_API_KEY` nunca lleva `NEXT_PUBLIC_`.** Ese prefijo la mandaría al
@@ -193,12 +191,12 @@ Los usuarios se crean a mano desde el panel.
 
 En este orden, porque cada paso depende del anterior:
 
-0. **El equipo, con los nombres de Notion.** Los de `supabase/equipo.sql` ya
+0. **El equipo.** Los de `supabase/equipo.sql` ya
    son los reales —Coti, Kathering, Johann, Romina, Natalia, Victoria y
    Jhosanna, más Javier y Angie como inactivos—. **Los nombres tienen que
-   coincidir exactamente con la columna `Consultor` de Notion**, que es un
-   select con esos valores: si acá dice «Kathe» y allá «Kathering», la
-   importación reporta la fila como no asignable en vez de adivinar.
+   coincidir exactamente con los de la columna `Consultor/a` del CSV**: si acá
+   dice «Kathe» y allá «Kathering», la importación reporta la fila como no
+   asignable en vez de adivinar.
    Cambiá los emails por los reales antes de correrlo. **Si ya lo habías
    cargado con los nombres viejos, no borres nada**: el archivo actualiza por
    email la fila que ya exista y deja intacto el enlace con el usuario. Lo
@@ -232,19 +230,6 @@ En este orden, porque cada paso depende del anterior:
    El reporte lista lo que quedó afuera con número de fila y motivo: eso es lo
    que hay que arreglar en la planilla, no en la app.
 
-1bis. **La asignación, desde Notion.** En la misma pantalla, el botón
-   **Sincronizar Notion**, y **después** del de la planilla. De «Auditoría
-   Clientes» salen el consultor de cada cliente, su estado, la fecha en que
-   arrancó el programa, su duración y el link a su carpeta de Drive.
-
-   Las dos fuentes comparten el estado y la fecha de alta, y en esos dos campos
-   manda Notion, porque es donde el equipo los mantiene al día. Por eso el
-   orden: al revés, la planilla los pisaría.
-
-   Antes de correrlo hay que darle acceso a la integración: en Notion, abrir
-   «Auditoría Clientes» → ••• → **Conexiones** → agregar la integración. Sin
-   ese paso la API responde 404 aunque el token esté bien.
-
 1ter. **El expediente, de una tabla.** En la misma planilla, una solapa llamada
    **`Ficha`**: una columna `nombre` y las columnas del expediente que tengas
    —`que vende`, `a quien`, `cliente ideal`, `promesa`, `oferta`, `meta
@@ -270,9 +255,8 @@ En este orden, porque cada paso depende del anterior:
    test de coherencia no tiene contra qué comparar.
 
 5. **Documentos, desde Drive.** En `/planilla`, el tercer botón: **Traer de
-   Drive**, y después de Notion, porque la carpeta de cada cliente la trae
-   Notion (columna «carpeta automatica de drive», llena en 104 de los 113
-   activos). Entra lo que haya adentro: las notas de Gemini de cada sesión, el
+   Drive**. Cada cliente declara su carpeta en su ficha (hoy 108 de 194 la
+   tienen). Entra lo que haya adentro: las notas de Gemini de cada sesión, el
    onboarding, la llamada de venta.
 
    Nada se adivina por el título: el documento es del cliente **cuya carpeta lo

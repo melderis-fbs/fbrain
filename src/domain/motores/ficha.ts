@@ -6,7 +6,7 @@ import { CONSTITUCION_HASH } from './constitucion';
  *
  * El onboarding no empieza con un formulario en blanco. El consultor sube lo
  * que ya tiene —la transcripción de la llamada de venta, el formulario de
- * onboarding, lo que haya en Notion— y esto lo convierte en los bloques del
+ * onboarding, las notas de la primera sesión— y lo convierte en los bloques del
  * expediente para que él corrija en vez de tipear.
  *
  * Rige el mismo principio que el extractor de sesiones: extrae, no interpreta.
