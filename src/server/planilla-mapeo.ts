@@ -36,6 +36,19 @@ export const SOLAPAS = {
    * pegar la tabla ahí. Si no existe, se saltea con un renglón que lo explica.
    */
   ficha: process.env.SHEETS_SOLAPA_FICHA ?? 'Ficha',
+  /**
+   * La solapa de documentos: una fila por documento, con su texto adentro.
+   *
+   * Existe para que el expediente se pueda llenar sin subir un solo archivo.
+   * Las consultoras vuelcan lo que tienen en un proyecto de Claude compartido,
+   * de ahí sale una tabla, y esa tabla entra acá. Sin PDFs viajando por el
+   * navegador, sin Drive, sin integraciones.
+   *
+   * Un documento en una celda suena raro hasta que uno mira los números: una
+   * transcripción de sesión son quince o veinte mil caracteres y una celda de
+   * Google Sheets admite cincuenta mil. Entra con margen.
+   */
+  documentos: process.env.SHEETS_SOLAPA_DOCUMENTOS ?? 'Documentos',
 } as const;
 
 /**
@@ -196,6 +209,36 @@ export const ASISTENCIAS: Mapeo = {
   mentoria: ['mentoria', 'mentoría', 'modulo', 'módulo'],
   fecha: ['fecha'],
   asistio: ['asistio', 'asistió', 'presente'],
+};
+
+/**
+ * La solapa de documentos. `contenido` es el texto del documento: la
+ * transcripción, el formulario, lo que sea. Es la única columna larga de todo
+ * el sistema y por eso se lee aparte.
+ */
+export const DOCUMENTOS: Mapeo = {
+  cliente: ['cliente', 'nombre', 'nombre cliente'],
+  fecha: ['fecha', 'fecha del documento'],
+  tipo: ['tipo', 'tipo de documento'],
+  titulo: ['titulo', 'título', 'nombre del documento'],
+  contenido: ['contenido', 'texto', 'transcripcion', 'transcripción'],
+};
+
+/**
+ * Los tipos que entiende la columna `tipo`. Lo que no coincide entra como
+ * «otro», que es honesto: el tipo sirve para que el motor sepa qué está
+ * leyendo, no para clasificar por clasificar.
+ */
+export const TIPO_DOCUMENTO: Record<string, 'transcripcion' | 'llamada_venta' | 'formulario_onboarding' | 'contrato' | 'reporte' | 'otro'> = {
+  'transcripcion': 'transcripcion', 'transcripción': 'transcripcion', 'sesion': 'transcripcion',
+  'sesión': 'transcripcion', 'mentoria': 'transcripcion', 'mentoría': 'transcripcion',
+  'llamada de venta': 'llamada_venta', 'llamada venta': 'llamada_venta', 'venta': 'llamada_venta',
+  'closing': 'llamada_venta', 'cierre': 'llamada_venta',
+  'onboarding': 'formulario_onboarding', 'formulario': 'formulario_onboarding',
+  'formulario de onboarding': 'formulario_onboarding',
+  'contrato': 'contrato',
+  'reporte': 'reporte', 'informe': 'reporte',
+  'nota': 'otro', 'notas': 'otro', 'otro': 'otro',
 };
 
 /** Cómo se leen los estados de pago que escribe finanzas. */

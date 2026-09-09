@@ -525,3 +525,90 @@ describe('sincronizar · la solapa «Ficha»', () => {
     expect(ficha.error).toBeUndefined();
   });
 });
+
+describe('sincronizar · la solapa «Documentos»', () => {
+  /**
+   * El camino que evita subir archivos: una fila por documento con su texto en
+   * una celda. Lo que se prueba es que no duplique al resincronizar y que no
+   * meta un documento en el expediente equivocado.
+   */
+  const csv = (encabezado: string, ...filas: string[]) => [encabezado, ...filas].join('\n');
+  const LARGO = 'Repasamos el tracker: once DMs contra los veintiuno que necesita para su meta.';
+
+  beforeEach(() => {
+    vi.stubEnv('SHEETS_SOLAPA_PAGOS', '');
+    vi.stubEnv('SHEETS_SOLAPA_ASISTENCIAS', '');
+    vi.stubEnv('SHEETS_SOLAPA_DOCUMENTOS', 'Documentos');
+  });
+
+  it('carga documentos con su texto, sin ningún archivo', async () => {
+    const { getRepo } = await import('@/data');
+    const repo = getRepo();
+    mockearDrive({
+      Clientes: csv('nombre,fecha alta', 'Ana Doc,2026-01-10'),
+      Documentos: csv(
+        'cliente,fecha,tipo,titulo,contenido',
+        `Ana Doc,2026-06-26,sesión,Sesión 4,"${LARGO}"`,
+      ),
+    });
+    const { sincronizar } = await import('./planilla');
+    const r = await sincronizar(HOY);
+
+    const docs = r.solapas.find((x) => x.solapa === 'Documentos')!;
+    expect(docs.error).toBeUndefined();
+    expect(docs.aplicadas).toBe(1);
+
+    const d = await repo.cargarTodo(HOY);
+    const doc = d.documentos.find((x) => x.titulo === 'Sesión 4')!;
+    expect(doc.contenido).toBe(LARGO);
+    expect(doc.tipo).toBe('transcripcion');
+    expect(doc.fecha).toBe('2026-06-26');
+  });
+
+  it('resincronizar corrige el texto, no agrega una copia', async () => {
+    const { getRepo } = await import('@/data');
+    const repo = getRepo();
+    const hoja = (texto: string) =>
+      csv('cliente,fecha,tipo,titulo,contenido', `Ana Doc,2026-06-26,sesión,Sesión 4,"${texto}"`);
+
+    mockearDrive({ Clientes: csv('nombre,fecha alta', 'Ana Doc,2026-01-10'), Documentos: hoja(LARGO) });
+    const { sincronizar } = await import('./planilla');
+    await sincronizar(HOY);
+    const primera = (await repo.cargarTodo(HOY)).documentos.length;
+
+    mockearDrive({ Clientes: csv('nombre,fecha alta', 'Ana Doc,2026-01-10'), Documentos: hoja(`${LARGO} Y algo más.`) });
+    await sincronizar(HOY);
+    const d = await repo.cargarTodo(HOY);
+
+    // Sin esto el diagnóstico citaría la misma frase dos veces creyendo que
+    // son dos fuentes distintas.
+    expect(d.documentos.length).toBe(primera);
+    expect(d.documentos.find((x) => x.titulo === 'Sesión 4')!.contenido).toContain('Y algo más');
+  });
+
+  it('un cliente que no existe no recibe el documento de otro', async () => {
+    mockearDrive({
+      Clientes: csv('nombre,fecha alta', 'Ana Doc,2026-01-10'),
+      Documentos: csv('cliente,fecha,tipo,titulo,contenido', `Ana Dok,2026-06-26,sesión,Sesión 4,"${LARGO}"`),
+    });
+    const { sincronizar } = await import('./planilla');
+    const r = await sincronizar(HOY);
+    const docs = r.solapas.find((x) => x.solapa === 'Documentos')!;
+
+    expect(docs.aplicadas).toBe(0);
+    expect(docs.salteadas[0].motivo).toContain('Ana Dok');
+  });
+
+  it('una celda de contenido vacía se informa, no se guarda un documento hueco', async () => {
+    mockearDrive({
+      Clientes: csv('nombre,fecha alta', 'Ana Doc,2026-01-10'),
+      Documentos: csv('cliente,fecha,tipo,titulo,contenido', 'Ana Doc,2026-06-26,sesión,Sesión 4,'),
+    });
+    const { sincronizar } = await import('./planilla');
+    const r = await sincronizar(HOY);
+    const docs = r.solapas.find((x) => x.solapa === 'Documentos')!;
+
+    expect(docs.aplicadas).toBe(0);
+    expect(docs.salteadas[0].motivo).toContain('vacía');
+  });
+});

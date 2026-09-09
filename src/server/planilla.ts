@@ -3,12 +3,12 @@ import { nuevoId } from '@/lib/id';
 import { getRepo } from '@/data';
 import { fechaDePlanilla as fecha, normalizarEncabezado as normalizar, numeroDePlanilla as numero, parsearCsv } from '@/lib/csv';
 import type {
-  AsistenciaMentoria, Autoridad, Cliente, EstrategiaVersion,
+  AsistenciaMentoria, Autoridad, Cliente, DocumentoCliente, EstrategiaVersion,
   Mentoria, Negocio, ObjetivoComercial, Pago,
 } from '@/domain/types';
 import {
-  ASISTENCIAS, CAMPOS_DE_FICHA, CLIENTES, CUOTAS, ESTADO_CLIENTE, ESTADO_DEUDA, ESTADO_PAGO,
-  MENTORIAS, MONEDA_POR_DEFECTO, PAGOS, SOLAPAS, type Mapeo,
+  ASISTENCIAS, CAMPOS_DE_FICHA, CLIENTES, CUOTAS, DOCUMENTOS, ESTADO_CLIENTE, ESTADO_DEUDA,
+  ESTADO_PAGO, MENTORIAS, MONEDA_POR_DEFECTO, PAGOS, SOLAPAS, TIPO_DOCUMENTO, type Mapeo,
 } from './planilla-mapeo';
 
 /**
@@ -565,6 +565,82 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
       else rf.error = mensaje;
     }
     if (nombrada || rf.aplicadas || rf.salteadas.length || rf.error) solapas.push(rf);
+  }
+
+  // ---------------------------------------------- 1quater · los documentos
+  /**
+   * El expediente, sin subir un solo archivo.
+   *
+   * Una fila por documento con su texto en una celda. Es el camino que evita
+   * todo lo que hoy hace lenta la carga: el PDF no viaja por el navegador, no
+   * hay tope de tamaño de request, no hay nada que esperar en pantalla.
+   *
+   * La clave de deduplicación se arma con cliente, título y fecha. Volver a
+   * sincronizar corrige el texto del mismo documento en vez de agregar una
+   * copia — sin eso, el diagnóstico citaría la misma frase tres veces creyendo
+   * que son tres fuentes distintas.
+   */
+  if (SOLAPAS.documentos) {
+    const nombrada = Boolean(process.env.SHEETS_SOLAPA_DOCUMENTOS);
+    const rd: ReporteSolapa = { solapa: SOLAPAS.documentos, leidas: 0, aplicadas: 0, salteadas: [] };
+    try {
+      const filas = await bajar(SOLAPAS.documentos);
+      const encabezados = new Set(Object.keys(filas[0] ?? {}));
+      const esLaSolapa = DOCUMENTOS.contenido.some((a) => encabezados.has(normalizar(a)));
+
+      if (!esLaSolapa) {
+        rd.nota =
+          `No hay una solapa «${SOLAPAS.documentos}» con una columna de contenido, así que no se cargó ningún documento desde ahí. ` +
+          'Para usarla: una fila por documento, con las columnas cliente, fecha, tipo, titulo y contenido.';
+      } else {
+        rd.leidas = filas.length;
+        const yaEstan = new Map(
+          dataset.documentos.filter((d) => d.archivo).map((d) => [d.archivo!, d.id]),
+        );
+
+        for (const [i, f] of filas.entries()) {
+          const nombre = leer(f, DOCUMENTOS, 'cliente');
+          const contenido = leer(f, DOCUMENTOS, 'contenido').trim();
+          const cliente = nombre ? porNombre.get(normalizar(nombre)) : undefined;
+
+          if (!nombre) { rd.salteadas.push({ fila: i + 2, motivo: 'Sin nombre de cliente.' }); continue; }
+          if (!cliente) {
+            rd.salteadas.push({
+              fila: i + 2,
+              motivo: `«${nombre}» no existe en la cartera con ese nombre exacto. Un documento en el expediente equivocado es peor que uno faltante, así que no se adivina.`,
+            });
+            continue;
+          }
+          if (contenido.length < 40) {
+            rd.salteadas.push({ fila: i + 2, motivo: `«${nombre}»: la celda de contenido está vacía o es demasiado corta.` });
+            continue;
+          }
+
+          const fechaDoc = fecha(leer(f, DOCUMENTOS, 'fecha')) ?? hoy;
+          const titulo = opcional(leer(f, DOCUMENTOS, 'titulo')) ?? `Documento del ${fechaDoc}`;
+          const clave = `hoja:${normalizar(nombre)}|${normalizar(titulo)}|${fechaDoc}`;
+
+          const doc: DocumentoCliente = {
+            id: yaEstan.get(clave) ?? nuevoId(),
+            clienteId: cliente.id,
+            tipo: TIPO_DOCUMENTO[normalizar(leer(f, DOCUMENTOS, 'tipo'))] ?? 'otro',
+            titulo,
+            contenido,
+            fecha: fechaDoc,
+            creadoAt: hoy,
+            archivo: clave,
+          };
+          await repo.guardarDocumento(doc);
+          yaEstan.set(clave, doc.id);
+          rd.aplicadas++;
+        }
+      }
+    } catch (e) {
+      const mensaje = e instanceof Error ? e.message : 'Error desconocido.';
+      if (/No existe la solapa/i.test(mensaje)) rd.nota = mensaje;
+      else rd.error = mensaje;
+    }
+    if (nombrada || rd.aplicadas || rd.salteadas.length || rd.error) solapas.push(rd);
   }
 
   // --------------------------------------------------------------- 2 · pagos

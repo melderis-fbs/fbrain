@@ -168,7 +168,35 @@ export default async function PlanillaPage() {
       </section>
 
       <section className="mt-4 rounded-xl border border-line bg-surface p-4">
-        <h2 className="text-[14px] font-semibold">3 · Las transcripciones, en Drive</h2>
+        <h2 className="text-[14px] font-semibold">
+          3 · Los documentos, sin subir archivos{' '}
+          <span className="font-normal text-ink-3">· solapa «{SOLAPAS.documentos}»</span>
+        </h2>
+        <p className="mt-1 text-[12.5px] leading-relaxed text-ink-2">
+          Una fila por documento, con el texto en una celda. Es el camino más corto para llenar el
+          expediente: no hay archivos que subir, no hay nada que esperar en pantalla, y no depende
+          de ninguna integración con Google.
+        </p>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-ink-2">
+          Cinco columnas: <code>cliente</code> · <code>fecha</code> · <code>tipo</code> ·{' '}
+          <code>titulo</code> · <code>contenido</code>. El tipo puede ser <em>sesión</em>,{' '}
+          <em>llamada de venta</em>, <em>onboarding</em>, <em>contrato</em> o <em>nota</em>; lo que
+          no reconozca entra como «otro», que también sirve.
+        </p>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-ink-2">
+          Una transcripción de sesión son quince o veinte mil caracteres y una celda de Google
+          Sheets admite cincuenta mil: entra con margen. <strong>Resincronizar corrige el texto
+          del mismo documento, no agrega una copia</strong> — la clave se arma con cliente, título
+          y fecha. Y un nombre que no existe se informa: un documento en el expediente equivocado
+          es peor que uno faltante.
+        </p>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-ink-3">
+          Lo lee el mismo botón <em>Sincronizar ahora</em> de arriba, en la misma corrida.
+        </p>
+      </section>
+
+      <section className="mt-4 rounded-xl border border-line bg-surface p-4">
+        <h2 className="text-[14px] font-semibold">4 · Las transcripciones, en Drive</h2>
         <p className="mt-1 text-[12.5px] leading-relaxed text-ink-2">
           De acá sale el <strong>expediente</strong>: las notas que deja Gemini después de cada
           sesión, el formulario de onboarding, la llamada de venta. Es lo que le permite al
@@ -217,7 +245,7 @@ export default async function PlanillaPage() {
       </section>
 
       <section className="mt-4 rounded-xl border border-line bg-surface p-4">
-        <h2 className="text-[14px] font-semibold">4 · La ficha, desde los documentos</h2>
+        <h2 className="text-[14px] font-semibold">5 · La ficha, propuesta desde los documentos</h2>
         <p className="mt-1 text-[12.5px] leading-relaxed text-ink-2">
           Los documentos entran como texto, y eso todavía no llena una ficha. Esto lee el
           expediente de cada cliente y <strong>propone</strong> los campos que están vacíos: qué
