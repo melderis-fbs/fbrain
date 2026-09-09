@@ -158,6 +158,13 @@ export default async function PlanillaPage() {
           </li>
         </ol>
         <p className="mt-2 text-[12.5px] leading-relaxed text-ink-2">
+          <strong>Los primeros documentos van en esta misma fila</strong>, como cuatro columnas
+          más: <code>onboarding</code>, <code>llamada de venta</code>, <code>contrato</code> y{' '}
+          <code>notas iniciales</code>. El texto completo va adentro de la celda y entra al
+          expediente como documento — sin subir ningún archivo. Es una sola planilla madre: una
+          fila por cliente, con sus campos y su arranque.
+        </p>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-ink-2">
           Dos cosas que hace y conviene saber. <strong>Celda vacía no borra</strong>: completa lo
           que está en blanco y deja intacto el resto, así que se puede cargar por tandas —una
           tabla con el negocio, otra con la meta— sin que una pise a la anterior. Y{' '}

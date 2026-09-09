@@ -7,7 +7,7 @@ import type {
   Mentoria, Negocio, ObjetivoComercial, Pago,
 } from '@/domain/types';
 import {
-  ASISTENCIAS, CAMPOS_DE_FICHA, CLIENTES, CUOTAS, DOCUMENTOS, ESTADO_CLIENTE, ESTADO_DEUDA,
+  ASISTENCIAS, CAMPOS_DE_FICHA, CLIENTES, CUOTAS, DOCS_INICIALES, DOCUMENTOS, ESTADO_CLIENTE, ESTADO_DEUDA,
   ESTADO_PAGO, MENTORIAS, MONEDA_POR_DEFECTO, PAGOS, SOLAPAS, TIPO_DOCUMENTO, type Mapeo,
 } from './planilla-mapeo';
 
@@ -319,6 +319,60 @@ async function escribirExpediente(
     }
 }
 
+/**
+ * Los documentos iniciales que vienen como columnas de la fila del cliente.
+ *
+ * Devuelve cuántos entraron. La clave de deduplicación es el cliente más el
+ * tipo: hay un solo onboarding por cliente, así que volver a sincronizar
+ * corrige ese texto en vez de apilar copias.
+ */
+async function documentosDeColumna(
+  f: Fila,
+  cliente: { id: string; nombre: string },
+  dataset: Awaited<ReturnType<ReturnType<typeof getRepo>['cargarTodo']>>,
+  repo: ReturnType<typeof getRepo>,
+  hoy: string,
+  reporte: ReporteSolapa,
+  fila: number,
+): Promise<number> {
+  const yaEstan = new Map(
+    dataset.documentos.filter((d) => d.archivo).map((d) => [d.archivo!, d.id]),
+  );
+  let entraron = 0;
+
+  for (const def of DOCS_INICIALES) {
+    const columna = def.alias.map(normalizar).find((a) => f[a] !== undefined);
+    if (!columna) continue;
+    const texto = (f[columna] ?? '').trim();
+    if (!texto) continue;
+
+    // Un documento hueco es peor que ninguno: el motor lo lee y no encuentra
+    // nada. Con menos de cuarenta caracteres es una nota al pie, no un
+    // documento, y se dice.
+    if (texto.length < 40) {
+      reporte.salteadas.push({
+        fila,
+        motivo: `«${cliente.nombre}» · ${def.titulo}: la celda tiene texto pero es demasiado corto para ser el documento.`,
+      });
+      continue;
+    }
+
+    const clave = `hoja:${cliente.id}|${def.tipo}`;
+    await repo.guardarDocumento({
+      id: yaEstan.get(clave) ?? nuevoId(),
+      clienteId: cliente.id,
+      tipo: def.tipo,
+      titulo: def.titulo,
+      contenido: texto,
+      fecha: fecha(leer(f, CLIENTES, 'fechaAlta')) ?? hoy,
+      creadoAt: hoy,
+      archivo: clave,
+    });
+    entraron++;
+  }
+  return entraron;
+}
+
 // ---------------------------------------------------------------- sincronía
 
 export async function sincronizar(hoy: string): Promise<Reporte> {
@@ -525,10 +579,17 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
       const filas = await bajar(SOLAPAS.ficha);
       // Se mira el encabezado, no los valores: una tabla cuya primera fila
       // esté vacía sigue siendo la solapa correcta.
+      //
+      // Cuenta como solapa de ficha tanto una con campos del expediente como
+      // una que sólo traiga los documentos del arranque en columnas: las dos
+      // formas son la planilla madre, y la segunda es la que arma un proyecto
+      // de Claude cuando todavía no hay expediente que volcar.
       const encabezados = new Set(Object.keys(filas[0] ?? {}));
-      const tieneCampos = CAMPOS_DE_FICHA.some((campo) =>
-        CLIENTES[campo].some((alias) => encabezados.has(normalizar(alias))),
-      );
+      const tieneCampos =
+        CAMPOS_DE_FICHA.some((campo) =>
+          CLIENTES[campo].some((alias) => encabezados.has(normalizar(alias))),
+        ) ||
+        DOCS_INICIALES.some((d) => d.alias.some((a) => encabezados.has(normalizar(a))));
 
       if (!tieneCampos) {
         // Google no da error cuando la solapa no existe: devuelve la primera
@@ -553,7 +614,7 @@ export async function sincronizar(hoy: string): Promise<Reporte> {
             continue;
           }
           await escribirExpediente(f, cliente.id, dataset, repo, hoy);
-          rf.aplicadas++;
+          rf.aplicadas += 1 + (await documentosDeColumna(f, cliente, dataset, repo, hoy, rf, i + 2));
         }
       }
     } catch (e) {

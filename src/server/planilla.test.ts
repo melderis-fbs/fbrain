@@ -612,3 +612,73 @@ describe('sincronizar · la solapa «Documentos»', () => {
     expect(docs.salteadas[0].motivo).toContain('vacía');
   });
 });
+
+describe('sincronizar · la planilla madre', () => {
+  /**
+   * Una sola fila por cliente con sus campos y sus primeros documentos en
+   * columnas. Es como el equipo ya trabaja: un proyecto de Claude devuelve una
+   * tabla, y esa tabla es todo lo que hay que pegar.
+   */
+  const csv = (encabezado: string, ...filas: string[]) => [encabezado, ...filas].join('\n');
+  const ONB = 'Vende consultoría de marca a estudios de arquitectura. Factura seis mil por mes con cuatro clientes.';
+  const VENTA = 'En la llamada dijo que su problema es que no puede prever el mes que viene. Quiere diez reuniones.';
+
+  beforeEach(() => {
+    vi.stubEnv('SHEETS_SOLAPA_PAGOS', '');
+    vi.stubEnv('SHEETS_SOLAPA_ASISTENCIAS', '');
+    vi.stubEnv('SHEETS_SOLAPA_FICHA', 'Ficha');
+  });
+
+  it('los documentos del arranque entran como columnas de la fila del cliente', async () => {
+    const { getRepo } = await import('@/data');
+    const repo = getRepo();
+    mockearDrive({
+      Clientes: csv('nombre,fecha alta', 'Ana Madre,2026-01-10'),
+      Ficha: csv(
+        'nombre,que vende,onboarding,llamada de venta',
+        `Ana Madre,Consultoría de marca,"${ONB}","${VENTA}"`,
+      ),
+    });
+    const { sincronizar } = await import('./planilla');
+    const r = await sincronizar(HOY);
+    expect(r.solapas.find((x) => x.solapa === 'Ficha')!.error).toBeUndefined();
+
+    const d = await repo.cargarTodo(HOY);
+    const cliente = d.clientes.find((c) => c.nombre === 'Ana Madre')!;
+    const docs = d.documentos.filter((x) => x.clienteId === cliente.id);
+
+    expect(docs.map((x) => x.tipo).sort()).toEqual(['formulario_onboarding', 'llamada_venta']);
+    expect(docs.find((x) => x.tipo === 'formulario_onboarding')!.contenido).toBe(ONB);
+    // Y el expediente de la misma fila también entró.
+    expect(d.negocios.find((n) => n.clienteId === cliente.id)!.queVende).toBe('Consultoría de marca');
+  });
+
+  it('resincronizar corrige el onboarding, no lo duplica', async () => {
+    const { getRepo } = await import('@/data');
+    const repo = getRepo();
+    const hoja = (texto: string) => csv('nombre,onboarding', `Ana Madre,"${texto}"`);
+
+    mockearDrive({ Clientes: csv('nombre,fecha alta', 'Ana Madre,2026-01-10'), Ficha: hoja(ONB) });
+    const { sincronizar } = await import('./planilla');
+    await sincronizar(HOY);
+    const primera = (await repo.cargarTodo(HOY)).documentos.length;
+
+    mockearDrive({ Clientes: csv('nombre,fecha alta', 'Ana Madre,2026-01-10'), Ficha: hoja(`${ONB} Corregido.`) });
+    await sincronizar(HOY);
+    const d = await repo.cargarTodo(HOY);
+
+    expect(d.documentos.length).toBe(primera);
+    expect(d.documentos.find((x) => x.tipo === 'formulario_onboarding')!.contenido).toContain('Corregido');
+  });
+
+  it('una celda con dos palabras se informa: no es un documento', async () => {
+    mockearDrive({
+      Clientes: csv('nombre,fecha alta', 'Ana Madre,2026-01-10'),
+      Ficha: csv('nombre,onboarding', 'Ana Madre,pendiente'),
+    });
+    const { sincronizar } = await import('./planilla');
+    const r = await sincronizar(HOY);
+    const ficha = r.solapas.find((x) => x.solapa === 'Ficha')!;
+    expect(ficha.salteadas.some((x) => /demasiado corto/.test(x.motivo))).toBe(true);
+  });
+});

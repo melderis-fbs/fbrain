@@ -241,6 +241,25 @@ export const TIPO_DOCUMENTO: Record<string, 'transcripcion' | 'llamada_venta' | 
   'nota': 'otro', 'notas': 'otro', 'otro': 'otro',
 };
 
+/**
+ * LOS DOCUMENTOS INICIALES, EN LA MISMA FILA DEL CLIENTE
+ *
+ * Una planilla madre: una fila por cliente con todos sus campos **y** sus
+ * primeros documentos en columnas. El texto del onboarding va en la celda de
+ * la columna «onboarding», el de la llamada de venta en la suya.
+ *
+ * Es la forma en que el equipo ya trabaja —un proyecto de Claude devuelve una
+ * tabla— y evita tener que mantener dos solapas sincronizadas por nombre de
+ * cliente. Para las sesiones, que son muchas por cliente, existe la solapa
+ * aparte; para los tres o cuatro documentos del arranque, una columna alcanza.
+ */
+export const DOCS_INICIALES: { tipo: 'formulario_onboarding' | 'llamada_venta' | 'contrato' | 'otro'; titulo: string; alias: string[] }[] = [
+  { tipo: 'formulario_onboarding', titulo: 'Formulario de onboarding', alias: ['onboarding', 'formulario de onboarding', 'formulario onboarding'] },
+  { tipo: 'llamada_venta', titulo: 'Llamada de venta', alias: ['llamada de venta', 'llamada venta', 'call de venta', 'closing'] },
+  { tipo: 'contrato', titulo: 'Contrato', alias: ['contrato', 'texto del contrato'] },
+  { tipo: 'otro', titulo: 'Notas iniciales', alias: ['notas iniciales', 'notas del arranque'] },
+];
+
 /** Cómo se leen los estados de pago que escribe finanzas. */
 export const ESTADO_PAGO: Record<string, 'pagado' | 'pendiente' | 'vencido' | 'incobrable'> = {
   // La planilla de finanzas marca cada cuota con una casilla y el export la
