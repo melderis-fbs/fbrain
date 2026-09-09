@@ -511,7 +511,11 @@ export default async function ExpedientePage({ params }: { params: Promise<{ id:
           </Card>
 
           <Card>
-            <SectionTitle>Sesiones</SectionTitle>
+            <SectionTitle
+              action={<Link href={`/clientes/${id}/sesiones`} className="text-[12px] hover:border-accent">Ver todas y analizar →</Link>}
+            >
+              Sesiones
+            </SectionTitle>
             <ul className="space-y-2 text-[12.5px]">
               {ctx.registros.sesiones.filter((s) => s.fecha <= ws.hoy).slice(0, 6).map((s) => {
                 const sinRegistro = !s.transcripcionTexto && !s.reporte;
