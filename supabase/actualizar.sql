@@ -152,6 +152,22 @@ notify pgrst, 'reload schema';
 --  opcionales y 1 tabla de propuestas. Si algún número es menor, algo
 --  de arriba no corrió.
 
+-- ---------------------------------------------------------------------------
+-- 0015 · La llave contra GHL
+--
+-- `ghl_contact_id` es el CONTACTO, no la oportunidad: un cliente tiene la
+-- oportunidad de la venta, la del programa y a veces una de cobranza, y todas
+-- cuelgan del contacto. Con la oportunidad como llave, una renovación entraría
+-- como un cliente nuevo.
+-- ---------------------------------------------------------------------------
+
+alter table clientes add column if not exists ghl_contact_id text;
+alter table clientes add column if not exists ghl_opportunity_id text;
+
+create unique index if not exists ux_clientes_ghl_contact
+  on clientes (ghl_contact_id) where ghl_contact_id is not null;
+
+
 select
   (select count(*) from information_schema.columns
     where table_name = 'clientes'
@@ -170,4 +186,8 @@ select
   ) as opcionales_de_4,
   (select count(*) from information_schema.tables
     where table_name = 'propuestas_ficha'
-  ) as propuesta_de_1;
+  ) as propuesta_de_1,
+  (select count(*) from information_schema.columns
+    where table_name = 'clientes'
+      and column_name in ('ghl_contact_id','ghl_opportunity_id')
+  ) as ghl_de_2;

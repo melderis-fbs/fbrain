@@ -5,9 +5,10 @@ import { getUsuario, veTodo } from '@/server/auth';
 import { getWorkspace } from '@/server/workspace';
 import { hayPlanilla } from '@/server/planilla';
 import { hayDrive, modoDrive } from '@/server/drive';
+import { disparador, hayGhl } from '@/server/ghl';
 import { hayModelo } from '@/server/modelo';
 import { CLIENTES, CUOTAS, esDePlanilla, SOLAPAS } from '@/server/planilla-mapeo';
-import { proponerFichasAhora, sincronizarAhora, sincronizarDriveAhora } from './actions';
+import { proponerFichasAhora, sincronizarAhora, sincronizarDriveAhora, sincronizarGhlAhora } from './actions';
 
 export const metadata = { title: 'Las fuentes · Founders Brain' };
 
@@ -199,6 +200,44 @@ export default async function PlanillaPage() {
         </p>
         <p className="mt-2 text-[12.5px] leading-relaxed text-ink-3">
           Lo lee el mismo botón <em>Sincronizar ahora</em> de arriba, en la misma corrida.
+        </p>
+      </section>
+
+      <section className="mt-4 rounded-xl border border-line bg-surface p-4">
+        <h2 className="text-[14px] font-semibold">0 · Los clientes, desde GHL</h2>
+        <p className="mt-1 text-[12.5px] leading-relaxed text-ink-2">
+          La venta ya quedó cargada en GHL. Un cliente entra acá{' '}
+          <strong>cuando su oportunidad llega a la etapa de onboarding</strong>: recién ahí está
+          firmado el acuerdo y cargados el programa, la coach y la fecha. Antes de eso hay una
+          venta, pero todavía no hay con qué compararlo.
+        </p>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-ink-2">
+          El cliente se identifica por su <strong>contacto</strong> de GHL, no por la oportunidad
+          ni por parecido de nombre. Por eso volver a traer corrige al que ya existe, y una
+          renovación —que es el mismo contacto pasando otra vez por las etapas— lo actualiza en
+          lugar de duplicarlo.
+        </p>
+        <p className="mt-2 text-[12.5px] leading-relaxed text-ink-2">
+          Un campo vacío en GHL <strong>no borra</strong> lo que ya estaba cargado acá. Y si no
+          viene ninguna fecha de inicio, el cliente entra igual con la fecha marcada como
+          estimada: existe y se puede trabajar, pero el reloj del programa no corre hasta que
+          alguien cargue la real.
+        </p>
+        <div className="mt-3">
+          <Planilla
+            configurada={hayGhl() && Boolean(disparador())}
+            sincronizar={sincronizarGhlAhora}
+            etiqueta="Traer de GHL"
+            etiquetaCorriendo="Trayendo clientes…"
+            faltante="GHL_TOKEN, GHL_LOCATION_ID, GHL_PIPELINE_CLIENTES y GHL_ETAPA_ALTA"
+            repetir
+          />
+        </div>
+        <p className="mt-3 text-[12.5px] leading-relaxed text-ink-3">
+          Los clientes nuevos además entran solos: un aviso de GHL pega en{' '}
+          <code className="rounded bg-surface-2 px-1">/api/ghl/alta</code> cada vez que una
+          oportunidad llega a esa etapa. Este botón existe igual porque un aviso se puede perder,
+          y porque la primera corrida tiene que traer la cartera entera.
         </p>
       </section>
 

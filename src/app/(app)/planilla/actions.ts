@@ -6,6 +6,7 @@ import { getUsuario, veTodo } from '@/server/auth';
 import { hoyIso } from '@/server/workspace';
 import { sincronizar, type Reporte } from '@/server/planilla';
 import { sincronizarDrive } from '@/server/drive-sync';
+import { sincronizarGhl } from '@/server/ghl-sync';
 import { proponerFichas } from '@/server/ficha-masiva';
 
 /**
@@ -59,6 +60,30 @@ export async function proponerFichasAhora(): Promise<Reporte> {
 
   const reporte = await proponerFichas(hoyIso());
   revalidatePath('/cartera');
+  revalidatePath('/planilla');
+  return reporte;
+}
+
+/**
+ * Traer los clientes de GHL.
+ *
+ * Va antes que todo lo demás: sin clientes en la base no hay a quién
+ * enganchar un documento ni una métrica. Trae la etapa que da de alta, y lo
+ * que ya existe se corrige en vez de duplicarse — la llave es el contacto de
+ * GHL, no la oportunidad, así que una renovación actualiza al cliente.
+ *
+ * El alta automática por aviso de GHL hace lo mismo para un cliente suelto.
+ * Este botón existe igual porque un aviso se puede perder, y porque la
+ * primera corrida tiene que traer la cartera entera.
+ */
+export async function sincronizarGhlAhora(): Promise<Reporte> {
+  const usuario = await getUsuario();
+  if (!usuario) redirect('/login');
+  if (!veTodo(usuario.rol)) redirect('/mis-clientes');
+
+  const reporte = await sincronizarGhl(hoyIso());
+  revalidatePath('/cartera');
+  revalidatePath('/grilla');
   revalidatePath('/planilla');
   return reporte;
 }

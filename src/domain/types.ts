@@ -72,6 +72,15 @@ export interface Cliente {
   consultoraId?: string;
   estado: EstadoCliente;
   driveFolderId?: string;
+  /**
+   * El contacto de GHL. Es la llave del cliente contra el sistema donde se
+   * vende: un mismo cliente tiene la oportunidad de la venta, la del programa
+   * y a veces una de cobranza, y todas cuelgan del contacto. Si la llave fuera
+   * la oportunidad, una renovación entraría como un cliente nuevo.
+   */
+  ghlContactId?: string;
+  /** La oportunidad del programa, para volver a abrirla desde la ficha. */
+  ghlOpportunityId?: string;
   /** Declaradas en la sesión 1. El plan se arma contra este número, no contra las del pitch. */
   horasRealesSemana?: number;
   /**
