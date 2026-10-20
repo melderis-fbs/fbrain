@@ -24,9 +24,11 @@ import { createClient } from '@supabase/supabase-js';
  *
  *   1. En Supabase → Authentication → Add user: un mail de la casa, por
  *      ejemplo `integracion-ghl@foundersbs.com`, con una contraseña larga.
- *   2. Una fila en `consultoras` con ese `auth_user_id`, `rol` de
- *      administración y `activa = false` —no es una persona y no debe
- *      aparecer para asignarle clientes.
+ *   2. Una fila en `consultoras` con ese `auth_user_id`, `rol = 'admin'` y
+ *      `activa = true`. Las dos condiciones son obligatorias: `fn_es_admin()`
+ *      pide `rol = 'admin' and activa`, así que con `activa = false` la base
+ *      rechazaría cada alta. No aparece para asignarle clientes igual, porque
+ *      esa lista se arma con los de `rol = 'consultora'`.
  *   3. Las dos credenciales en el entorno del servidor. Nunca con prefijo
  *      `NEXT_PUBLIC_`: eso las publicaría en el navegador.
  */
