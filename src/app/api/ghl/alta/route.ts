@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { timingSafeEqual } from 'node:crypto';
 import { nuevoId } from '@/lib/id';
 import { clienteDeIntegracion, hayIntegracion } from '@/data/supabase/integracion';
-import { aCliente, coachDe, disparador, hayGhl, oportunidad, type OportunidadGhl } from '@/server/ghl';
+import { aCliente, coachDe, contacto, disparador, hayGhl, oportunidad, type OportunidadGhl } from '@/server/ghl';
+import { fichaDeContacto } from '@/server/ghl-ficha';
 import { buscarConsultora } from '@/server/ghl-sync';
 import type { Cliente } from '@/domain/types';
 
@@ -129,6 +130,19 @@ export async function POST(req: Request) {
     const campos: Partial<Cliente> = { ...traido.campos };
     if (consultoraId) campos.consultoraId = consultoraId;
 
+    /**
+     * El formulario de onboarding ya está en GHL como campos del contacto.
+     * Si falla, el cliente entra igual: tenerlo sin ficha es muy distinto de
+     * no tenerlo, y el botón «Traer de GHL» la completa después.
+     */
+    let ficha: ReturnType<typeof fichaDeContacto> | undefined;
+    try {
+      ficha = fichaDeContacto(await contacto(traido.ghlContactId));
+      if (ficha.linkContrato) campos.linkContrato = ficha.linkContrato;
+    } catch {
+      ficha = undefined;
+    }
+
     const fila = filaDe(previos?.[0] ?? null, campos, traido.ghlContactId, traido.ghlOpportunityId);
 
     const { error } = await sb.from('clientes').upsert(fila, { onConflict: 'id' });
@@ -145,11 +159,19 @@ export async function POST(req: Request) {
       );
     }
 
+    /**
+     * El expediente —negocio, autoridad, estrategia y objetivo— se escribe
+     * desde el botón «Traer de GHL», que corre con una sesión de persona y
+     * con el repositorio entero cargado. Acá sólo se guarda el contrato y los
+     * datos del cliente; la ficha completa entra en la primera corrida.
+     */
     return NextResponse.json({
       ok: true,
       clienteId: fila.id,
       nuevo: !previos?.length,
       nombre: fila.nombre,
+      contrato: Boolean(campos.linkContrato),
+      camposDeOnboarding: ficha ? Object.keys(ficha.valores).length - 1 : 0,
     });
   } catch (e) {
     return NextResponse.json(
@@ -179,6 +201,7 @@ function filaDe(
   poner('estado', campos.estado ?? (previo ? undefined : 'activo'));
   poner('monto_total', campos.montoTotal);
   poner('cantidad_cuotas', campos.cantidadCuotas);
+  poner('link_contrato', campos.linkContrato);
   if (campos.tieneGarantia !== undefined) base.tiene_garantia = campos.tieneGarantia;
   else if (!previo) base.tiene_garantia = false;
 

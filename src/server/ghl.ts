@@ -264,3 +264,15 @@ export async function oportunidad(id: string): Promise<OportunidadGhl> {
   const r = await pedir<{ opportunity: OportunidadGhl }>(`/opportunities/${id}`);
   return r.opportunity;
 }
+
+/**
+ * El contacto con sus campos personalizados.
+ *
+ * La búsqueda de oportunidades trae el contacto pero sin sus campos: ahí
+ * están las respuestas del formulario de onboarding, así que hay que pedirlo
+ * aparte. Es una llamada más por cliente, y es la que trae la ficha entera.
+ */
+export async function contacto(id: string): Promise<{ id: string; customFields?: { id: string }[] }> {
+  const r = await pedir<{ contact: { id: string; customFields?: { id: string }[] } }>(`/contacts/${id}`);
+  return r.contact;
+}

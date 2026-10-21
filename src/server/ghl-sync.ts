@@ -3,7 +3,9 @@ import { nuevoId } from '@/lib/id';
 import { getRepo } from '@/data';
 import type { Cliente } from '@/domain/types';
 import type { Reporte, ReporteSolapa } from './planilla';
-import { aCliente, coachDe, disparador, hayGhl, oportunidadesDeEtapa, type OportunidadGhl } from './ghl';
+import { aCliente, coachDe, contacto, disparador, hayGhl, oportunidadesDeEtapa, type OportunidadGhl } from './ghl';
+import { fichaDeContacto } from './ghl-ficha';
+import { escribirFicha } from './planilla';
 
 /**
  * TRAER LOS CLIENTES DE GHL
@@ -150,20 +152,72 @@ export async function sincronizarGhl(hoy: string): Promise<Reporte> {
 
     let altas = 0;
     let sinConsultora = 0;
+    let conFicha = 0;
+    let conContrato = 0;
+    const sinNumero: string[] = [];
     for (const o of tanda) {
       const res = resolver(o, porContacto, equipo);
       if ('motivo' in res) {
         r.salteadas.push({ fila: 0, motivo: res.motivo });
         continue;
       }
+      /**
+       * El formulario de onboarding, que ya vive en GHL como campos del
+       * contacto. Se pide aparte porque la búsqueda de oportunidades trae el
+       * contacto sin sus campos.
+       *
+       * Si esta llamada falla, el cliente igual entra: tener al cliente sin
+       * ficha es muy distinto de no tenerlo. Se informa y la próxima corrida
+       * vuelve a intentar.
+       */
+      let ficha: ReturnType<typeof fichaDeContacto> | undefined;
+      try {
+        ficha = fichaDeContacto(await contacto(res.cliente.ghlContactId!));
+        if (ficha.linkContrato) res.cliente.linkContrato = ficha.linkContrato;
+      } catch (e) {
+        r.salteadas.push({
+          fila: 0,
+          motivo: `«${res.cliente.nombre}»: entró el cliente pero no se pudo leer su formulario de onboarding (${e instanceof Error ? e.message : 'error'}). Se reintenta en la próxima corrida.`,
+        });
+      }
+
       await repo.guardarCliente(res.cliente);
       porContacto.set(res.cliente.ghlContactId!, res.cliente);
+
+      if (ficha) {
+        // Lo del formulario es dato cargado, no propuesta: lo escribió el
+        // cliente. La confirmación es para lo que deduce el motor de un texto.
+        await escribirFicha(ficha.valores, res.cliente.id, dataset, repo, hoy, 'Formulario de onboarding (GHL)');
+        if (ficha.linkContrato) conContrato++;
+        if (Object.keys(ficha.valores).length > 1) conFicha++;
+        for (const s of ficha.sinConvertir) {
+          sinNumero.push(`«${res.cliente.nombre}» · ${s.campo}: «${s.texto.slice(0, 60)}»`);
+        }
+      }
+
       if (res.nuevo) altas++;
       if (!res.cliente.consultoraId) sinConsultora++;
       r.aplicadas++;
     }
 
-    r.nota = `${altas} cliente(s) nuevos y ${r.aplicadas - altas} actualizados.`;
+    r.nota =
+      `${altas} cliente(s) nuevos y ${r.aplicadas - altas} actualizados. ` +
+      `${conFicha} con ficha del formulario de onboarding, ${conContrato} con contrato.`;
+    if (sinNumero.length) {
+      /**
+       * El ticket y la meta vienen como texto libre o como rango. De ahí sale
+       * la cuenta inversa —cuántas conversaciones por semana se le pide al
+       * cliente—, así que deducir un número de «entre 5.000 y 10.000» sería
+       * fijarle un objetivo inventado. Se deja sin cargar y se dice cuál era
+       * el texto, para que alguien lo complete mirando el caso.
+       */
+      r.salteadas.push({
+        fila: 0,
+        motivo:
+          `${sinNumero.length} dato(s) numéricos quedaron sin cargar porque en el formulario son un rango o texto, y de ahí sale la cuenta inversa: ` +
+          sinNumero.slice(0, 8).join(' · ') + (sinNumero.length > 8 ? ' …' : ''),
+      });
+    }
     if (sinConsultora) {
       r.salteadas.push({
         fila: 0,

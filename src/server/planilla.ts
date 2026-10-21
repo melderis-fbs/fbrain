@@ -167,6 +167,84 @@ function verificarQueSeaLaSolapa(filas: Fila[], solapa: string): void {
  * sin la fusión una tabla parcial —que es la forma normal de cargar por
  * tandas— borraba lo que había cargado la tanda anterior.
  */
+/**
+ * Los valores del expediente, ya leídos y sin saber de dónde salieron.
+ *
+ * Existe para que la planilla y GHL escriban por la misma puerta. La
+ * semántica de fusión —vacío nunca borra, y una versión nueva de estrategia
+ * arranca de la anterior— es delicada y costó datos una vez; tenerla escrita
+ * dos veces es garantizar que las dos se separen.
+ */
+export interface ValoresFicha {
+  moneda?: string;
+  // negocio
+  queVende?: string;
+  aQuien?: string;
+  negocioPrecio?: number;
+  comoEntrega?: string;
+  facturacionMensual?: number;
+  cantidadClientes?: number;
+  origenClientes?: string;
+  queFunciono?: string;
+  queNoFunciono?: string;
+  // autoridad
+  haceExcepcionalmenteBien?: string;
+  experienciaProfesional?: string;
+  resultadosPropios?: string;
+  resultadosTerceros?: string;
+  industriasQueConoce?: string[];
+  autoridadDesperdiciada?: string;
+  // estrategia
+  clienteIdeal?: string;
+  problema?: string;
+  deseo?: string;
+  promesa?: string;
+  oferta?: string;
+  mecanismo?: string;
+  canal?: string;
+  estrategiaPrecio?: number;
+  motivoCambio?: string;
+  // objetivo
+  metaMensual?: number;
+  ticket?: number;
+}
+
+/** Lo que trae una fila de la planilla, en el formato común. */
+function valoresDeFila(f: Fila): ValoresFicha {
+  const industrias = leer(f, CLIENTES, 'industriasQueConoce');
+  return {
+    moneda: opcional(leer(f, CLIENTES, 'moneda')),
+    queVende: opcional(leer(f, CLIENTES, 'queVende')),
+    aQuien: opcional(leer(f, CLIENTES, 'aQuien')),
+    negocioPrecio: numero(leer(f, CLIENTES, 'negocioPrecio')) ?? undefined,
+    comoEntrega: opcional(leer(f, CLIENTES, 'comoEntrega')),
+    facturacionMensual: numero(leer(f, CLIENTES, 'facturacionMensual')) ?? undefined,
+    cantidadClientes: numero(leer(f, CLIENTES, 'cantidadClientes')) ?? undefined,
+    origenClientes: opcional(leer(f, CLIENTES, 'origenClientes')),
+    queFunciono: opcional(leer(f, CLIENTES, 'queFunciono')),
+    queNoFunciono: opcional(leer(f, CLIENTES, 'queNoFunciono')),
+    haceExcepcionalmenteBien: opcional(leer(f, CLIENTES, 'haceExcepcionalmenteBien')),
+    experienciaProfesional: opcional(leer(f, CLIENTES, 'experienciaProfesional')),
+    resultadosPropios: opcional(leer(f, CLIENTES, 'resultadosPropios')),
+    resultadosTerceros: opcional(leer(f, CLIENTES, 'resultadosTerceros')),
+    industriasQueConoce: industrias
+      ? industrias.split(',').map((x) => x.trim()).filter(Boolean)
+      : undefined,
+    autoridadDesperdiciada: opcional(leer(f, CLIENTES, 'autoridadDesperdiciada')),
+    clienteIdeal: opcional(leer(f, CLIENTES, 'clienteIdeal')),
+    problema: opcional(leer(f, CLIENTES, 'problema')),
+    deseo: opcional(leer(f, CLIENTES, 'deseo')),
+    promesa: opcional(leer(f, CLIENTES, 'promesa')),
+    oferta: opcional(leer(f, CLIENTES, 'oferta')),
+    mecanismo: opcional(leer(f, CLIENTES, 'mecanismo')),
+    canal: opcional(leer(f, CLIENTES, 'canal')),
+    estrategiaPrecio: numero(leer(f, CLIENTES, 'estrategiaPrecio')) ?? undefined,
+    motivoCambio: opcional(leer(f, CLIENTES, 'motivoCambio')),
+    metaMensual: numero(leer(f, CLIENTES, 'metaMensual')) ?? undefined,
+    ticket: numero(leer(f, CLIENTES, 'ticket')) ?? undefined,
+  };
+}
+
 async function escribirExpediente(
   f: Fila,
   id: string,
@@ -174,31 +252,40 @@ async function escribirExpediente(
   repo: ReturnType<typeof getRepo>,
   hoy: string,
 ): Promise<void> {
-    const moneda = opcional(leer(f, CLIENTES, 'moneda')) ?? MONEDA_POR_DEFECTO;
+  await escribirFicha(valoresDeFila(f), id, dataset, repo, hoy, 'Importado de la planilla');
+}
 
-    /**
-     * --- negocio
-     *
-     * Se fusiona con lo que ya había. Es la misma regla que rige la fila del
-     * cliente y hay que decir por qué: el bloque se guarda entero, así que
-     * subir una tabla con «a quién» pero sin «qué vende» reemplazaba el
-     * bloque completo y dejaba en null lo que alguien había cargado a mano.
-     *
-     * Celda vacía es «sin dato», nunca «borrá lo que sabías». Sin esto, una
-     * planilla parcial —que es la forma normal de cargar por tandas— es una
-     * herramienta de pérdida de datos silenciosa.
-     */
+/**
+ * Escribe negocio, autoridad, estrategia y objetivo de un cliente.
+ *
+ * La regla que gobierna los cuatro bloques: **un valor ausente nunca borra lo
+ * que ya estaba.** Los bloques se guardan enteros, así que sin esto una carga
+ * parcial —que es la forma normal de cargar, por tandas o desde una fuente
+ * que tiene medio formulario sin completar— es una herramienta silenciosa de
+ * pérdida de datos.
+ */
+export async function escribirFicha(
+  v: ValoresFicha,
+  id: string,
+  dataset: Awaited<ReturnType<ReturnType<typeof getRepo>['cargarTodo']>>,
+  repo: ReturnType<typeof getRepo>,
+  hoy: string,
+  motivoPorDefecto: string,
+): Promise<void> {
+    const moneda = v.moneda ?? MONEDA_POR_DEFECTO;
+
+    // --- negocio · vacío no borra
     const negocioPrevio = dataset.negocios.find((n) => n.clienteId === id);
     const negocioFila = {
-      queVende: opcional(leer(f, CLIENTES, 'queVende')),
-      aQuien: opcional(leer(f, CLIENTES, 'aQuien')),
-      precio: numero(leer(f, CLIENTES, 'negocioPrecio')) ?? undefined,
-      comoEntrega: opcional(leer(f, CLIENTES, 'comoEntrega')),
-      facturacionMensual: numero(leer(f, CLIENTES, 'facturacionMensual')) ?? undefined,
-      cantidadClientes: numero(leer(f, CLIENTES, 'cantidadClientes')) ?? undefined,
-      origenClientes: opcional(leer(f, CLIENTES, 'origenClientes')),
-      queFunciono: opcional(leer(f, CLIENTES, 'queFunciono')),
-      queNoFunciono: opcional(leer(f, CLIENTES, 'queNoFunciono')),
+      queVende: v.queVende,
+      aQuien: v.aQuien,
+      precio: v.negocioPrecio,
+      comoEntrega: v.comoEntrega,
+      facturacionMensual: v.facturacionMensual,
+      cantidadClientes: v.cantidadClientes,
+      origenClientes: v.origenClientes,
+      queFunciono: v.queFunciono,
+      queNoFunciono: v.queNoFunciono,
     };
     if (Object.values(negocioFila).some((x) => x !== undefined)) {
       const negocio: Negocio = {
@@ -207,7 +294,7 @@ async function escribirExpediente(
         queVende: negocioFila.queVende ?? negocioPrevio?.queVende,
         aQuien: negocioFila.aQuien ?? negocioPrevio?.aQuien,
         precio: negocioFila.precio ?? negocioPrevio?.precio,
-        moneda: opcional(leer(f, CLIENTES, 'moneda')) ?? negocioPrevio?.moneda ?? moneda,
+        moneda: v.moneda ?? negocioPrevio?.moneda ?? moneda,
         comoEntrega: negocioFila.comoEntrega ?? negocioPrevio?.comoEntrega,
         facturacionMensual: negocioFila.facturacionMensual ?? negocioPrevio?.facturacionMensual,
         cantidadClientes: negocioFila.cantidadClientes ?? negocioPrevio?.cantidadClientes,
@@ -219,18 +306,15 @@ async function escribirExpediente(
       await repo.guardarNegocio(negocio);
     }
 
-    // --- autoridad · misma regla que negocio: vacío no borra
+    // --- autoridad · misma regla que negocio
     const autoridadPrevia = dataset.autoridades.find((a) => a.clienteId === id);
-    const industrias = leer(f, CLIENTES, 'industriasQueConoce');
     const autoridadFila = {
-      haceExcepcionalmenteBien: opcional(leer(f, CLIENTES, 'haceExcepcionalmenteBien')),
-      experienciaProfesional: opcional(leer(f, CLIENTES, 'experienciaProfesional')),
-      resultadosPropios: opcional(leer(f, CLIENTES, 'resultadosPropios')),
-      resultadosTerceros: opcional(leer(f, CLIENTES, 'resultadosTerceros')),
-      industriasQueConoce: industrias
-        ? industrias.split(',').map((x) => x.trim()).filter(Boolean)
-        : undefined,
-      autoridadDesperdiciada: opcional(leer(f, CLIENTES, 'autoridadDesperdiciada')),
+      haceExcepcionalmenteBien: v.haceExcepcionalmenteBien,
+      experienciaProfesional: v.experienciaProfesional,
+      resultadosPropios: v.resultadosPropios,
+      resultadosTerceros: v.resultadosTerceros,
+      industriasQueConoce: v.industriasQueConoce,
+      autoridadDesperdiciada: v.autoridadDesperdiciada,
     };
     if (Object.values(autoridadFila).some((x) => x !== undefined)) {
       const autoridad: Autoridad = {
@@ -250,19 +334,19 @@ async function escribirExpediente(
     // --- estrategia · append-only, sólo si cambió algo
     const previa = dataset.estrategias.filter((e) => e.clienteId === id).at(-1);
     const est = {
-      clienteIdeal: opcional(leer(f, CLIENTES, 'clienteIdeal')),
-      problema: opcional(leer(f, CLIENTES, 'problema')),
-      deseo: opcional(leer(f, CLIENTES, 'deseo')),
-      promesa: opcional(leer(f, CLIENTES, 'promesa')),
-      oferta: opcional(leer(f, CLIENTES, 'oferta')),
-      mecanismo: opcional(leer(f, CLIENTES, 'mecanismo')),
-      canal: opcional(leer(f, CLIENTES, 'canal')),
-      precio: numero(leer(f, CLIENTES, 'estrategiaPrecio')) ?? undefined,
+      clienteIdeal: v.clienteIdeal,
+      problema: v.problema,
+      deseo: v.deseo,
+      promesa: v.promesa,
+      oferta: v.oferta,
+      mecanismo: v.mecanismo,
+      canal: v.canal,
+      precio: v.estrategiaPrecio,
     };
     const hayEstrategia = Object.values(est).some((x) => x !== undefined);
     /**
      * La versión nueva arranca de la anterior y le pisa sólo lo que trae la
-     * fila. Acá el error era peor que en los otros dos bloques: una tabla
+     * carga. Acá el error era peor que en los otros dos bloques: una carga
      * parcial creaba una v2 con los campos que faltaban vacíos, y esa v2 es
      * la vigente — la que el diagnóstico usa y contra la que el test de
      * coherencia compara el drift. Se perdía la estrategia y encima quedaba
@@ -287,19 +371,19 @@ async function escribirExpediente(
         clienteId: id,
         version: (previa?.version ?? 0) + 1,
         ...fusion,
-        moneda: opcional(leer(f, CLIENTES, 'moneda')) ?? previa?.moneda ?? moneda,
+        moneda: v.moneda ?? previa?.moneda ?? moneda,
         vigenteDesde: hoy,
-        motivoCambio: opcional(leer(f, CLIENTES, 'motivoCambio')) ?? 'Importado de la planilla',
+        motivoCambio: v.motivoCambio ?? motivoPorDefecto,
         iniciativa: 'consultora',
       };
       await repo.guardarEstrategia(nueva);
     }
 
     // --- objetivo comercial
-    const meta = numero(leer(f, CLIENTES, 'metaMensual'));
-    const ticket = numero(leer(f, CLIENTES, 'ticket'));
+    const meta = v.metaMensual;
+    const ticket = v.ticket;
     const objPrevio = dataset.objetivos.filter((o) => o.clienteId === id).at(-1);
-    if (meta !== null && ticket !== null &&
+    if (meta !== undefined && ticket !== undefined &&
         (!objPrevio || objPrevio.metaMensual !== meta || objPrevio.ticket !== ticket)) {
       const objetivo: ObjetivoComercial = {
         id: nuevoId(),

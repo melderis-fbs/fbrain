@@ -81,6 +81,12 @@ export interface Cliente {
   ghlContactId?: string;
   /** La oportunidad del programa, para volver a abrirla desde la ficha. */
   ghlOpportunityId?: string;
+  /**
+   * El contrato firmado. Es un link, no un archivo: vive donde se firmó y la
+   * app lo muestra. Copiar el PDF acá sería tener dos versiones de un
+   * documento legal y no saber cuál rige.
+   */
+  linkContrato?: string;
   /** Declaradas en la sesión 1. El plan se arma contra este número, no contra las del pitch. */
   horasRealesSemana?: number;
   /**

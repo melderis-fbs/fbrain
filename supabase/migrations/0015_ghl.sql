@@ -22,3 +22,7 @@ comment on column clientes.ghl_contact_id is
   'Contacto de GHL. La llave del cliente contra el sistema donde se vende.';
 comment on column clientes.ghl_opportunity_id is
   'Oportunidad del programa en el pipeline de clientes, para abrirla desde la ficha.';
+
+-- El contrato firmado, como link y no como archivo: vive donde se firmó. Dos
+-- copias de un documento legal es no saber cuál rige.
+alter table clientes add column if not exists link_contrato text;
