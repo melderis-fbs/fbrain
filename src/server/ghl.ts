@@ -104,6 +104,8 @@ export interface OportunidadGhl {
  * y el rótulo se edita desde la pantalla. El identificador no cambia nunca.
  */
 export const CAMPO = {
+  /** Beneficios extras del contrato: lo que se sumó fuera del programa. */
+  otos: 'wvWMw4nMaXfY7Hh0BR7A',
   fechaInicio: 'brCPZJCW6LnRGdXUZbck',
   fechaIngresoPrograma: 'wKiE5i17Yj8BNwQDA9xf',
   fechaFin: 'jYD1uyijPF23YqsTfNKS',
@@ -275,4 +277,19 @@ export async function oportunidad(id: string): Promise<OportunidadGhl> {
 export async function contacto(id: string): Promise<{ id: string; customFields?: { id: string }[] }> {
   const r = await pedir<{ contact: { id: string; customFields?: { id: string }[] } }>(`/contacts/${id}`);
   return r.contact;
+}
+
+/**
+ * El diccionario de campos del contacto: identificador → pregunta.
+ *
+ * Hace falta para guardar el formulario de onboarding con las preguntas
+ * puestas. Se pide una vez por corrida y no una vez por cliente: son 234
+ * campos y no cambian entre un cliente y el siguiente.
+ */
+export async function diccionarioDeCampos(): Promise<Map<string, string>> {
+  const locationId = process.env.GHL_LOCATION_ID!;
+  const r = await pedir<{ customFields?: { id: string; name?: string }[] }>(
+    `/locations/${locationId}/customFields?model=contact`,
+  );
+  return new Map((r.customFields ?? []).filter((c) => c.name).map((c) => [c.id, c.name!]));
 }

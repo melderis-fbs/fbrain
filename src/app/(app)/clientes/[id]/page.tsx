@@ -131,6 +131,9 @@ export default async function ExpedientePage({ params }: { params: Promise<{ id:
           >
             Cerrar sesión
           </Link>
+          <Link href={`/clientes/${id}/brief`} className="rounded-lg border border-line px-3 py-2 text-[12.5px] font-medium hover:border-accent">
+            Antes de la reunión
+          </Link>
           <Link href={`/clientes/${id}/preparar`} className="rounded-lg border border-line px-3 py-2 text-[12.5px] font-medium hover:border-accent">
             Preparar sesión
           </Link>

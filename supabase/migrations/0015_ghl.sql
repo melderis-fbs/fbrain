@@ -26,3 +26,8 @@ comment on column clientes.ghl_opportunity_id is
 -- El contrato firmado, como link y no como archivo: vive donde se firmó. Dos
 -- copias de un documento legal es no saber cuál rige.
 alter table clientes add column if not exists link_contrato text;
+
+-- Las condiciones que firmó el cliente. Importan en una reunión: son lo que ya
+-- se prometió y hay que cumplir, y lo que no hace falta volver a ofrecer.
+alter table clientes add column if not exists tipo_contrato text;
+alter table clientes add column if not exists beneficios_extra text;

@@ -87,6 +87,14 @@ export interface Cliente {
    * documento legal y no saber cuál rige.
    */
   linkContrato?: string;
+  /** Cómo clasifica administración el contrato que firmó. */
+  tipoContrato?: string;
+  /**
+   * Lo que se sumó fuera del programa: sesiones extra, accesos, bonos. En GHL
+   * es el campo «OTOs». Importa en una reunión: es lo que ya se prometió y
+   * hay que cumplir, y lo que no hace falta volver a ofrecer.
+   */
+  beneficiosExtra?: string;
   /** Declaradas en la sesión 1. El plan se arma contra este número, no contra las del pitch. */
   horasRealesSemana?: number;
   /**

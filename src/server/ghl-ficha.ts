@@ -185,3 +185,167 @@ export function fichaDeContacto(c: ContactoConCampos): FichaDeGhl {
 
   return { valores: v, linkContrato: primero(c, CAMPO_CONTACTO.linkContrato), sinConvertir };
 }
+
+/**
+ * EL BRIEF · LO QUE LA CONSULTORA LEE ANTES DE LA PRIMERA REUNIÓN
+ *
+ * El formulario de onboarding tiene mucho más de lo que entra en la ficha:
+ * qué lo frena, qué intentó antes, qué quiere lograr, con qué activos cuenta.
+ * Nada de eso tiene una casilla en el expediente, y perderlo sería tirar lo
+ * único que la consultora tiene del cliente antes de conocerlo.
+ *
+ * Así que el formulario entero se guarda como un documento, con las preguntas
+ * puestas, y el brief lo ordena en los bloques en que una consultora lo
+ * necesita leer: quién es, dónde está, qué quiere, qué lo frena.
+ *
+ * Sin inteligencia artificial. Antes de la primera reunión, las palabras del
+ * cliente valen más que un resumen: el «me da vergüenza cobrar más» textual
+ * es el dato, y una paráfrasis lo borra.
+ */
+
+/** Los bloques del brief, en el orden en que se leen antes de una reunión. */
+export const BLOQUES_BRIEF = [
+  {
+    clave: 'quien',
+    titulo: 'Quién es y qué vende',
+    campos: [
+      'v6MxIPBzN7g2DuhgpjYs', // profesión
+      '3d4O9fJ2SY0q3id7pJng', // nombre del negocio
+      'lyH4cmao6Ib4i6g8eYKE', 'oY3jTWsSl0VlhZsiPAZV', // modelo de negocio
+      'WFI3mKVwezyvWmpJd8gu', // ofertas
+      'SAfKvaSAxNfZ96NVimab', 'jbwHwZW3vCDGrEFlgKAv', // cliente ideal
+      'jQCvXXASdml4fTVYLGB4', // problema que resuelve
+      'bQH6UZg8BxS9Ipb824Vd', 'S0kKHxbl2NgtrG283msk', // promesa
+      'GRZ3WREotzQujzjnu0rN', // su ventaja
+    ],
+  },
+  {
+    clave: 'donde',
+    titulo: 'Dónde está hoy',
+    campos: [
+      'eXd2VRt2I7F9sMYqIdT9', 'tASbAkMph82gtDgWx25l', '7owgy7PY0Yb5oGEnF0Uu', // facturación
+      'Q7wvcmWmk1OG9AAeQdzh', // valor promedio por cliente
+      'OgixMoudDbu1Yn51tfn3', // canal que mejor funciona
+      'kF1jSYGWRr3Ynh8a7ucz', // estrategia de marketing
+      'pBpJNLYtg3x5QDY7wdnd', // proceso de ventas
+      'B6GunNlvBP6eXfRUHYSd', // activos y plataformas
+      'xDRp77kgu6ayRay33hVD', // equipo
+      'iQxwT0nGPxcySLyeuCwf', // competidores
+      'MaoIu1CpL16UjDNjRFDt', // números que mira
+    ],
+  },
+  {
+    clave: 'quiere',
+    titulo: 'Qué quiere',
+    campos: [
+      'ILmuDnz6vHUGDqOg240d', // objetivo a 6 meses
+      'azTpFcewboBTmhH6CKZ7', 'rZXdKbdgsBsvryFa3KKK', // a cuánto quiere llegar
+      'GBgi3gTiBJIZfBXTIU8h', // 3 objetivos de las próximas semanas
+      'D3FjREK0GkU0yU7W4MUZ', // oportunidad sin explotar
+    ],
+  },
+  {
+    clave: 'frena',
+    titulo: 'Qué lo frena',
+    campos: [
+      '7L1pz9CSGlDnmHJTVHqa', 'Omv42KqHrDMP97kIzJmQ', 'PaLp2YkkmuZYiyWCjFrM', 'SX7LOTQcEDXiTiwMu6dZ',
+      'Hb6l3YaRCq5UVJO3hude', // mayor desafío
+      '52inz8eVttU7LSKJ4hWR', // qué intentó antes
+      'W7EnU9NPZ6Jo2rENywna', // qué sí le funcionó
+      'qg78036O36cOAtaMFXXA', 'uPL1FgXok3mycrYswPBX', // qué probó
+      'dZu8DGNdy4nn4FXeBA1g', // frustraciones
+    ],
+  },
+] as const;
+
+export interface LineaBrief {
+  pregunta: string;
+  respuesta: string;
+}
+export interface BloqueBrief {
+  clave: string;
+  titulo: string;
+  lineas: LineaBrief[];
+}
+
+/**
+ * El formulario entero, ordenado en bloques. Lo que no entra en ningún bloque
+ * va al final: puede ser de otro formulario, pero si el cliente lo escribió
+ * no se tira.
+ */
+export function brief(
+  c: ContactoConCampos,
+  diccionario: Map<string, string>,
+): { bloques: BloqueBrief[]; otras: LineaBrief[] } {
+  const usados = new Set<string>();
+  const bloques: BloqueBrief[] = [];
+
+  for (const b of BLOQUES_BRIEF) {
+    const lineas: LineaBrief[] = [];
+    for (const id of b.campos) {
+      usados.add(id);
+      const v = valorDe(c.customFields?.find((x) => x.id === id));
+      const pregunta = diccionario.get(id);
+      // Sin la pregunta la respuesta no se entiende, y mostrar un
+      // identificador de GHL en una pantalla es peor que no mostrar nada.
+      if (v && pregunta) lineas.push({ pregunta, respuesta: v });
+    }
+    if (lineas.length) bloques.push({ clave: b.clave, titulo: b.titulo, lineas });
+  }
+
+  const otras: LineaBrief[] = [];
+  for (const campo of c.customFields ?? []) {
+    if (usados.has(campo.id)) continue;
+    const v = valorDe(campo);
+    const pregunta = diccionario.get(campo.id);
+    if (v && pregunta) otras.push({ pregunta, respuesta: v });
+  }
+
+  return { bloques, otras };
+}
+
+/** El formulario como texto, para guardarlo de documento del expediente. */
+export function briefComoTexto(b: ReturnType<typeof brief>): string {
+  const partes: string[] = [];
+  for (const bloque of b.bloques) {
+    partes.push(`## ${bloque.titulo}`);
+    for (const l of bloque.lineas) partes.push(`${l.pregunta}\n${l.respuesta}`);
+  }
+  if (b.otras.length) {
+    partes.push('## Otras respuestas');
+    for (const l of b.otras) partes.push(`${l.pregunta}\n${l.respuesta}`);
+  }
+  return partes.join('\n\n');
+}
+
+/** El tipo de contrato que firmó, tal como lo clasifica administración. */
+export const CAMPO_TIPO_CONTRATO = 'tjJexFQzVhzIeOQ47RQN';
+
+export function tipoDeContrato(c: ContactoConCampos): string | undefined {
+  return valorDe(c.customFields?.find((x) => x.id === CAMPO_TIPO_CONTRATO));
+}
+
+/**
+ * El documento se guardó como texto con `## Bloque` y pares de
+ * pregunta/respuesta. Se vuelve a partir acá para mostrarlo, en vez de
+ * guardar el mismo contenido dos veces en formatos distintos.
+ */
+export function parsearBrief(texto: string): { titulo: string; lineas: { pregunta: string; respuesta: string }[] }[] {
+  const bloques: { titulo: string; lineas: { pregunta: string; respuesta: string }[] }[] = [];
+  for (const parte of texto.split(/\n{2,}/)) {
+    const limpio = parte.trim();
+    if (!limpio) continue;
+    if (limpio.startsWith('## ')) {
+      bloques.push({ titulo: limpio.slice(3).trim(), lineas: [] });
+      continue;
+    }
+    const salto = limpio.indexOf('\n');
+    if (salto === -1) continue;
+    if (!bloques.length) bloques.push({ titulo: 'Del onboarding', lineas: [] });
+    bloques[bloques.length - 1].lineas.push({
+      pregunta: limpio.slice(0, salto).trim(),
+      respuesta: limpio.slice(salto + 1).trim(),
+    });
+  }
+  return bloques.filter((b) => b.lineas.length);
+}

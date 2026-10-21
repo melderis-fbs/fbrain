@@ -168,6 +168,8 @@ create unique index if not exists ux_clientes_ghl_contact
   on clientes (ghl_contact_id) where ghl_contact_id is not null;
 
 alter table clientes add column if not exists link_contrato text;
+alter table clientes add column if not exists tipo_contrato text;
+alter table clientes add column if not exists beneficios_extra text;
 
 
 select
@@ -191,5 +193,6 @@ select
   ) as propuesta_de_1,
   (select count(*) from information_schema.columns
     where table_name = 'clientes'
-      and column_name in ('ghl_contact_id','ghl_opportunity_id','link_contrato')
-  ) as ghl_de_3;
+      and column_name in ('ghl_contact_id','ghl_opportunity_id','link_contrato',
+                          'tipo_contrato','beneficios_extra')
+  ) as ghl_de_5;

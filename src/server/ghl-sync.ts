@@ -1,10 +1,10 @@
 import 'server-only';
 import { nuevoId } from '@/lib/id';
 import { getRepo } from '@/data';
-import type { Cliente } from '@/domain/types';
+import type { Cliente, DocumentoCliente } from '@/domain/types';
 import type { Reporte, ReporteSolapa } from './planilla';
-import { aCliente, coachDe, contacto, disparador, hayGhl, oportunidadesDeEtapa, type OportunidadGhl } from './ghl';
-import { fichaDeContacto } from './ghl-ficha';
+import { CAMPO, aCliente, coachDe, contacto, diccionarioDeCampos, disparador, hayGhl, oportunidadesDeEtapa, type OportunidadGhl } from './ghl';
+import { brief, briefComoTexto, fichaDeContacto, tipoDeContrato } from './ghl-ficha';
 import { escribirFicha } from './planilla';
 
 /**
@@ -146,6 +146,21 @@ export async function sincronizarGhl(hoy: string): Promise<Reporte> {
   const equipo = dataset.equipo.map((c) => ({ id: c.id, nombre: c.nombre }));
 
   try {
+    /**
+     * El diccionario de preguntas, una vez por corrida y no una por cliente:
+     * son 234 campos y no cambian entre un cliente y el siguiente. Si falla,
+     * la corrida sigue sin el brief — el cliente y su ficha valen igual.
+     */
+    let diccionario = new Map<string, string>();
+    try {
+      diccionario = await diccionarioDeCampos();
+    } catch {
+      r.salteadas.push({
+        fila: 0,
+        motivo: 'No se pudo leer el diccionario de preguntas de GHL, así que esta corrida no guarda el formulario de onboarding. Los clientes y sus fichas entran igual.',
+      });
+    }
+
     const oportunidades = await oportunidadesDeEtapa(d.pipelineId, d.etapaId, TOPE + 1);
     const tanda = oportunidades.slice(0, TOPE);
     r.leidas = oportunidades.length;
@@ -154,6 +169,7 @@ export async function sincronizarGhl(hoy: string): Promise<Reporte> {
     let sinConsultora = 0;
     let conFicha = 0;
     let conContrato = 0;
+    let conBrief = 0;
     const sinNumero: string[] = [];
     for (const o of tanda) {
       const res = resolver(o, porContacto, equipo);
@@ -171,9 +187,17 @@ export async function sincronizarGhl(hoy: string): Promise<Reporte> {
        * vuelve a intentar.
        */
       let ficha: ReturnType<typeof fichaDeContacto> | undefined;
+      let textoBrief: string | undefined;
       try {
-        ficha = fichaDeContacto(await contacto(res.cliente.ghlContactId!));
+        const ct = await contacto(res.cliente.ghlContactId!);
+        ficha = fichaDeContacto(ct);
         if (ficha.linkContrato) res.cliente.linkContrato = ficha.linkContrato;
+        const tipo = tipoDeContrato(ct);
+        if (tipo) res.cliente.tipoContrato = tipo;
+        if (diccionario.size) {
+          const b = brief(ct, diccionario);
+          if (b.bloques.length || b.otras.length) textoBrief = briefComoTexto(b);
+        }
       } catch (e) {
         r.salteadas.push({
           fila: 0,
@@ -181,8 +205,36 @@ export async function sincronizarGhl(hoy: string): Promise<Reporte> {
         });
       }
 
+      const otos = o.customFields?.find((c) => c.id === CAMPO.otos)?.fieldValueString?.trim();
+      if (otos) res.cliente.beneficiosExtra = otos;
+
       await repo.guardarCliente(res.cliente);
       porContacto.set(res.cliente.ghlContactId!, res.cliente);
+
+      /**
+       * El formulario entero, como documento del expediente.
+       *
+       * Es lo único que la consultora tiene del cliente antes de conocerlo, y
+       * la ficha sólo se queda con nueve de sus respuestas. La clave es el
+       * cliente más el tipo: hay un solo onboarding, así que volver a traer
+       * corrige ese texto en vez de apilar copias.
+       */
+      if (textoBrief) {
+        const previo = dataset.documentos.find(
+          (doc) => doc.clienteId === res.cliente.id && doc.tipo === 'formulario_onboarding',
+        );
+        const doc: DocumentoCliente = {
+          id: previo?.id ?? nuevoId(),
+          clienteId: res.cliente.id,
+          tipo: 'formulario_onboarding',
+          titulo: 'Formulario de onboarding',
+          contenido: textoBrief,
+          fecha: previo?.fecha ?? (res.cliente.fechaAlta || hoy),
+          creadoAt: previo?.creadoAt ?? hoy,
+        };
+        await repo.guardarDocumento(doc);
+        conBrief++;
+      }
 
       if (ficha) {
         // Lo del formulario es dato cargado, no propuesta: lo escribió el
@@ -202,7 +254,7 @@ export async function sincronizarGhl(hoy: string): Promise<Reporte> {
 
     r.nota =
       `${altas} cliente(s) nuevos y ${r.aplicadas - altas} actualizados. ` +
-      `${conFicha} con ficha del formulario de onboarding, ${conContrato} con contrato.`;
+      `${conFicha} con ficha del formulario de onboarding, ${conBrief} con el brief guardado, ${conContrato} con contrato.`;
     if (sinNumero.length) {
       /**
        * El ticket y la meta vienen como texto libre o como rango. De ahí sale
